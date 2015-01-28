@@ -46,8 +46,8 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include
                      ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
                     )
 
-add_executable(knm.x src/knm.cpp)
-target_link_libraries(knm.x sdsl pthread divsufsort divsufsort64)
+add_executable(build-index.x src/build-index.cpp)
+target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64)
 
-add_executable(KNbuildintvec.x src/KNbuildintvec.cpp)
-target_link_libraries(KNbuildintvec.x sdsl pthread divsufsort divsufsort64)
+add_executable(query-index-stupid.x src/query-index-stupid.cpp)
+target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)

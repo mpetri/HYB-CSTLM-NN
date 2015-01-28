@@ -14,9 +14,31 @@ class index_succinct
         t_cst  m_cst;
         t_cst  m_cst_rev;
     public:
+        index_succinct() = default;
         index_succinct(collection& col)
         {
-
+            std::cout << "CONSTRUCT CST" << std::endl;
+            {
+                sdsl::cache_config cfg;
+                cfg.delete_files = false;
+                cfg.dir = col.path + "/tmp/";
+                cfg.id = "TMP";
+                cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+                cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+                construct(m_cst,col.file_map[KEY_TEXT],cfg,0);
+            }
+            std::cout << "DONE" << std::endl;
+            std::cout << "CONSTRUCT CST REV" << std::endl;
+            {
+                sdsl::cache_config cfg;
+                cfg.delete_files = false;
+                cfg.dir = col.path + "/tmp/";
+                cfg.id = "TMPREV";
+                cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
+                cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
+                construct(m_cst_rev,col.file_map[KEY_TEXTREV],cfg,0);
+            }
+            std::cout << "DONE" << std::endl;
         }
 
         size_type serialize(std::ostream& out,sdsl::structure_tree_node* v=NULL, std::string name="")const
