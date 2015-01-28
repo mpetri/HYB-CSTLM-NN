@@ -4,6 +4,7 @@
 #include <chrono>
 #include <sdsl/qsufsort.hpp>
 #include <sdsl/int_vector.hpp>
+#include <sdsl/int_vector_mapper.hpp>
 
 #include "utils.hpp"
 
@@ -54,7 +55,20 @@ struct collection {
             auto textrev_path = path+"/"+KEY_PREFIX+KEY_TEXTREV;
             std::cout << "CONSTRUCT " << KEY_TEXTREV << std::endl;
             auto start = clock::now();
-
+            const sdsl::int_vector_mapper<0,std::ios_base::in> sdsl_input(file_map[KEY_TEXT]);
+            {
+                sdsl::int_vector<> tmp;
+                std::ofstream ofs(textrev_path);
+                sdsl::serialize(tmp,ofs);
+            }
+            sdsl::int_vector_mapper<0,std::ios_base::out|std::ios_base::in> sdsl_revinput(textrev_path);
+            sdsl_revinput.resize(sdsl_input.size());
+            // don't copy the last 0 and 1
+            std::reverse_copy(std::begin(sdsl_input), std::end(sdsl_input)-2, std::begin(sdsl_revinput));
+            sdsl_revinput[sdsl_input.size()-2] = 1ULL;
+            sdsl_revinput[sdsl_input.size()-1] = 0ULL;
+            sdsl::util::bit_compress(sdsl_revinput);
+            file_map[KEY_TEXTREV] = textrev_path;
             auto stop = clock::now();
             std::cout << "DONE (" 
                 << std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count()/1000.0f 
@@ -62,7 +76,7 @@ struct collection {
         }
 
         if (file_map.count(KEY_SA) == 0) {
-            std::cout << "CONSTRUCT " << KEY_SA;
+            std::cout << "CONSTRUCT " << KEY_SA << std::endl;
             auto start = clock::now();
             sdsl::int_vector<> sa;
             sdsl::qsufsort::construct_sa(sa,file_map[KEY_TEXT].c_str(),0);
@@ -76,7 +90,7 @@ struct collection {
         }
 
         if (file_map.count(KEY_SAREV) == 0) {
-            std::cout << "CONSTRUCT " << KEY_SAREV;
+            std::cout << "CONSTRUCT " << KEY_SAREV << std::endl;
             auto start = clock::now();
             sdsl::int_vector<> sarev;
             sdsl::qsufsort::construct_sa(sarev,file_map[KEY_TEXTREV].c_str(),0);
