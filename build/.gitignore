@@ -1,3 +1,5 @@
 *.x
-CMakeFiles
-CMakeCache.txt
+C*
+cmake_*
+Makefile
+external

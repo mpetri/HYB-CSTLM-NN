@@ -1,5 +1,15 @@
 #pragma once
 
+#include <string>
+#include <unistd.h>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 namespace utils
 {
 
