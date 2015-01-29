@@ -50,7 +50,7 @@ parse_args(int argc,const char* argv[])
 
 template<class t_idx>
 std::vector<std::pair<uint64_t,uint64_t>>
-run_query_stupid(const t_idx& idx,const std::vector<uint64_t>& tokens)
+run_query_knm(const t_idx& idx,const std::vector<uint64_t>& tokens)
 {
     std::vector<std::pair<uint64_t,uint64_t>> res;
 	size_t lb=0;
@@ -108,7 +108,7 @@ int main(int argc,const char* argv[])
 
     		// run the query
     		auto start = clock::now();
-    		auto res = run_query_stupid(idx,tokens);
+    		auto res = run_query_knm(idx,tokens);
     		auto stop = clock::now();
             for(const auto& r : res) {
                 std::cout << "len = " << r.first << " freq = " <<  r.second << std::endl;

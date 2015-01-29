@@ -9,7 +9,8 @@ template<class t_cst>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type   size_type;
-protected:
+    typedef t_cst cst_type;
+    typedef typename t_cst::csa_type csa_type;
     t_cst  m_cst;
     t_cst  m_cst_rev;
 public:
