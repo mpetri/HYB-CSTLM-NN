@@ -48,7 +48,7 @@ parse_args(int argc,const char* argv[])
     return args;
 }
 
-
+double d = 0.4;
 double stupidbackoff(const csa_wt<wt_huff_int<>> &csarev, const deque<int> &pattern_rev)
 {
     int N = csarev.size()-1;    //size of the suffix array
