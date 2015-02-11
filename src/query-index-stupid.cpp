@@ -48,6 +48,85 @@ parse_args(int argc,const char* argv[])
     return args;
 }
 
+
+double stupidbackoff(const csa_wt<wt_huff_int<>> &csarev, const deque<int> &pattern_rev)
+{
+    int N = csarev.size()-1;    //size of the suffix array
+    int M = pattern_rev.size(); //size of the pattern
+    // assumes that the pattern is reversed
+    
+    // create a copy of the pattern with and without first (=last) entry
+    vector<int> full_pattern, context_pattern;
+    full_pattern.push_back(pattern_rev[0]);
+    
+    // track the lower and upper bounds for numerator (full) and denominator
+    // (context) matches
+    uint64_t lb_num=0,lb_denom=0, rb_num=N-1,rb_denom=N-1;
+    uint64_t lb_num_prev=0,lb_denom_prev=0, rb_num_prev=N-1,rb_denom_prev=N-1;
+    double s=0;
+    for (int m=1; m<=M; m++)
+    {
+        double numer=0, denom=0;
+
+	lb_num_prev = lb_num;
+	rb_num_prev = rb_num;
+        backward_search(csarev, lb_num, rb_num,
+                        full_pattern.begin(), full_pattern.end(),
+                        lb_num, rb_num);
+        
+	numer = rb_num - lb_num + 1;
+
+	// missing patterns || unknown words
+        if(lb_num>rb_num || (lb_num<0 || rb_num>N))
+        {
+            s *= pow(d,min(M-m, 5));
+            // TODO use a smarter backoff weighting
+            break;
+        }
+	
+	rb_denom_prev = rb_denom;
+	lb_denom_prev = lb_denom;
+        
+        if(m>=2)
+        {
+                backward_search(csarev, lb_denom, rb_denom,
+                           context_pattern.begin(), context_pattern.end(),
+                            lb_denom, rb_denom);
+        }
+	
+        denom = rb_denom - lb_denom + 1;
+        s = numer/denom;
+	
+	if(lb_num!=rb_num)
+        {
+		full_pattern[0]=pattern_rev[m];
+	}else
+	{
+		//re-use the previous search interval
+		lb_num = lb_num_prev;
+		rb_num = rb_num_prev;
+		//grow the pattern
+		full_pattern.push_back(pattern_rev[m]);
+	}
+
+	if(lb_denom!=rb_denom)
+	{
+		if(context_pattern.size()!=0)
+			context_pattern[0]=pattern_rev[m];
+		else
+			context_pattern.push_back(pattern_rev[m]);
+	}else
+	{
+		//re-use the previous search interval
+		lb_denom = lb_denom_prev;
+		rb_denom = rb_denom_prev;
+		//grow the pattern
+        	context_pattern.push_back(pattern_rev[m]);
+	}
+    }
+    return s;
+}
+
 template<class t_idx>
 std::vector<std::pair<uint64_t,uint64_t>>
 run_query_stupid(const t_idx& idx,const std::vector<uint64_t>& tokens)
@@ -90,6 +169,42 @@ int main(int argc,const char* argv[])
     auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::cout << "loading index from file '" << index_file << "'" << std::endl;
     sdsl::load_from_file(idx,index_file);
+
+
+    /*
+    while (getline(file,line))
+    {
+        vector<int> word_vec;
+        istringstream iss(line);
+        string word;
+        int size=1;
+        double score=1;
+        
+        //loads the a test sentence into a vector of words
+        while (std::getline(iss, word, ' '))
+        {
+            int num = stoi(word);
+            word_vec.push_back(num);
+        }
+        
+        //generates all the required patterns from the reverse word vector: c b a -> c, c b , c b a
+        deque<int> pattern;
+        for (auto it = word_vec.begin(); it != word_vec.end(); ++it)
+        {
+            pattern.push_front(*it);
+            while (ngramsize > 0 && pattern.size() > ngramsize)
+                pattern.pop_back();
+
+            //calls stupidbackoff to get the score for the pattern
+            //Example: score (c b a) = stupidbackoff(c)*stupidbackoff(c b)*stupidbackoff(c b a)
+            double dummyscore = stupidbackoff(csarev, pattern);
+	    score*=dummyscore;
+	//    cout<<"SCORE: "<<dummyscore<<endl;;
+            //TODO reuse numerator of the previous pattern
+        }
+    cout<<"FINAL SCORE: "<<score<<endl;
+    }		
+    */
 
     /* parse pattern file */
     std::chrono::nanoseconds total_time(0);
