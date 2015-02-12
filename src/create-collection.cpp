@@ -70,51 +70,16 @@ int main(int argc,const char* argv[])
     	std::ifstream ifile(args.input_file);
     	std::cout << "reading input file '" << args.input_file << "'" << std::endl;
     	std::string line;
-	/*
-	vector<int> v;
-        vector<int> v_rev;
-	while (getline(file,line))
-	{
-		istringstream iss(line);
-		string word;
-		v.push_back(START);
-		v_rev.insert(v_rev.begin(),1);		
-                v_rev.insert(v_rev.begin(),START);
-		while (std::getline(iss, word, ' '))
-		{
-			int num = stoi(word);
-			v.push_back(num);
-			v_rev.insert(v_rev.begin(),num);
-		}
-                v_rev.insert(v_rev.begin(),END);
-		v.push_back(END);
-		v.push_back(1);
-	}
-
-        sdsl::int_vector<> ivec(v.size()); //TODO convert v to ivec - Not possible!	
-	sdsl::int_vector<> ivec_rev(v_rev.size()); //TODO convert v_rev to ivec_rev - Not possible!
-
-	//converts vectors to int_vectors
-	for(int i=0;i<v.size();i++)
-	{
-		ivec[i]=v[i];
-		ivec_rev[i]=v_rev[i];
-	}
-
-        util::bit_compress(ivec);
-        util::bit_compress(ivec_rev);
-	store_to_file(ivec,"file.sdsl");      
-	store_to_file(ivec_rev,"filereverse.sdsl");
-
-	*/
 
     	while (std::getline(ifile,line)) {
     		std::istringstream iss(line);
     		std::string word;
+		sdsl_input.push_back(START); //TODO added
     		while (std::getline(iss, word, ' ')) {
     			uint64_t num = std::stoull(word);
     			sdsl_input.push_back(num);
     		}
+		sdsl_input.push_back(END); //TODO added
     		sdsl_input.push_back(1ULL); // EOL
     	}
     	//sdsl_input.push_back(0ULL); // EOF ///TODO Ehsan: Is it required?
