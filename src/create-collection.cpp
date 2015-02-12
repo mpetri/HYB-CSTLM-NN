@@ -93,6 +93,8 @@ int main(int argc,const char* argv[])
 
         sdsl::int_vector<> ivec(v.size()); //TODO convert v to ivec - Not possible!	
 	sdsl::int_vector<> ivec_rev(v_rev.size()); //TODO convert v_rev to ivec_rev - Not possible!
+
+	//converts vectors to int_vectors
 	for(int i=0;i<v.size();i++)
 	{
 		ivec[i]=v[i];
