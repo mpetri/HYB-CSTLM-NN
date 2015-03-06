@@ -5,14 +5,15 @@
 
 #include <sdsl/suffix_arrays.hpp>
 
-template<class t_cst>
+template <class t_cst>
 class index_succinct {
 public:
-    typedef sdsl::int_vector<>::size_type   size_type;
+    typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
     typedef typename t_cst::csa_type csa_type;
-    t_cst  m_cst;
-    t_cst  m_cst_rev;
+    t_cst m_cst;
+    t_cst m_cst_rev;
+
 public:
     index_succinct() = default;
     index_succinct(collection& col)
@@ -25,7 +26,7 @@ public:
             cfg.id = "TMP";
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(m_cst,col.file_map[KEY_TEXT],cfg,0);
+            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
         }
         std::cout << "DONE" << std::endl;
         std::cout << "CONSTRUCT CST REV" << std::endl;
@@ -36,14 +37,18 @@ public:
             cfg.id = "TMPREV";
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
-            construct(m_cst_rev,col.file_map[KEY_TEXTREV],cfg,0);
+            construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
+        std::cout << "DONE" << std::endl;
+        std::cout << "COMPUTE DISCOUNTS" << std::endl;
+
+
         std::cout << "DONE" << std::endl;
     }
 
-    size_type serialize(std::ostream& out,sdsl::structure_tree_node* v=NULL, std::string name="") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v,name,sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");

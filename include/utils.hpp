@@ -10,15 +10,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace utils
-{
+namespace utils {
 
 bool
 directory_exists(std::string dir)
 {
     struct stat sb;
     const char* pathname = dir.c_str();
-    if (stat(pathname, &sb) == 0 && (S_IFDIR&sb.st_mode)) {
+    if (stat(pathname, &sb) == 0 && (S_IFDIR & sb.st_mode)) {
         return true;
     }
     return false;
@@ -39,11 +38,10 @@ void
 create_directory(std::string dir)
 {
     if (!directory_exists(dir)) {
-        if (mkdir(dir.c_str(),0777) == -1) {
+        if (mkdir(dir.c_str(), 0777) == -1) {
             perror("could not create directory");
             exit(EXIT_FAILURE);
         }
     }
 }
-
 }
