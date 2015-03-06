@@ -52,6 +52,8 @@ target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64)
 add_executable(create-collection.x src/create-collection.cpp)
 target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64)
 
+add_executable(query-index-knm.x src/query-index-knm.cpp)
+target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(query-index-stupid.x src/query-index-stupid.cpp)
 target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)

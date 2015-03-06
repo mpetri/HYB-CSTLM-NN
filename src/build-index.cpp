@@ -95,9 +95,8 @@ int main(int argc, const char* argv[])
         }
     }
 
-    //TODO added by Ehsan
     {
-        using csa_type = sdsl::csa_wt<wt_huff_int<> >;
+        using csa_type = sdsl::csa_wt<sdsl::wt_huff_int<> >;
         using cst_type = sdsl::cst_sct3<csa_type>;
 
         auto start = clock::now();

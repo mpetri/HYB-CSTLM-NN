@@ -11,26 +11,6 @@
 #include "collection.hpp"
 #include "index_succinct.hpp"
 
-int ngramsize;
-int vocabsize = 0;
-int unigramdenominator = 0;
-int STARTTAG = 3;
-int ENDTAG = 4;
-int unksymbol = 2;
-bool ismkn;
-
-vector<int> n1; //n1[1]=#unigrams with count=1, n1[2]=#bigrams with count=1, n1[3]=#trigrams with count=1, ... index=0 is always empty
-vector<int> n2; //n2[1]=#unigrams with count=2, n2[2]=#bigrams with count=2, n2[3]=#trigrams with count=2, ... index=0 is always empty
-vector<int> n3; //n3[1]=#unigrams with count=3, n3[2]=#bigrams with count=3, n3[3]=#trigrams with count=3, ... index=0 is always empty
-vector<int> n4; //n4[1]=#unigrams with count>=4, n4[2]=#bigrams with count>=4, n4[3]=#trigrams with count>=4, ... index=0 is always empty
-int N3plus;
-
-vector<double> Y; //Y[1] is Y for unigram, Y[2] is Y for bigram,...index=0 is always empty
-vector<double> D1; //D[1]=D1 for unigram, D[2]=D1 for bigram,...index=0 is always empty
-vector<double> D2; //D2[1]=D2 for unigram, D2[2]=D2 for bigram,...index=0 is always empty
-vector<double> D3; //D3[1]=D+3 for unigram, D3[2]=D3+ for bigram,...index=0 is always empty
-
-int freq;
 typedef struct cmdargs {
     std::string pattern_file;
     std::string collection_dir;
@@ -82,7 +62,8 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-int ncomputer(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat, int size)
+template <class t_idx>
+int ncomputer(const t_idx& idx, t_idx::string_type pat, int size)
 {
     uint64_t lb = 0, rb = idx.m_cst.size() - 1;
     backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
@@ -153,7 +134,8 @@ int ncomputer(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat, int 
     }
 }
 
-int calculate_denominator_rev(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat, uint64_t lb, uint64_t rb)
+template <class t_idx>
+int calculate_denominator_rev(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
 {
     int denominator = 0;
     auto v = idx.m_cst_rev.node(lb, rb);
@@ -187,7 +169,8 @@ int calculate_denominator_rev(const t_idx& idx, cst_sct3<csa_sada_int<> >::strin
     return denominator;
 }
 
-int calculate_denominator(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat, uint64_t lb, uint64_t rb)
+template <class t_idx>
+int calculate_denominator(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
 {
     int denominator = 0;
     auto v = idx.m_cst.node(lb, rb);
@@ -205,7 +188,7 @@ int calculate_denominator(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_ty
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 0 && symbol != 1) {
                     pat.push_back(symbol);
-                    cst_sct3<csa_sada_int<> >::string_type patrev = pat;
+                    t_idx::string_type patrev = pat;
                     reverse(patrev.begin(), patrev.end());
                     uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
                     backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
@@ -215,7 +198,7 @@ int calculate_denominator(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_ty
                 ind++;
             }
         } else {
-            cst_sct3<csa_sada_int<> >::string_type patrev = pat;
+            t_idx::string_type patrev = pat;
             reverse(patrev.begin(), patrev.end());
             uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
             backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
@@ -226,7 +209,8 @@ int calculate_denominator(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_ty
     return denominator;
 }
 
-double pkn(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat)
+template <class t_idx>
+double pkn(const t_idx& idx, t_idx::string_type pat)
 {
     int size = pat.size();
 
@@ -352,7 +336,7 @@ double pkn(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat)
     } else if (size < ngramsize && size != 1) { //for lower order ngrams
 
         int c = 0;
-        cst_sct3<csa_sada_int<> >::string_type patrev = pat;
+        t_idx::string_type patrev = pat;
         reverse(patrev.begin(), patrev.end());
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
@@ -388,13 +372,13 @@ double pkn(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat)
         if (ismkn) {
             if (freq == 1) {
                 if (n1[size] != 0)
-                    D = D1[size];
+                    D = idx.m_D1[size];
             } else if (freq == 2) {
                 if (n2[size] != 0)
-                    D = D2[size];
+                    D = idx.m_D2[size];
             } else if (freq >= 3) {
                 if (n3[size] != 0)
-                    D = D3[size];
+                    D = idx.m_D3[size];
             }
         } else {
             D = Y[ngramsize];
@@ -476,7 +460,7 @@ double pkn(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat)
                 }
             } else {
             }
-            gamma = (D1[size] * N1) + (D2[size] * N2) + (D3[size] * N3);
+            gamma = (D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
             return output;
         } else {
@@ -566,8 +550,8 @@ double pkn(const t_idx& idx, cst_sct3<csa_sada_int<> >::string_type pat)
             N1 = n1[1];
             N2 = n2[1];
             N1 = N3plus;
-            gamma = (D1[size] * N1) + (D2[size] * N2) + (D3[size] * N3);
-            double output = numerator / denominator + (gamma / denominator) * (1 / (double)vocabsize);
+            gamma = (idx.m_D1[size] * N1) + (D2[size] * N2) + (D3[size] * N3);
+            double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
             return output;
         }
     }
@@ -590,89 +574,35 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
         double score = pkn(idx, pattern);
         final_score += log10(score);
     }
-}
-
-return final_score;
+    return final_score;
 }
 
 template <class t_idx>
 void run_queries(const t_idx& idx, const std::string& col_dir, const std::vector<std::vector<uint64_t> > patterns)
 {
     using clock = std::chrono::high_resolution_clock;
-    auto index_file = col_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-    if (utils::file_exists(index_file)) {
-        std::cout << "loading index from file '" << index_file << "'" << std::endl;
-        sdsl::load_from_file(idx, index_file);
-
-        n1.resize(ngramsize + 1);
-        n2.resize(ngramsize + 1);
-        n3.resize(ngramsize + 1);
-        n4.resize(ngramsize + 1);
-
-        vocabsize = idx.m_cst.degree(idx.m_cst.root()) - 3; // -3 is for deducting the count for 0, and 1, and 3
-
-        //precompute n1,n2,n3,n4
-        ncomputer(idx, pat, 0);
-
-        Y.resize(ngramsize + 1);
-        if (ismkn) {
-            D1.resize(ngramsize + 1);
-            D2.resize(ngramsize + 1);
-            D3.resize(ngramsize + 1);
-        }
-        //compute discounts Y, D1, D2, D+3
-        for (int size = 1; size <= ngramsize; size++) {
-            Y[size] = (double)n1[size] / (n1[size] + 2 * n2[size]);
-            if (ismkn) {
-                if (n1[size] != 0)
-                    D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
-                if (n2[size] != 0)
-                    D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
-                if (n3[size] != 0)
-                    D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
-            }
-        }
-
-        cout << "------------------------------------------------" << endl;
-        cout << n1 << endl;
-        cout << n2 << endl;
-        cout << n3 << endl;
-        cout << n4 << endl;
-        cout << "------------------------------------------------" << endl;
-        for (int size = 1; size <= ngramsize; size++) {
-            cout << "n= " << size << " Y= " << Y[size] << endl;
-            if (ismkn)
-                cout << "\t" << size << " D1= " << D1[size] << " D2= " << D2[size] << " D3= " << D3[size] << endl;
-        }
-
-        cout << "N+1(..)= " << unigramdenominator << endl;
-        cout << "-------------------------------" << endl;
-
-        double perpelxity = 0;
-        double sentenceprob = 0;
-        int M = 0;
-        std::chrono::nanoseconds total_time(0);
-        for (const auto& pattern : patterns) {
-            M += pattern.size() - 1; // -1 for discarding <s>
-            // run the query
-            auto start = clock::now();
-            double sentenceprob = run_query_knm(idx, pattern);
-            auto stop = clock::now();
-            perplexity + = log10(sentenceprob);
-            // output score
-            std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
-            std::cout << " -> " << sentenceprob;
-            total_time += (stop - start);
-        }
-        std::cout << "time in milliseconds = "
-                  << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
-                  << " ms" << endl;
-        perplexity = (1 / (double)M) * perplexity;
-        perplexity = pow(10, (-perplexity));
-        std::cout << "Perplexity = " << perplexity << endl;
-    } else {
-        std::cerr << "index does not exist. build it first" << std::endl;
+    double perpelxity = 0;
+    double sentenceprob = 0;
+    int M = 0;
+    std::chrono::nanoseconds total_time(0);
+    for (const auto& pattern : patterns) {
+        M += pattern.size() - 1; // -1 for discarding <s>
+        // run the query
+        auto start = clock::now();
+        double sentenceprob = run_query_knm(idx, pattern);
+        auto stop = clock::now();
+        perplexity + = log10(sentenceprob);
+        // output score
+        std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
+        std::cout << " -> " << sentenceprob;
+        total_time += (stop - start);
     }
+    std::cout << "time in milliseconds = "
+              << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
+              << " ms" << endl;
+    perplexity = (1 / (double)M) * perplexity;
+    perplexity = pow(10, (-perplexity));
+    std::cout << "Perplexity = " << perplexity << endl;
 }
 
 int main(int argc, const char* argv[])
@@ -690,8 +620,13 @@ int main(int argc, const char* argv[])
     using cst_type = sdsl::cst_sct3<csa_type>;
     index_succinct<cst_type> idx;
     auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-    std::cout << "loading index from file '" << index_file << "'" << std::endl;
-    sdsl::load_from_file(idx, index_file);
+    if (utils::file_exists(index_file)) {
+        std::cout << "loading index from file '" << index_file << "'" << std::endl;
+        sdsl::load_from_file(idx, index_file);
+    } else {
+        std::cerr << "index does not exist. build it first" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
