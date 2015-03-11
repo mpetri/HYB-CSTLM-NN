@@ -103,10 +103,10 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
     int size = pat.size();
     if (freq > 0) {
         if (size == idx.m_cst.depth(v)) {
-            int deg = idx.m_cst.degree(v);
-            int ind = 0;
-            while (ind < deg) {
-                auto w = idx.m_cst.select_child(v, ind + 1);
+            auto w = idx.m_cst.select_child(v, 1);
+            int symbol = idx.m_cst.edge(w, pat_size + 1);
+            int root_id = idx.m_cst.id(idx.m_cst.root());
+            while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 0 && symbol != 1) {
                     pat.push_back(symbol);
@@ -117,7 +117,7 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
                     denominator += N1PlusFrontBack_Front(patrev, lbrev, rbrev);
                     pat.pop_back();
                 }
-                ind++;
+                w = idx.m_cst.sibling(w);
             }
         } else {
             t_idx::string_type patrev = pat;
@@ -158,7 +158,6 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
     int pat_size = pat.size();
     int deg = idx.m_cst.degree(node);
     if (pat_size == idx.m_cst.depth(node)) {
-        int ind = 0;
         N = 0;
         if (!ismkn) {
             auto w = idx.m_cst.select_child(node, 1);
@@ -170,8 +169,8 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
         } else {
             auto w = idx.m_cst.select_child(node, 1);
             int symbol = idx.m_cst.edge(w, pat_size + 1);
-            while (ind < deg) {
-                auto w = idx.m_cst.select_child(node, ind + 1);
+            int root_id = idx.m_cst.id(idx.m_cst.root());
+            while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, pat_size + 1);
                 if (symbol != 1) {
                     pat.push_back(symbol);
@@ -189,39 +188,37 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
                         N3 += 1;
                     pat.pop_back();
                 }
-                ind++;
+                w = idx.m_cst.sibling(w);
             }
         }
     } else {
         int symbol = idx.m_cst.edge(v, pat.size() + 1);
-        if(!ismkn)
-	{
-		if (symbol != 1) {
-	            N = 1;
-		}
-	}
-	if(ismkn)
-	{
-	        if (symbol != 1) {
-        	    if (ismkn) {
-        	        pat.push_back(symbol);
-	
-        	        leftbound = 0, rightbound = idx.m_cst.size() - 1;
-        	        backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
-        	        freq = rightbound - leftbound + 1;
-        	        if (freq == 1 && rightbound != leftbound) {
-        	            freq = 0;
-        	        }
-        	        if (freq == 1)
-        	            N1 += 1;
-        	        else if (freq == 2)
-        	            N2 += 1;
-        	        else if (freq >= 3)
-        	            N3 += 1;
+        if (!ismkn) {
+            if (symbol != 1) {
+                N = 1;
+            }
+        }
+        if (ismkn) {
+            if (symbol != 1) {
+                if (ismkn) {
+                    pat.push_back(symbol);
 
-        	        pat.pop_back();
-        	    }
-		}
+                    leftbound = 0, rightbound = idx.m_cst.size() - 1;
+                    backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
+                    freq = rightbound - leftbound + 1;
+                    if (freq == 1 && rightbound != leftbound) {
+                        freq = 0;
+                    }
+                    if (freq == 1)
+                        N1 += 1;
+                    else if (freq == 2)
+                        N2 += 1;
+                    else if (freq >= 3)
+                        N3 += 1;
+
+                    pat.pop_back();
+                }
+            }
         }
     }
     return N, N1, N2, N3; //TODO fix this
@@ -232,14 +229,14 @@ int N1PlusBack(node_type node, t_idx::string_type patrev)
 {
     int c = 0;
     int patrev_size = patrev;
-    int deg = idx.m_cst_rev.degree(node); 
+    int deg = idx.m_cst_rev.degree(node);
     if (patrev_size == idx.m_cst_rev.depth(node)) {
         int ind = 0;
         c = deg;
         auto w = idx.m_cst_rev.select_child(node, 1);
         int symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
-        if(symbol==1)
-		c = c - 1 ;
+        if (symbol == 1)
+            c = c - 1;
     } else {
         int symbol = idx.m_cst_rev.edge(node, patrev_size + 1);
         if (symbol != 1) {
