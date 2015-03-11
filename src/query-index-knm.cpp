@@ -63,79 +63,7 @@ parse_args(int argc, const char* argv[])
 }
 
 template <class t_idx>
-int ncomputer(const t_idx& idx, t_idx::string_type pat, int size)
-{
-    uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-    backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
-    freq = rb - lb + 1;
-    if (freq == 1 && lb != rb) {
-        freq = 0;
-    }
-    if (size != 0) {
-        if (pat.size() == 2 && freq >= 1) {
-            unigramdenominator++;
-        }
-
-        if (freq == 1) {
-            n1[size] += 1;
-        } else if (freq == 2) {
-            n2[size] += 1;
-        } else if (freq >= 3) {
-            if (freq == 3) {
-                n3[size] += 1;
-            } else if (freq == 4) {
-                n4[size] += 1;
-            }
-            if (size == 1)
-                N3plus++;
-        }
-    }
-    if (size == 0) {
-        int ind = 0;
-        pat.resize(1);
-        while (ind < idx.m_cst.degree(idx.m_cst.root())) {
-            auto w = idx.m_cst.select_child(idx.m_cst.root(), ind + 1);
-            int symbol = idx.m_cst.edge(w, 1);
-            if (symbol != 1 && symbol != 0) {
-                pat[0] = symbol;
-                ncomputer(idx, pat, size + 1);
-            }
-            ++ind;
-        }
-    } else {
-        if (size + 1 <= ngramsize) {
-            if (freq > 0) {
-                auto node = idx.m_cst.node(lb, rb);
-                int depth = idx.m_cst.depth(node);
-                if (pat.size() == depth) {
-                    int ind = 0;
-
-                    while (ind < idx.m_cst.degree(node)) {
-                        auto w = idx.m_cst.select_child(node, ind + 1);
-                        int symbol = idx.m_cst.edge(w, depth + 1);
-                        if (symbol != 1 && symbol != 0) {
-                            pat.push_back(symbol);
-                            ncomputer(idx, pat, size + 1);
-                            pat.pop_back();
-                        }
-                        ++ind;
-                    }
-                } else {
-                    int symbol = idx.m_cst.edge(node, pat.size() + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        pat.push_back(symbol);
-                        ncomputer(idx, pat, size + 1);
-                        pat.pop_back();
-                    }
-                }
-            } else {
-            }
-        }
-    }
-}
-
-template <class t_idx>
-int calculate_denominator_rev(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
+int N1PlusFrontBack_Back(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
 {
     int denominator = 0;
     auto v = idx.m_cst_rev.node(lb, rb);
@@ -146,22 +74,16 @@ int calculate_denominator_rev(const t_idx& idx, t_idx::string_type pat, uint64_t
     }
     if (freq > 0) {
         if (size == idx.m_cst_rev.depth(v)) {
-            int deg = idx.m_cst_rev.degree(v);
-            int ind = 0;
-            while (ind < deg) {
-                auto w = idx.m_cst_rev.select_child(v, ind + 1);
-                int symbol = idx.m_cst_rev.edge(w, size + 1);
-                if (symbol != 0 && symbol != 1) //TODO check
-                {
-                    denominator++;
-                }
-                ind++;
+            auto w = idx.m_cst_rev.select_child(v, 1);
+            int symbol = idx.m_cst_rev.edge(w, size + 1);
+            denominator = idx.m_cst_rev.degree(v);
+            if (symbol == 1) {
+                denominator = denominator - 1;
             }
         } else {
             int symbol = idx.m_cst_rev.edge(v, size + 1);
-            if (symbol != 0 && symbol != 1) //TODO check
-            {
-                denominator++;
+            if (symbol != 1) {
+                denominator = 1;
             }
         }
     } else {
@@ -170,7 +92,7 @@ int calculate_denominator_rev(const t_idx& idx, t_idx::string_type pat, uint64_t
 }
 
 template <class t_idx>
-int calculate_denominator(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
+int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
 {
     int denominator = 0;
     auto v = idx.m_cst.node(lb, rb);
@@ -192,7 +114,7 @@ int calculate_denominator(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
                     reverse(patrev.begin(), patrev.end());
                     uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
                     backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
-                    denominator += calculate_denominator_rev(patrev, lbrev, rbrev);
+                    denominator += N1PlusFrontBack_Front(patrev, lbrev, rbrev);
                     pat.pop_back();
                 }
                 ind++;
@@ -202,11 +124,129 @@ int calculate_denominator(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
             reverse(patrev.begin(), patrev.end());
             uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
             backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-            denominator += calculate_denominator_rev(pat, lbrev, rbrev);
+            denominator += N1PlusFrontBack_Front(pat, lbrev, rbrev);
         }
     } else {
     }
     return denominator;
+}
+
+template <class t_idx>
+int discount(int c)
+{
+    if (ismkn) {
+        if (c == 1) {
+            if (n1[ngramsize] != 0)
+                D = D1[ngramsize];
+        } else if (c == 2) {
+            if (n2[ngramsize] != 0)
+                D = D2[ngramsize];
+        } else if (c >= 3) {
+            if (n3[ngramsize] != 0)
+                D = D3[ngramsize];
+        }
+    } else {
+        D = Y[ngramsize];
+    }
+    return D;
+}
+
+template <class t_idx>
+int N1PlusFront(node_type node, t_idx::string_type pat)
+{
+    int N = 0, N1 = 0, N2 = 0, N3 = 0;
+    int pat_size = pat.size();
+    int deg = idx.m_cst.degree(node);
+    if (pat_size == idx.m_cst.depth(node)) {
+        int ind = 0;
+        N = 0;
+        if (!ismkn) {
+            auto w = idx.m_cst.select_child(node, 1);
+            int symbol = idx.m_cst.edge(w, pat_size + 1);
+            N = deg;
+            if (symbol == 1) {
+                N = N - 1;
+            }
+        } else {
+            auto w = idx.m_cst.select_child(node, 1);
+            int symbol = idx.m_cst.edge(w, pat_size + 1);
+            while (ind < deg) {
+                auto w = idx.m_cst.select_child(node, ind + 1);
+                int symbol = idx.m_cst.edge(w, pat_size + 1);
+                if (symbol != 1) {
+                    pat.push_back(symbol);
+                    leftbound = 0, rightbound = idx.m_cst.size() - 1;
+                    backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
+                    freq = rightbound - leftbound + 1;
+                    if (freq == 1 && rightbound != leftbound) {
+                        freq = 0;
+                    }
+                    if (freq == 1)
+                        N1 += 1;
+                    else if (freq == 2)
+                        N2 += 1;
+                    else if (freq >= 3)
+                        N3 += 1;
+                    pat.pop_back();
+                }
+                ind++;
+            }
+        }
+    } else {
+        int symbol = idx.m_cst.edge(v, pat.size() + 1);
+        if(!ismkn)
+	{
+		if (symbol != 1) {
+	            N = 1;
+		}
+	}
+	if(ismkn)
+	{
+	        if (symbol != 1) {
+        	    if (ismkn) {
+        	        pat.push_back(symbol);
+	
+        	        leftbound = 0, rightbound = idx.m_cst.size() - 1;
+        	        backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
+        	        freq = rightbound - leftbound + 1;
+        	        if (freq == 1 && rightbound != leftbound) {
+        	            freq = 0;
+        	        }
+        	        if (freq == 1)
+        	            N1 += 1;
+        	        else if (freq == 2)
+        	            N2 += 1;
+        	        else if (freq >= 3)
+        	            N3 += 1;
+
+        	        pat.pop_back();
+        	    }
+		}
+        }
+    }
+    return N, N1, N2, N3; //TODO fix this
+}
+
+template <class t_idx>
+int N1PlusBack(node_type node, t_idx::string_type patrev)
+{
+    int c = 0;
+    int patrev_size = patrev;
+    int deg = idx.m_cst_rev.degree(node); 
+    if (patrev_size == idx.m_cst_rev.depth(node)) {
+        int ind = 0;
+        c = deg;
+        auto w = idx.m_cst_rev.select_child(node, 1);
+        int symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
+        if(symbol==1)
+		c = c - 1 ;
+    } else {
+        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1);
+        if (symbol != 1) {
+            c = 1;
+        }
+    }
+    return c;
 }
 
 template <class t_idx>
@@ -225,21 +265,7 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         if (c == 1 && lb != rb) {
             c = 0;
         }
-        double D = 0;
-        if (ismkn) {
-            if (c == 1) {
-                if (n1[ngramsize] != 0)
-                    D = D1[ngramsize];
-            } else if (c == 2) {
-                if (n2[ngramsize] != 0)
-                    D = D2[ngramsize];
-            } else if (c >= 3) {
-                if (n3[ngramsize] != 0)
-                    D = D3[ngramsize];
-            }
-        } else {
-            D = Y[ngramsize];
-        }
+        double D = discount(c);
 
         double numerator = 0;
         if (c - D > 0) {
@@ -271,59 +297,7 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         int N1 = 0, N2 = 0, N3 = 0;
         int pat_size = pat.size();
         if (freq > 0) {
-            if (pat_size == idx.m_cst.depth(v)) {
-                int ind = 0;
-                N = 0;
-                while (ind < idx.m_cst.degree(v)) {
-                    auto w = idx.m_cst.select_child(v, ind + 1);
-                    int symbol = idx.m_cst.edge(w, pat_size + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        N++;
-                        if (ismkn) {
-                            pat.push_back(symbol);
-                            leftbound = 0, rightbound = idx.m_cst.size() - 1;
-                            backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
-                            freq = rightbound - leftbound + 1;
-                            if (freq == 1 && rightbound != leftbound) {
-                                freq = 0;
-                            }
-                            if (freq == 1)
-                                N1 += 1;
-                            else if (freq == 2)
-                                N2 += 1;
-                            else if (freq >= 3)
-                                N3 += 1;
-                            pat.pop_back();
-                        }
-                    }
-                    ++ind;
-                }
-            } else {
-                int symbol = idx.m_cst.edge(v, pat.size() + 1);
-                if (symbol != 1 && symbol != 0) {
-                    N = 1;
-                    if (ismkn) {
-                        pat.push_back(symbol);
-
-                        leftbound = 0, rightbound = idx.m_cst.size() - 1;
-                        backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
-                        freq = rightbound - leftbound + 1;
-                        if (freq == 1 && rightbound != leftbound) {
-                            freq = 0;
-                        }
-                        if (freq == 1)
-                            N1 += 1;
-                        else if (freq == 2)
-                            N2 += 1;
-                        else if (freq >= 3)
-                            N3 += 1;
-
-                        pat.pop_back();
-                    }
-                }
-            }
-        } else {
-            N = 0;
+            N, N1, N2, N3 = N1PlusFront(); //TODO fix this
         }
         if (ismkn) {
             double gamma = (D1[ngramsize] * N1) + (D2[ngramsize] * N2) + (D3[ngramsize] * N3);
@@ -348,41 +322,9 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         int patrev_size = patrev.size();
 
         if (freq > 0) {
-            if (patrev.size() == idx.m_cst_rev.depth(vrev)) {
-                int ind = 0;
-                c = 0;
-                while (ind < idx.m_cst_rev.degree(vrev)) {
-                    auto w = idx.m_cst_rev.select_child(vrev, ind + 1);
-                    int symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        c++;
-                    }
-                    ++ind;
-                }
-            } else {
-                int symbol = idx.m_cst_rev.edge(vrev, patrev_size + 1);
-                if (symbol != 1 && symbol != 0) {
-                    c = 1;
-                }
-            }
-        } else {
+            c = N1PlusBack(); //TODO fix this
         }
-        double D = 0;
-
-        if (ismkn) {
-            if (freq == 1) {
-                if (n1[size] != 0)
-                    D = idx.m_D1[size];
-            } else if (freq == 2) {
-                if (n2[size] != 0)
-                    D = idx.m_D2[size];
-            } else if (freq >= 3) {
-                if (n3[size] != 0)
-                    D = idx.m_D3[size];
-            }
-        } else {
-            D = Y[ngramsize];
-        }
+        double D = discount(freq);
 
         double numerator = 0;
         if (c - D > 0) {
@@ -401,10 +343,12 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             freq = 0;
         }
         double denominator = 0;
+        int N = 0;
         if (freq != 1) {
-            denominator = calculate_denominator(pat, lb, rb);
+            N, denominator = N1PlusFrontBack_Front(pat, lb, rb); // TODO return N here separatetely
         } else {
             denominator = 1;
+            N = XXX; //TODO fix this
         }
         if (denominator == 0) {
             cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
@@ -417,75 +361,13 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             double gamma = 0;
             int N1 = 0, N2 = 0, N3 = 0;
             if (freq > 0) {
-                if (pat.size() == idx.m_cst.depth(v)) {
-                    int ind = 0;
-
-                    while (ind < idx.m_cst.degree(v)) {
-                        auto w = idx.m_cst.select_child(v, ind + 1);
-                        int symbol = idx.m_cst.edge(w, pat.size() + 1);
-                        if (symbol != 1 && symbol != 0) {
-                            pat.push_back(symbol);
-                            backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
-                            freq = rightbound - leftbound + 1;
-                            if (freq == 1 && leftbound != rightbound)
-                                freq = 0;
-                            if (freq == 1)
-                                N1 += 1;
-                            else if (freq == 2)
-                                N2 += 1;
-                            else if (freq >= 3)
-                                N3 += 1;
-
-                            pat.pop_back();
-                        }
-                        ++ind;
-                    }
-                } else {
-                    int symbol = idx.m_cst.edge(v, pat.size() + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        pat.push_back(symbol);
-                        backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), rb, lb);
-                        freq = rightbound - leftbound + 1;
-                        if (freq == 1 && leftbound != rightbound)
-                            freq = 0;
-                        if (freq == 1)
-                            N1 += 1;
-                        else if (freq == 2)
-                            N2 += 1;
-                        else if (freq >= 3)
-                            N3 += 1;
-
-                        pat.pop_back();
-                    }
-                }
-            } else {
+                N, N1, N2, N3 = N1PlusFront(); //TODO fix this
             }
             gamma = (D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
             return output;
         } else {
-
-            int N = 0;
             int pat_size = pat.size();
-            if (freq > 0) {
-                if (pat.size() == idx.m_cst.depth(v)) {
-                    int ind = 0;
-                    while (ind < idx.m_cst.degree(v)) {
-                        auto w = idx.m_cst.select_child(v, ind + 1);
-                        int symbol = idx.m_cst.edge(w, pat_size + 1);
-                        if (symbol != 1 && symbol != 0) {
-                            N++;
-                        }
-                        ++ind;
-                    }
-                } else {
-                    int symbol = idx.m_cst.edge(v, pat_size + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        N = 1;
-                    }
-                }
-            } else {
-            }
             double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat3);
             return output;
         }
@@ -500,25 +382,7 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         auto vrev = idx.m_cst_rev.node(lbrev, rbrev);
         int pat_size = pat.size();
         if (freq > 0) {
-            if (pat.size() == idx.m_cst_rev.depth(vrev)) {
-
-                int ind = 0;
-                c = 0;
-                while (ind < idx.m_cst_rev.degree(vrev)) {
-                    auto w = idx.m_cst_rev.select_child(vrev, ind + 1);
-                    int symbol = idx.m_cst_rev.edge(w, pat_size + 1);
-                    if (symbol != 1 && symbol != 0) {
-                        ++c;
-                    }
-                    ind++;
-                }
-            } else {
-                int symbol = idx.m_cst_rev.edge(vrev, pat_size + 1);
-                if (symbol != 1 && symbol != 0) {
-                    c = 1;
-                }
-            }
-        } else {
+            N = N1PlusFront(); //TODO fix this
         }
 
         double denominator = unigramdenominator;
@@ -528,17 +392,7 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             return output;
         } else {
 
-            double D = 0;
-            if (freq == 1) {
-                if (n1[size] != 0)
-                    D = D1[size];
-            } else if (freq == 2) {
-                if (n2[size] != 0)
-                    D = D2[size];
-            } else if (freq >= 3) {
-                if (n3[size] != 0)
-                    D = D3[size];
-            }
+            double D = discount(freq);
 
             double numerator = 0;
             if (c - D > 0) {
@@ -652,6 +506,5 @@ int main(int argc, const char* argv[])
     {
         run_queries(idx, args.collection_dir, patterns);
     }
-
     return 0;
 }
