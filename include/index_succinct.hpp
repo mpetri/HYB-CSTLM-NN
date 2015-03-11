@@ -12,7 +12,7 @@ public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
     typedef typename t_cst::csa_type csa_type;
-    typedef typename t_cst::string_type;
+    typedef typename t_cst::string_type string_type;
     t_cst m_cst;
     t_cst m_cst_rev;
 
@@ -20,18 +20,19 @@ public:
     std::vector<int> m_n2; 
     std::vector<int> m_n3; 
     std::vector<int> m_n4; 
-    int m_N1plus_dotdot;
-    int m_N3plus_dot;
+    uint64_t m_N1plus_dotdot;
+    uint64_t m_N3plus_dot;
     std::vector<double> m_Y;
     std::vector<double> m_D1;
     std::vector<double> m_D2;
     std::vector<double> m_D3;
 
 public:
-    int ncomputer(cst_sct3<csa_sada_int<> >::string_type pat, int size, uint64_t lb, uint64_t rb)
+    void
+    ncomputer(string_type pat, int size, uint64_t lb, uint64_t rb)
     {
         backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
-        freq = rb - lb + 1;
+        auto freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
             freq = 0;
         }
@@ -56,10 +57,10 @@ public:
         }
         
 	if (size == 0) {
-            int ind = 0;
+            size_t ind = 0;
             pat.resize(1);
-            int degree=m_cst.degree(m_cst.root());
-            while (ind < degree) {
+            auto deg = m_cst.degree(m_cst.root());
+            while (ind < deg) {
                 auto w = m_cst.select_child(m_cst.root(), ind + 1);
                 int symbol = m_cst.edge(w, 1);
                 if (symbol != 1) {
@@ -72,12 +73,13 @@ public:
             if (size + 1 <= max_ngram_count) {
                 if (freq > 0) {
                     auto node = m_cst.node(lb, rb);
-                    int depth = m_cst.depth(node);
+                    auto depth = m_cst.depth(node);
+                    auto deg = m_cst.degree(node);
                     if (pat.size() == depth) {
-                        int ind = 0;
-                        while (ind < degree) {
+                        size_t ind = 0;
+                        while (ind < deg) {
                             auto w = m_cst.select_child(node, ind + 1);
-                            int symbol = m_cst.edge(w, depth + 1);
+                            auto symbol = m_cst.edge(w, depth + 1);
                             if (symbol != 1) {
                                 pat.push_back(symbol);
                                 ncomputer(pat, size + 1,lb,rb);
@@ -86,7 +88,7 @@ public:
                             ++ind;
                         }
                     } else {
-                        int symbol = m_cst.edge(node, pat.size() + 1);
+                        auto symbol = m_cst.edge(node, pat.size() + 1);
                         if (symbol != 1) {
                             pat.push_back(symbol);
                             ncomputer(pat, size + 1,lb,rb);
@@ -108,9 +110,9 @@ public:
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
             cfg.id = "TMP";
-            cfg.file_map[sdsl::conf::KEm_Y_SA] = col.file_map[KEY_SA];
-            cfg.file_map[sdsl::conf::KEm_Y_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(m_cst, col.file_map[KEm_Y_TEXT], cfg, 0);
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
         }
         std::cout << "DONE" << std::endl;
         std::cout << "CONSTRUCT CST REV" << std::endl;
@@ -119,9 +121,9 @@ public:
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
             cfg.id = "TMPREV";
-            cfg.file_map[sdsl::conf::KEm_Y_SA] = col.file_map[KEY_SAREV];
-            cfg.file_map[sdsl::conf::KEm_Y_TEXT_INT] = col.file_map[KEY_TEXTREV];
-            construct(m_cst_rev, col.file_map[KEm_Y_TEXTREV], cfg, 0);
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
+            construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
         std::cout << "DONE" << std::endl;
         std::cout << "COMPUTE DISCOUNTS" << std::endl;
@@ -129,9 +131,9 @@ public:
         m_n1.resize(max_ngram_count + 1);
         m_n2.resize(max_ngram_count + 1);
         m_n3.resize(max_ngram_count + 1);
-        m_n4.resize(max_ngram_counti + 1);
+        m_n4.resize(max_ngram_count + 1);
         uint64_t lb = 0, rb = m_cst.size() - 1;
-        cst_sct3<csa_sada_int<> >::string_type pat(1);
+        string_type pat(1);
         ncomputer(pat, 0,lb,rb);
 
         m_Y.resize(max_ngram_count + 1);
@@ -157,16 +159,16 @@ public:
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
-        written_bytes += sdsl::serialize_vector(m_N1plus_dotdot);
-	written_bytes += sdsl::serialize_vector(m_N3plus_dot);
-        written_bytes += sdsl::serialize_vector(m_n1);
-        written_bytes += sdsl::serialize_vector(m_n2);
-        written_bytes += sdsl::serialize_vector(m_n3);
-        written_bytes += sdsl::serialize_vector(m_n4);
-        written_bytes += sdsl::serialize_vector(m_Y);
-        written_bytes += sdsl::serialize_vector(m_D1);
-        written_bytes += sdsl::serialize_vector(m_D2);
-        written_bytes += sdsl::serialize_vector(m_D3);
+        written_bytes += sdsl::serialize(m_N1plus_dotdot,out, child,"n1plusdotdot");
+	    written_bytes += sdsl::serialize(m_N3plus_dot,out, child,"N3plusdot");
+        written_bytes += sdsl::serialize_vector(m_n1,out, child,"N1");
+        written_bytes += sdsl::serialize_vector(m_n2,out, child,"N2");
+        written_bytes += sdsl::serialize_vector(m_n3,out, child,"N3");
+        written_bytes += sdsl::serialize_vector(m_n4,out, child,"N4");
+        written_bytes += sdsl::serialize_vector(m_Y,out, child,"Y");
+        written_bytes += sdsl::serialize_vector(m_D1,out, child,"D1");
+        written_bytes += sdsl::serialize_vector(m_D2,out, child,"D2");
+        written_bytes += sdsl::serialize_vector(m_D3,out, child,"D3");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -176,18 +178,18 @@ public:
         m_cst.load(in);
         m_cst_rev.load(in);
 
-        sdsl::load_vector(m_N1plus_dotdot);
-        sdsl::load_vector(m_N3plus_dot);
+        sdsl::read_member(m_N1plus_dotdot,in);
+        sdsl::read_member(m_N3plus_dot,in);
 
-        sdsl::load_vector(m_n1);
-        sdsl::load_vector(m_n2);
-        sdsl::load_vector(m_n3);
-        sdsl::load_vector(m_n4);
+        sdsl::load_vector(m_n1,in);
+        sdsl::load_vector(m_n2,in);
+        sdsl::load_vector(m_n3,in);
+        sdsl::load_vector(m_n4,in);
 
-        sdsl::load_vector(m_Y);
-        sdsl::load_vector(m_D1);
-        sdsl::load_vector(m_D2);
-        sdsl::load_vector(m_D3);
+        sdsl::load_vector(m_Y,in);
+        sdsl::load_vector(m_D1,in);
+        sdsl::load_vector(m_D2,in);
+        sdsl::load_vector(m_D3,in);
     }
 
     void swap(index_succinct& a)
@@ -195,9 +197,8 @@ public:
         if (this != &a) {
             m_cst.swap(a.m_cst);
             m_cst_rev.swap(a.m_cst_rev);
-            
-	    m_N1plus_dotdot.swap(a.m_N1plus_dotdot);
-            m_N3plus_dot.swap(a.m_N3plus_dot);
+	        std::swap(m_N1plus_dotdot,a.m_N1plus_dotdot);
+            std::swap(m_N3plus_dot,a.m_N3plus_dot);
             m_n1.swap(a.m_n1);
             m_n2.swap(a.m_n2);
             m_n3.swap(a.m_n3);
@@ -211,6 +212,6 @@ public:
 
     uint64_t vocab_size() const
     {
-        return m_cst.csa.sigma - 3;
+        return m_cst.csa.sigma - 2;
     }
 };
