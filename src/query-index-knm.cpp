@@ -110,20 +110,18 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 1) {
                     pat.push_back(symbol);
-                    t_idx::string_type patrev = pat;
-                    reverse(patrev.begin(), patrev.end());
                     uint64_t lbrev = idx.m_cst_rev.lb(w), rbrev = idx.m_cst_rev.rb(w);
-                    backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
+                    backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
+ 	            t_idx::string_type patrev = pat;//TODO replace this
+                    reverse(patrev.begin(), patrev.end());
                     denominator += N1PlusFrontBack_Front(patrev, lbrev, rbrev);
                     pat.pop_back();
                 }
                 w = idx.m_cst.sibling(w);
             }
         } else {
-            t_idx::string_type patrev = pat;
-            reverse(patrev.begin(), patrev.end());
             uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-            backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
+            backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
             denominator += N1PlusFrontBack_Front(pat, lbrev, rbrev);
         }
     } else {
@@ -136,17 +134,17 @@ int discount(int c)
 {
     if (ismkn) {
         if (c == 1) {
-            if (n1[ngramsize] != 0)
-                D = D1[ngramsize];
+            if (idx.m_n1[ngramsize] != 0)
+                D = idx.m_D1[ngramsize];
         } else if (c == 2) {
-            if (n2[ngramsize] != 0)
-                D = D2[ngramsize];
+            if (idx.m_n2[ngramsize] != 0)
+                D = idx.m_D2[ngramsize];
         } else if (c >= 3) {
-            if (n3[ngramsize] != 0)
-                D = D3[ngramsize];
+            if (idx.m_n3[ngramsize] != 0)
+                D = idx.m_D3[ngramsize];
         }
     } else {
-        D = Y[ngramsize];
+        D = idx.m_Y[ngramsize];
     }
     return D;
 }
@@ -292,29 +290,27 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             N, N1, N2, N3 = N1PlusFront(); //TODO fix this
         }
         if (ismkn) {
-            double gamma = (D1[ngramsize] * N1) + (D2[ngramsize] * N2) + (D3[ngramsize] * N3);
+            double gamma = (idx.m_D1[ngramsize] * N1) + (idx.m_D2[ngramsize] * N2) + (idx.m_D3[ngramsize] * N3);
             double output = (numerator / denominator) + (gamma / denominator) * pkn(idx, pat2);
             return output;
         } else {
-            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat2);
+            double output = (numerator / denominator) + (idx.m_D * N / denominator) * pkn(idx, pat2);
             return output;
         }
     } else if (size < ngramsize && size != 1) { //for lower order ngrams
 
         int c = 0;
-        t_idx::string_type patrev = pat;
-        reverse(patrev.begin(), patrev.end());
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
+        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
         freq = rbrev - lbrev + 1;
         if (freq == 1 && lbrev != rbrev) {
             freq = 0;
         }
-        auto vrev = idx.m_cst_rev.node(lbrev, rbrev);
-        int patrev_size = patrev.size();
-
+        
+        t_idx::string_type patrev = pat;//TODO replace this
+        reverse(patrev.begin(), patrev.end());
         if (freq > 0) {
-            c = N1PlusBack(); //TODO fix this
+            c = N1PlusBack(idx.m_cst_rev.node(lbrev, rbrev),patrev); //TODO fix this
         }
         double D = discount(freq);
 
@@ -355,12 +351,12 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             if (freq > 0) {
                 N, N1, N2, N3 = N1PlusFront(); //TODO fix this
             }
-            gamma = (D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
+            gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
             return output;
         } else {
             int pat_size = pat.size();
-            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat3);
+            double output = (numerator / denominator) + (idx.m_D * N / denominator) * pkn(idx, pat3);
             return output;
         }
     } else if (size == 1 || ngramsize == 1) //for unigram
@@ -371,13 +367,13 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         freq = rbrev - lbrev + 1;
         if (freq == 1 && lbrev != rbrev)
             freq = 0;
-        auto vrev = idx.m_cst_rev.node(lbrev, rbrev);
+
         int pat_size = pat.size();
         if (freq > 0) {
             N = N1PlusFront(); //TODO fix this
         }
 
-        double denominator = unigramdenominator;
+        double denominator = idx.m_N1plus_dotdot;
 
         if (!ismkn) {
             double output = c / denominator;
@@ -393,10 +389,10 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
 
             double gamma = 0;
             int N1 = 0, N2 = 0, N3 = 0;
-            N1 = n1[1];
-            N2 = n2[1];
-            N1 = N3plus;
-            gamma = (idx.m_D1[size] * N1) + (D2[size] * N2) + (D3[size] * N3);
+            N1 = idx.m_n1[1];
+            N2 = idx.m_n2[1];
+            N1 = idx.m_N3plus_dot;
+            gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
             return output;
         }
