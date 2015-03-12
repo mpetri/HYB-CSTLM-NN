@@ -6,10 +6,18 @@
 #include <iostream>
 #include <math.h>
 #include <algorithm>
+#include <string>
 
 #include "utils.hpp"
 #include "collection.hpp"
 #include "index_succinct.hpp"
+
+int N = 0, N1 = 0, N2 = 0, N3 = 0, denominator = 0;
+int ngramsize;
+bool ismkn;
+int STARTTAG = 3;
+int ENDTAG = 4;
+int freq = 0;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -46,11 +54,11 @@ parse_args(int argc, const char* argv[])
             args.collection_dir = optarg;
             break;
         case 'm':
-            if (optarg == "true")
+            if (strcmp(optarg, "true") == 0)
                 args.ismkn = true;
             break;
         case 'n':
-            args.ngramsize = stoi((string)optarg);
+            args.ngramsize = atoi(optarg);
             break;
         }
     }
@@ -63,9 +71,8 @@ parse_args(int argc, const char* argv[])
 }
 
 template <class t_idx>
-int N1PlusFrontBack_Back(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
+void N1PlusFrontBack_Back(const t_idx& idx, std::vector<uint64_t> pat, uint64_t lb, uint64_t rb)
 {
-    int denominator = 0;
     auto v = idx.m_cst_rev.node(lb, rb);
     int size = pat.size();
     freq = rb - lb + 1;
@@ -86,15 +93,12 @@ int N1PlusFrontBack_Back(const t_idx& idx, t_idx::string_type pat, uint64_t lb, 
                 denominator = 1;
             }
         }
-    } else {
     }
-    return denominator;
 }
 
 template <class t_idx>
-int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb, uint64_t rb)
+void N1PlusFrontBack_Front(const t_idx& idx, std::vector<uint64_t> pat, uint64_t lb, uint64_t rb)
 {
-    int denominator = 0;
     auto v = idx.m_cst.node(lb, rb);
     freq = rb - lb + 1;
     if (freq == 1 && lb != rb) {
@@ -104,17 +108,18 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
     if (freq > 0) {
         if (size == idx.m_cst.depth(v)) {
             auto w = idx.m_cst.select_child(v, 1);
-            int symbol = idx.m_cst.edge(w, pat_size + 1);
+            int symbol = idx.m_cst.edge(w, size + 1);
             int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 1) {
+                    N++;
                     pat.push_back(symbol);
                     uint64_t lbrev = idx.m_cst_rev.lb(w), rbrev = idx.m_cst_rev.rb(w);
                     backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
- 	            t_idx::string_type patrev = pat;//TODO replace this
+                    std::vector<uint64_t> patrev = pat; //TODO replace this
                     reverse(patrev.begin(), patrev.end());
-                    denominator += N1PlusFrontBack_Front(patrev, lbrev, rbrev);
+                    N1PlusFrontBack_Back(idx, patrev, lbrev, rbrev);
                     pat.pop_back();
                 }
                 w = idx.m_cst.sibling(w);
@@ -122,16 +127,15 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
         } else {
             uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
             backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
-            denominator += N1PlusFrontBack_Front(pat, lbrev, rbrev);
+            N1PlusFrontBack_Back(idx, pat, lbrev, rbrev);
         }
-    } else {
     }
-    return denominator;
 }
 
 template <class t_idx>
-int discount(int c)
+int discount(const t_idx& idx, int c)
 {
+    double D = 0;
     if (ismkn) {
         if (c == 1) {
             if (idx.m_n1[ngramsize] != 0)
@@ -150,13 +154,11 @@ int discount(int c)
 }
 
 template <class t_idx>
-int N1PlusFront(node_type node, t_idx::string_type pat)
+void N1PlusFront(const t_idx& idx, const typename t_idx::node_type& node, std::vector<uint64_t> pat)
 {
-    int N = 0, N1 = 0, N2 = 0, N3 = 0;
     int pat_size = pat.size();
     int deg = idx.m_cst.degree(node);
     if (pat_size == idx.m_cst.depth(node)) {
-        N = 0;
         if (!ismkn) {
             auto w = idx.m_cst.select_child(node, 1);
             int symbol = idx.m_cst.edge(w, pat_size + 1);
@@ -171,8 +173,8 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, pat_size + 1);
                 if (symbol != 1) {
-                    leftbound = idx.m_cst.lb(w);
-                    rightbound = idx.m_cst.rb(w);
+                    uint64_t leftbound = idx.m_cst.lb(w);
+                    uint64_t rightbound = idx.m_cst.rb(w);
                     freq = rightbound - leftbound + 1;
                     if (freq == 1 && rightbound != leftbound) {
                         freq = 0;
@@ -188,7 +190,7 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
             }
         }
     } else {
-        int symbol = idx.m_cst.edge(v, pat.size() + 1);
+        int symbol = idx.m_cst.edge(node, pat.size() + 1);
         if (!ismkn) {
             if (symbol != 1) {
                 N = 1;
@@ -197,8 +199,8 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
         if (ismkn) {
             if (symbol != 1) {
                 if (ismkn) {
-                    leftbound = idx.m_cst.lb(node);
-                    rightbound = idx.m_cst.rb(node);
+                    uint64_t leftbound = idx.m_cst.lb(node);
+                    uint64_t rightbound = idx.m_cst.rb(node);
                     freq = rightbound - leftbound + 1;
 
                     if (freq == 1 && rightbound != leftbound) {
@@ -214,11 +216,10 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
             }
         }
     }
-    return N, N1, N2, N3; //TODO fix this
 }
 
 template <class t_idx>
-int N1PlusBack(node_type node, t_idx::string_type patrev)
+int N1PlusBack(const t_idx& idx, const typename t_idx::node_type& node, std::vector<uint64_t> patrev)
 {
     int c = 0;
     int patrev_size = patrev;
@@ -240,7 +241,7 @@ int N1PlusBack(node_type node, t_idx::string_type patrev)
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx, t_idx::string_type pat)
+double pkn(const t_idx& idx, std::vector<uint64_t> pat)
 {
     int size = pat.size();
 
@@ -255,17 +256,14 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         if (c == 1 && lb != rb) {
             c = 0;
         }
-        double D = discount(c);
+        double D = discount(idx, c);
 
         double numerator = 0;
         if (c - D > 0) {
             numerator = c - D;
         }
 
-        double denominator = 0;
-        int N = 0;
-
-        cst_sct3<csa_sada_int<> >::string_type pat2 = pat;
+        std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
 
         pat.pop_back();
@@ -278,23 +276,21 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         }
         denominator = freq;
         if (denominator == 0) {
-            cout << pat << endl;
             cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
             double output = pkn(idx, pat2); //TODO check this
             return output;
         }
         auto v = idx.m_cst.node(lb, rb);
-        int N1 = 0, N2 = 0, N3 = 0;
         int pat_size = pat.size();
         if (freq > 0) {
-            N, N1, N2, N3 = N1PlusFront(); //TODO fix this
+            N1PlusFront(idx, v, pat);
         }
         if (ismkn) {
             double gamma = (idx.m_D1[ngramsize] * N1) + (idx.m_D2[ngramsize] * N2) + (idx.m_D3[ngramsize] * N3);
             double output = (numerator / denominator) + (gamma / denominator) * pkn(idx, pat2);
             return output;
         } else {
-            double output = (numerator / denominator) + (idx.m_D * N / denominator) * pkn(idx, pat2);
+            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat2);
             return output;
         }
     } else if (size < ngramsize && size != 1) { //for lower order ngrams
@@ -306,20 +302,20 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
         if (freq == 1 && lbrev != rbrev) {
             freq = 0;
         }
-        
-        t_idx::string_type patrev = pat;//TODO replace this
+
+        std::vector<uint64_t> patrev = pat; //TODO replace this
         reverse(patrev.begin(), patrev.end());
         if (freq > 0) {
-            c = N1PlusBack(idx.m_cst_rev.node(lbrev, rbrev),patrev); //TODO fix this
+            c = N1PlusBack(idx, idx.m_cst_rev.node(lbrev, rbrev), patrev); //TODO fix this
         }
-        double D = discount(freq);
+        double D = discount(idx, freq);
 
         double numerator = 0;
         if (c - D > 0) {
             numerator = c - D;
         }
 
-        cst_sct3<csa_sada_int<> >::string_type pat3 = pat;
+        std::vector<uint64_t> pat3 = pat;
         pat3.erase(pat3.begin());
 
         pat.pop_back();
@@ -331,56 +327,45 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             freq = 0;
         }
         double denominator = 0;
-        int N = 0;
         if (freq != 1) {
-            N, denominator = N1PlusFrontBack_Front(pat, lb, rb); // TODO return N here separatetely
+            N1PlusFrontBack_Front(idx, pat, lb, rb);
         } else {
             denominator = 1;
-            N = XXX; //TODO fix this
+            N = 1; //TODO fix this
         }
         if (denominator == 0) {
             cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
             double output = pkn(idx, pat3);
-            return output; //TODO check
+            return output;
         }
         auto v = idx.m_cst.node(lb, rb);
 
         if (ismkn) {
             double gamma = 0;
-            int N1 = 0, N2 = 0, N3 = 0;
             if (freq > 0) {
-                N, N1, N2, N3 = N1PlusFront(); //TODO fix this
+                N1PlusFront(idx, v, pat);
             }
             gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
             return output;
         } else {
             int pat_size = pat.size();
-            double output = (numerator / denominator) + (idx.m_D * N / denominator) * pkn(idx, pat3);
+            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat3);
             return output;
         }
     } else if (size == 1 || ngramsize == 1) //for unigram
     {
-        int c = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-        freq = rbrev - lbrev + 1;
-        if (freq == 1 && lbrev != rbrev)
-            freq = 0;
 
-        int pat_size = pat.size();
-        if (freq > 0) {
-            N = N1PlusFront(); //TODO fix this
-        }
-
-        double denominator = idx.m_N1plus_dotdot;
-
+        denominator = idx.m_N1plus_dotdot;
+        int c = N1PlusBack(idx,idx.m_cst_rev.node(lbrev, rbrev),pat);
         if (!ismkn) {
             double output = c / denominator;
             return output;
         } else {
 
-            double D = discount(freq);
+            double D = discount(idx, freq);
 
             double numerator = 0;
             if (c - D > 0) {
@@ -388,10 +373,9 @@ double pkn(const t_idx& idx, t_idx::string_type pat)
             }
 
             double gamma = 0;
-            int N1 = 0, N2 = 0, N3 = 0;
             N1 = idx.m_n1[1];
             N2 = idx.m_n2[1];
-            N1 = idx.m_N3plus_dot;
+            N3 = idx.m_N3plus_dot;
             gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
             return output;
@@ -404,16 +388,16 @@ template <class t_idx>
 double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 {
     double final_score = 0;
-    std::deque<uint64_t> pattern;
+    std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
-        pattern.push_back(word); //TODO check the pattern
+        pattern_deq.push_back(word); //TODO check the pattern
         if (word == STARTTAG)
             continue;
         if (pattern_deq.size() > ngramsize) {
             pattern_deq.pop_front();
         }
-        cst_sct3<csa_sada_int<> >::string_type pattern(pattern_deq.begin(), pattern_deq.end());
-        double score = pkn(idx, pattern);
+        std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
+        double score = pkn(idx, pattern);//TODO replace it
         final_score += log10(score);
     }
     return final_score;
@@ -423,8 +407,7 @@ template <class t_idx>
 void run_queries(const t_idx& idx, const std::string& col_dir, const std::vector<std::vector<uint64_t> > patterns)
 {
     using clock = std::chrono::high_resolution_clock;
-    double perpelxity = 0;
-    double sentenceprob = 0;
+    double perplexity = 0;
     int M = 0;
     std::chrono::nanoseconds total_time(0);
     for (const auto& pattern : patterns) {
@@ -433,7 +416,7 @@ void run_queries(const t_idx& idx, const std::string& col_dir, const std::vector
         auto start = clock::now();
         double sentenceprob = run_query_knm(idx, pattern);
         auto stop = clock::now();
-        perplexity + = log10(sentenceprob);
+        perplexity += log10(sentenceprob);
         // output score
         std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
         std::cout << " -> " << sentenceprob;
