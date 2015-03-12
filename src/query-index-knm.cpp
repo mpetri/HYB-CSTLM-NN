@@ -108,7 +108,6 @@ void N1PlusFrontBack_Front(const t_idx& idx, std::vector<uint64_t> pat, uint64_t
     if (freq > 0) {
         if (size == idx.m_cst.depth(v)) {
             auto w = idx.m_cst.select_child(v, 1);
-            int symbol = idx.m_cst.edge(w, size + 1);
             int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
@@ -154,8 +153,9 @@ int discount(const t_idx& idx, int c)
 }
 
 template <class t_idx>
-void N1PlusFront(const t_idx& idx, const typename t_idx::node_type& node, std::vector<uint64_t> pat)
+void N1PlusFront(const t_idx& idx, uint64_t lb, uint64_t rb , std::vector<uint64_t> pat)
 {
+    auto node = idx.m_cst.node(lb,rb);
     int pat_size = pat.size();
     int deg = idx.m_cst.degree(node);
     if (pat_size == idx.m_cst.depth(node)) {
@@ -168,7 +168,6 @@ void N1PlusFront(const t_idx& idx, const typename t_idx::node_type& node, std::v
             }
         } else {
             auto w = idx.m_cst.select_child(node, 1);
-            int symbol = idx.m_cst.edge(w, pat_size + 1);
             int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, pat_size + 1);
@@ -219,13 +218,13 @@ void N1PlusFront(const t_idx& idx, const typename t_idx::node_type& node, std::v
 }
 
 template <class t_idx>
-int N1PlusBack(const t_idx& idx, const typename t_idx::node_type& node, std::vector<uint64_t> patrev)
+int N1PlusBack(const t_idx& idx, uint64_t lb,uint64_t rb, std::vector<uint64_t> patrev)
 {
     int c = 0;
-    int patrev_size = patrev;
+    auto node = idx.m_cst_rev.node(lb,rb);
+    int patrev_size = patrev.size();
     int deg = idx.m_cst_rev.degree(node);
     if (patrev_size == idx.m_cst_rev.depth(node)) {
-        int ind = 0;
         c = deg;
         auto w = idx.m_cst_rev.select_child(node, 1);
         int symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
@@ -244,8 +243,6 @@ template <class t_idx>
 double pkn(const t_idx& idx, std::vector<uint64_t> pat)
 {
     int size = pat.size();
-
-    uint64_t leftbound = 0, rightbound = idx.m_cst.size() - 1;
     double probability = 0;
 
     if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
@@ -280,10 +277,9 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             double output = pkn(idx, pat2); //TODO check this
             return output;
         }
-        auto v = idx.m_cst.node(lb, rb);
-        int pat_size = pat.size();
+
         if (freq > 0) {
-            N1PlusFront(idx, v, pat);
+            N1PlusFront(idx, lb, rb, pat);
         }
         if (ismkn) {
             double gamma = (idx.m_D1[ngramsize] * N1) + (idx.m_D2[ngramsize] * N2) + (idx.m_D3[ngramsize] * N3);
@@ -306,7 +302,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         std::vector<uint64_t> patrev = pat; //TODO replace this
         reverse(patrev.begin(), patrev.end());
         if (freq > 0) {
-            c = N1PlusBack(idx, idx.m_cst_rev.node(lbrev, rbrev), patrev); //TODO fix this
+            c = N1PlusBack(idx, lbrev, rbrev, patrev); //TODO fix this
         }
         double D = discount(idx, freq);
 
@@ -338,18 +334,16 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             double output = pkn(idx, pat3);
             return output;
         }
-        auto v = idx.m_cst.node(lb, rb);
 
         if (ismkn) {
             double gamma = 0;
             if (freq > 0) {
-                N1PlusFront(idx, v, pat);
+                N1PlusFront(idx, lb , rb, pat);
             }
             gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
             return output;
         } else {
-            int pat_size = pat.size();
             double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat3);
             return output;
         }
@@ -359,7 +353,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
 
         denominator = idx.m_N1plus_dotdot;
-        int c = N1PlusBack(idx,idx.m_cst_rev.node(lbrev, rbrev),pat);
+        int c = N1PlusBack(idx,lbrev, rbrev,pat);
         if (!ismkn) {
             double output = c / denominator;
             return output;
@@ -404,7 +398,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 }
 
 template <class t_idx>
-void run_queries(const t_idx& idx, const std::string& col_dir, const std::vector<std::vector<uint64_t> > patterns)
+void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -432,8 +426,6 @@ void run_queries(const t_idx& idx, const std::string& col_dir, const std::vector
 
 int main(int argc, const char* argv[])
 {
-    using clock = std::chrono::high_resolution_clock;
-
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
@@ -475,7 +467,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        run_queries(idx, args.collection_dir, patterns);
+        run_queries(idx, patterns);
     }
     return 0;
 }
