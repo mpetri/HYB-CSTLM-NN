@@ -108,11 +108,11 @@ int N1PlusFrontBack_Front(const t_idx& idx, t_idx::string_type pat, uint64_t lb,
             int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
-                if (symbol != 0 && symbol != 1) {
+                if (symbol != 1) {
                     pat.push_back(symbol);
                     t_idx::string_type patrev = pat;
                     reverse(patrev.begin(), patrev.end());
-                    uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
+                    uint64_t lbrev = idx.m_cst_rev.lb(w), rbrev = idx.m_cst_rev.rb(w);
                     backward_search(idx.m_cst_rev.csa, lbrev, rbrev, patrev.begin(), patrev.end(), lbrev, rbrev);
                     denominator += N1PlusFrontBack_Front(patrev, lbrev, rbrev);
                     pat.pop_back();
@@ -173,9 +173,8 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, pat_size + 1);
                 if (symbol != 1) {
-                    pat.push_back(symbol);
-                    leftbound = 0, rightbound = idx.m_cst.size() - 1;
-                    backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
+                    leftbound = idx.m_cst.lb(w);
+                    rightbound = idx.m_cst.rb(w);
                     freq = rightbound - leftbound + 1;
                     if (freq == 1 && rightbound != leftbound) {
                         freq = 0;
@@ -186,7 +185,6 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
                         N2 += 1;
                     else if (freq >= 3)
                         N3 += 1;
-                    pat.pop_back();
                 }
                 w = idx.m_cst.sibling(w);
             }
@@ -201,11 +199,10 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
         if (ismkn) {
             if (symbol != 1) {
                 if (ismkn) {
-                    pat.push_back(symbol);
-
-                    leftbound = 0, rightbound = idx.m_cst.size() - 1;
-                    backward_search(idx.m_cst.csa, leftbound, rightbound, pat.begin(), pat.end(), lb, rb);
+                    leftbound = idx.m_cst.lb(node);
+                    rightbound = idx.m_cst.rb(node);
                     freq = rightbound - leftbound + 1;
+
                     if (freq == 1 && rightbound != leftbound) {
                         freq = 0;
                     }
@@ -215,8 +212,6 @@ int N1PlusFront(node_type node, t_idx::string_type pat)
                         N2 += 1;
                     else if (freq >= 3)
                         N3 += 1;
-
-                    pat.pop_back();
                 }
             }
         }
