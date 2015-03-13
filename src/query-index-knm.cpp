@@ -18,8 +18,8 @@ bool ismkn;
 int STARTTAG = 3;
 int ENDTAG = 4;
 int freq = 0;
-uint64_t dot_LB=-5, dot_RB=-5;
-uint64_t dot_LB_dot=-5, dot_RB_dot=-5;
+uint64_t dot_LB = -5, dot_RB = -5;
+uint64_t dot_LB_dot = -5, dot_RB_dot = -5;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -155,9 +155,9 @@ int discount(const t_idx& idx, int c)
 }
 
 template <class t_idx>
-void N1PlusFront(const t_idx& idx, uint64_t lb, uint64_t rb , std::vector<uint64_t> pat)
+void N1PlusFront(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t> pat)
 {
-    auto node = idx.m_cst.node(lb,rb);
+    auto node = idx.m_cst.node(lb, rb);
     int pat_size = pat.size();
     int deg = idx.m_cst.degree(node);
     if (pat_size == idx.m_cst.depth(node)) {
@@ -220,10 +220,10 @@ void N1PlusFront(const t_idx& idx, uint64_t lb, uint64_t rb , std::vector<uint64
 }
 
 template <class t_idx>
-int N1PlusBack(const t_idx& idx, uint64_t lb,uint64_t rb, std::vector<uint64_t> patrev)
+int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t> patrev)
 {
     int c = 0;
-    auto node = idx.m_cst_rev.node(lb,rb);
+    auto node = idx.m_cst_rev.node(lb, rb);
     int patrev_size = patrev.size();
     int deg = idx.m_cst_rev.degree(node);
     if (patrev_size == idx.m_cst_rev.depth(node)) {
@@ -250,8 +250,8 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
     if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
         std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
-  	double backoff_prob = pkn(idx, pat2);
-        
+        double backoff_prob = pkn(idx, pat2);
+
         int c = 0;
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
         backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
@@ -296,7 +296,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
 
         std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
-  	double backoff_prob = pkn(idx, pat2);
+        double backoff_prob = pkn(idx, pat2);
 
         int c = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
@@ -323,15 +323,14 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         pat.pop_back();
 
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-	//takes care of the first call - Bigram level
-        if(dot_LB_dot==-5 && dot_RB_dot==-5)
-	{
-		dot_LB_dot = lb;
-		dot_RB_dot = rb;
-	}
+        //takes care of the first call - Bigram level
+        if (dot_LB_dot == -5 && dot_RB_dot == -5) {
+            dot_LB_dot = lb;
+            dot_RB_dot = rb;
+        }
         backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
- 	dot_LB_dot = lb;
-	dot_RB_dot = rb;
+        dot_LB_dot = lb;
+        dot_RB_dot = rb;
         freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
             freq = 0;
@@ -352,23 +351,23 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         if (ismkn) {
             double gamma = 0;
             if (freq > 0) {
-                N1PlusFront(idx, lb , rb, pat);
+                N1PlusFront(idx, lb, rb, pat);
             }
             gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-            double output = numerator / denominator + (gamma / denominator) *  backoff_prob;
+            double output = numerator / denominator + (gamma / denominator) * backoff_prob;
             return output;
         } else {
-            double output = (numerator / denominator) + (D * N / denominator) *  backoff_prob;
+            double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
             return output;
         }
     } else if (size == 1 || ngramsize == 1) //for unigram
     {
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-	dot_LB = lbrev;
-	dot_RB = rbrev;
+        dot_LB = lbrev;
+        dot_RB = rbrev;
         denominator = idx.m_N1plus_dotdot;
-        int c = N1PlusBack(idx,lbrev, rbrev,pat);
+        int c = N1PlusBack(idx, lbrev, rbrev, pat);
         if (!ismkn) {
             double output = c / denominator;
             return output;
@@ -406,7 +405,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-        double score = pkn(idx, pattern);//TODO replace it
+        double score = pkn(idx, pattern); //TODO replace it
         final_score += log10(score);
     }
     return final_score;
