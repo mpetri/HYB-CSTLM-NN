@@ -246,6 +246,10 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
     double probability = 0;
 
     if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
+        std::vector<uint64_t> pat2 = pat;
+        pat2.erase(pat2.begin());
+  	double backoff_prob = pkn(idx, pat2);
+        
         int c = 0;
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
         backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
@@ -260,8 +264,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             numerator = c - D;
         }
 
-        std::vector<uint64_t> pat2 = pat;
-        pat2.erase(pat2.begin());
+
 
         pat.pop_back();
         lb = 0;
@@ -274,7 +277,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         denominator = freq;
         if (denominator == 0) {
             cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-            double output = pkn(idx, pat2); //TODO check this
+            double output = backoff_prob; //TODO check this
             return output;
         }
 
@@ -283,13 +286,17 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         }
         if (ismkn) {
             double gamma = (idx.m_D1[ngramsize] * N1) + (idx.m_D2[ngramsize] * N2) + (idx.m_D3[ngramsize] * N3);
-            double output = (numerator / denominator) + (gamma / denominator) * pkn(idx, pat2);
+            double output = (numerator / denominator) + (gamma / denominator) * backoff_prob;
             return output;
         } else {
-            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat2);
+            double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
             return output;
         }
     } else if (size < ngramsize && size != 1) { //for lower order ngrams
+
+        std::vector<uint64_t> pat2 = pat;
+        pat2.erase(pat2.begin());
+  	double backoff_prob = pkn(idx, pat2);
 
         int c = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
@@ -311,8 +318,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             numerator = c - D;
         }
 
-        std::vector<uint64_t> pat3 = pat;
-        pat3.erase(pat3.begin());
+
 
         pat.pop_back();
 
@@ -341,10 +347,10 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
                 N1PlusFront(idx, lb , rb, pat);
             }
             gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-            double output = numerator / denominator + (gamma / denominator) * pkn(idx, pat3);
+            double output = numerator / denominator + (gamma / denominator) *  backoff_prob;
             return output;
         } else {
-            double output = (numerator / denominator) + (D * N / denominator) * pkn(idx, pat3);
+            double output = (numerator / denominator) + (D * N / denominator) *  backoff_prob;
             return output;
         }
     } else if (size == 1 || ngramsize == 1) //for unigram
