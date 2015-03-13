@@ -5,9 +5,6 @@
 #include "utils.hpp"
 #include "collection.hpp"
 
-const int START = 3;
-const int END = 4;
-
 typedef struct cmdargs {
     std::string input_file;
     std::string collection_dir;
@@ -73,15 +70,15 @@ int main(int argc, const char* argv[])
         while (std::getline(ifile, line)) {
             std::istringstream iss(line);
             std::string word;
-            sdsl_input.push_back(START); //TODO added
+            sdsl_input.push_back(3ULL); //TODO added
             while (std::getline(iss, word, ' ')) {
                 uint64_t num = std::stoull(word);
                 sdsl_input.push_back(num);
             }
-            sdsl_input.push_back(END); //TODO added
-            sdsl_input.push_back(1ULL); // EOL
+            sdsl_input.push_back(4ULL); //TODO added
+            sdsl_input.push_back(1ULL); 
         }
-        //sdsl_input.push_back(0ULL); // EOF ///TODO Ehsan: Is it required?
+        sdsl_input.push_back(0ULL);
         sdsl::util::bit_compress(sdsl_input);
     } else {
         std::cerr << "input file does not exist." << std::endl;
