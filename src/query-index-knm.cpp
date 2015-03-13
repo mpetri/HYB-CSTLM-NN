@@ -18,6 +18,8 @@ bool ismkn;
 int STARTTAG = 3;
 int ENDTAG = 4;
 int freq = 0;
+uint64_t dot_LB=-5, dot_RB=-5;
+uint64_t dot_LB_dot=-5, dot_RB_dot=-5;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -252,7 +254,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         
         int c = 0;
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
+        backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
         c = rb - lb + 1;
         if (c == 1 && lb != rb) {
             c = 0;
@@ -264,12 +266,10 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             numerator = c - D;
         }
 
-
-
         pat.pop_back();
         lb = 0;
         rb = idx.m_cst.size() - 1;
-        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
+        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
         freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
             freq = 0;
@@ -300,7 +300,9 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
 
         int c = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
+        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
+        dot_LB = lbrev;
+        dot_RB = rbrev;
         freq = rbrev - lbrev + 1;
         if (freq == 1 && lbrev != rbrev) {
             freq = 0;
@@ -318,12 +320,18 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             numerator = c - D;
         }
 
-
-
         pat.pop_back();
 
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
+	//takes care of the first call - Bigram level
+        if(dot_LB_dot==-5 && dot_RB_dot==-5)
+	{
+		dot_LB_dot = lb;
+		dot_RB_dot = rb;
+	}
+        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
+ 	dot_LB_dot = lb;
+	dot_RB_dot = rb;
         freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
             freq = 0;
@@ -337,7 +345,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         }
         if (denominator == 0) {
             cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
-            double output = pkn(idx, pat3);
+            double output = backoff_prob;
             return output;
         }
 
@@ -357,7 +365,8 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
     {
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-
+	dot_LB = lbrev;
+	dot_RB = rbrev;
         denominator = idx.m_N1plus_dotdot;
         int c = N1PlusBack(idx,lbrev, rbrev,pat);
         if (!ismkn) {
