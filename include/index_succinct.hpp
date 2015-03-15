@@ -29,11 +29,8 @@ public:
 
 public:
     void
-    ncomputer(std::vector<uint64_t> pat, int size, uint64_t lb, uint64_t rb,std::vector<uint64_t> patt)
+    ncomputer(std::vector<uint64_t> pat, int size, uint64_t lb, uint64_t rb)
     {
-	cout<<"SIZE:::::"<<size<<endl;
-	cout<<"LB ::::::"<<lb<<" RB::::::"<<rb<<endl;
-
 	auto freq=0;
 
 	if(lb==rb)
@@ -41,21 +38,11 @@ public:
 
 	if(size!=0 && lb!=rb)
 	{
-	        backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
         	freq = rb - lb + 1;
         	if (freq == 1 && lb != rb) {
         	    freq = 0;
         	}
 	}
-	for(int i=0;i<patt.size();i++)
-	{
-		cout<<patt[i]<<" ";
-	}
-	cout<<endl;
-	std::cout << " SYMBOL:::::" <<pat[0] << " ";
-
-	cout<<"LB ::::::"<<lb<<" RB::::::"<<rb<<endl;	
-	cout<<"------------------------------------------------"<<endl;
         if (size != 0) {
             if (size == 2 && freq >= 1) {
                 m_N1plus_dotdot++;
@@ -75,62 +62,38 @@ public:
                     m_N3plus_dot++;
             }
         }
-        
 	if (size == 0) {
-            size_t ind = 0;
-
-            auto deg = m_cst.degree(m_cst.root());
-            while (ind < deg) {
-                auto w = m_cst.select_child(m_cst.root(), ind + 1);
-cout<<"****************2******************"<<endl;
-	     for(int i =0;i<extract(m_cst, w).size();i++)
-			cout<< extract(m_cst, w)[i]<< endl;
-cout<<"**********************************"<<endl;
+	    auto w = m_cst.select_child(m_cst.root(), 1);
+            int root_id = m_cst.id(m_cst.root());
+            while (m_cst.id(w) != root_id) {
                 int symbol = m_cst.edge(w, 1);
                 if (symbol != 1 && symbol != 0) {
                     pat[0] = symbol;
-		patt[0] = symbol;
-                    ncomputer(pat, size + 1,lb,rb,patt);
-		
+                    ncomputer(pat, size + 1,m_cst.lb(w),m_cst.rb(w));
                 }
-                ++ind;
+                w = m_cst.sibling(w);
             }
         } else {
             if (size + 1 <= max_ngram_count) {
                 if (freq > 0) {
                     auto node = m_cst.node(lb, rb);
-cout<<"****************3******************"<<endl;
-		     for(int i =0;i<extract(m_cst, node).size();i++)
-			cout<< extract(m_cst, node)[i]<< endl;
-cout<<"**********************************"<<endl;
                     auto depth = m_cst.depth(node);
-                    auto deg = m_cst.degree(node);
                     if (size == depth) {
-                        size_t ind = 0;
-                        while (ind < deg) {
-                            auto w = m_cst.select_child(node, ind + 1);
-cout<<"*****************4*****************"<<endl;
-		     for(int i =0;i<extract(m_cst, w).size();i++)
-			cout<< extract(m_cst, w)[i]<< endl;
-cout<<"**********************************"<<endl;
+			auto w = m_cst.select_child(node, 1);
+            		int root_id = m_cst.id(m_cst.root());
+           		while (m_cst.id(w) != root_id) {
                             auto symbol = m_cst.edge(w, depth + 1);
                             if (symbol != 1) {
                                 pat[0]=symbol;
-	patt.push_back(symbol);
-                                ncomputer(pat, size + 1,lb,rb,patt);
-	patt.pop_back();
-                                //pat.pop_back();
+                                ncomputer(pat, size + 1,m_cst.lb(w),m_cst.rb(w));
                             }
-                            ++ind;
+ 			    w = m_cst.sibling(w);
                         }
                     } else {
                         auto symbol = m_cst.edge(node, size + 1);
                         if (symbol != 1) {
                             pat[0]=symbol;
-				patt.push_back(symbol);
-                            ncomputer(pat, size + 1,lb,rb,patt);
-				patt.pop_back();
-                            //pat.pop_back();
+                            ncomputer(pat, size + 1,m_cst.lb(node),m_cst.rb(node));
                         }
                     }
                 } else {
@@ -172,14 +135,8 @@ cout<<"**********************************"<<endl;
         m_n4.resize(max_ngram_count + 1);
         uint64_t lb = 0, rb = m_cst.size() - 1;
         std::vector<uint64_t> pat(1);
-        std::vector<uint64_t> patt(1);
-        ncomputer(pat, 0,lb,rb,patt);
+        ncomputer(pat, 0,lb,rb);
 
-	cout<<m_n1.size()<<endl;
-	for(int i=0 ; i<m_n1.size();i++)
-	{
-		cout<<m_n1[i]<<" ";
-	}
         m_Y.resize(max_ngram_count + 1);
         m_D1.resize(max_ngram_count + 1);
         m_D2.resize(max_ngram_count + 1);
