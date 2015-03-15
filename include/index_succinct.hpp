@@ -53,10 +53,7 @@ public:
 	}
 	cout<<endl;
 	std::cout << " SYMBOL:::::" <<pat[0] << " ";
-	for(int i=0;i<pat.size();i++)
-	{
-		cout<<pat[i]<<" ";
-	}
+
 	cout<<"LB ::::::"<<lb<<" RB::::::"<<rb<<endl;	
 	cout<<"------------------------------------------------"<<endl;
         if (size != 0) {
@@ -85,6 +82,10 @@ public:
             auto deg = m_cst.degree(m_cst.root());
             while (ind < deg) {
                 auto w = m_cst.select_child(m_cst.root(), ind + 1);
+cout<<"****************2******************"<<endl;
+	     for(int i =0;i<extract(m_cst, w).size();i++)
+			cout<< extract(m_cst, w)[i]<< endl;
+cout<<"**********************************"<<endl;
                 int symbol = m_cst.edge(w, 1);
                 if (symbol != 1 && symbol != 0) {
                     pat[0] = symbol;
@@ -98,12 +99,20 @@ public:
             if (size + 1 <= max_ngram_count) {
                 if (freq > 0) {
                     auto node = m_cst.node(lb, rb);
+cout<<"****************3******************"<<endl;
+		     for(int i =0;i<extract(m_cst, node).size();i++)
+			cout<< extract(m_cst, node)[i]<< endl;
+cout<<"**********************************"<<endl;
                     auto depth = m_cst.depth(node);
                     auto deg = m_cst.degree(node);
                     if (size == depth) {
                         size_t ind = 0;
                         while (ind < deg) {
                             auto w = m_cst.select_child(node, ind + 1);
+cout<<"*****************4*****************"<<endl;
+		     for(int i =0;i<extract(m_cst, w).size();i++)
+			cout<< extract(m_cst, w)[i]<< endl;
+cout<<"**********************************"<<endl;
                             auto symbol = m_cst.edge(w, depth + 1);
                             if (symbol != 1) {
                                 pat[0]=symbol;
