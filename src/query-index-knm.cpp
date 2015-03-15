@@ -475,7 +475,7 @@ int main(int argc, const char* argv[])
 
 	for(int size=1;size<=ngramsize;size++)
 	{
-        	cout<<idx.m_n1[size]<<" ";
+        	cout<<idx.m_n1[size]<<" ";////XXXXX fails
 	}
 	cout<<endl;
 	cout<<"------------------------------------------------"<<endl;
