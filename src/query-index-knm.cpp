@@ -15,8 +15,8 @@
 int N = 0, N1 = 0, N2 = 0, N3 = 0, denominator = 0;
 int ngramsize;
 bool ismkn;
-int STARTTAG = 3;
-int ENDTAG = 4;
+uint64_t STARTTAG = 3;
+uint64_t ENDTAG = 4;
 int freq = 0;
 uint64_t dot_LB = -5, dot_RB = -5;
 uint64_t dot_LB_dot = -5, dot_RB_dot = -5;
@@ -36,7 +36,7 @@ print_usage(const char* program)
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
     fprintf(stdout, "  -m <ismkn>  : the flag for Modified-KN (true), or KN (false).\n");
-    fprintf(stdout, "  -n <ngramsize>  : the ngramsize integer.\n");
+    fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
 };
 
 cmdargs_t
@@ -47,6 +47,7 @@ parse_args(int argc, const char* argv[])
     args.pattern_file = "";
     args.collection_dir = "";
     args.ismkn = false;
+    args.ngramsize=1;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:m:")) != -1) {
         switch (op) {
         case 'p':
@@ -398,14 +399,14 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
-        pattern_deq.push_back(word); //TODO check the pattern
+        pattern_deq.push_back(word);
         if (word == STARTTAG)
             continue;
         if (pattern_deq.size() > ngramsize) {
             pattern_deq.pop_front();
         }
-        std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-        double score = pkn(idx, pattern); //TODO replace it
+        std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());        
+        double score = pkn(idx, pattern);
         final_score += log10(score);
     }
     return final_score;
@@ -418,8 +419,12 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     double perplexity = 0;
     int M = 0;
     std::chrono::nanoseconds total_time(0);
-    for (const auto& pattern : patterns) {
-        M += pattern.size() - 1; // -1 for discarding <s>
+    cout<<" Parameters "<<ngramsize<<endl;
+    for (std::vector<uint64_t> pattern : patterns) {
+	
+	pattern.push_back(ENDTAG);
+	pattern.insert(pattern.begin(), STARTTAG);
+        M += pattern.size() + 1; // +1 for adding </s>
         // run the query
         auto start = clock::now();
         double sentenceprob = run_query_knm(idx, pattern);
@@ -427,7 +432,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         perplexity += log10(sentenceprob);
         // output score
         std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
-        std::cout << " -> " << sentenceprob;
+        std::cout << " -> " << sentenceprob << endl;
         total_time += (stop - start);
     }
     std::cout << "time in milliseconds = "
@@ -442,6 +447,9 @@ int main(int argc, const char* argv[])
 {
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
+
+    ngramsize = args.ngramsize;
+    ismkn = args.ismkn;
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
