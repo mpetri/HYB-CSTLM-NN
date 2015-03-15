@@ -8,7 +8,7 @@
 template <class t_cst>
 class index_succinct {
 public:
-    const int max_ngram_count = 20;
+    const int max_ngram_count = 2;
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
     typedef typename t_cst::csa_type csa_type;
@@ -29,15 +29,38 @@ public:
 
 public:
     void
-    ncomputer(string_type pat, int size, uint64_t lb, uint64_t rb)
+    ncomputer(std::vector<uint64_t> pat, int size, uint64_t lb, uint64_t rb,std::vector<uint64_t> patt)
     {
-        backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
-        auto freq = rb - lb + 1;
-        if (freq == 1 && lb != rb) {
-            freq = 0;
-        }
+	cout<<"SIZE:::::"<<size<<endl;
+	cout<<"LB ::::::"<<lb<<" RB::::::"<<rb<<endl;
+
+	auto freq=0;
+
+	if(lb==rb)
+		freq = 1;
+
+	if(size!=0 && lb!=rb)
+	{
+	        backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb);
+        	freq = rb - lb + 1;
+        	if (freq == 1 && lb != rb) {
+        	    freq = 0;
+        	}
+	}
+	for(int i=0;i<patt.size();i++)
+	{
+		cout<<patt[i]<<" ";
+	}
+	cout<<endl;
+	std::cout << " SYMBOL:::::" <<pat[0] << " ";
+	for(int i=0;i<pat.size();i++)
+	{
+		cout<<pat[i]<<" ";
+	}
+	cout<<"LB ::::::"<<lb<<" RB::::::"<<rb<<endl;	
+	cout<<"------------------------------------------------"<<endl;
         if (size != 0) {
-            if (pat.size() == 2 && freq >= 1) {
+            if (size == 2 && freq >= 1) {
                 m_N1plus_dotdot++;
             }
 
@@ -58,14 +81,16 @@ public:
         
 	if (size == 0) {
             size_t ind = 0;
-            pat.resize(1);
+
             auto deg = m_cst.degree(m_cst.root());
             while (ind < deg) {
                 auto w = m_cst.select_child(m_cst.root(), ind + 1);
                 int symbol = m_cst.edge(w, 1);
-                if (symbol != 1) {
+                if (symbol != 1 && symbol != 0) {
                     pat[0] = symbol;
-                    ncomputer(pat, size + 1,lb,rb);
+		patt[0] = symbol;
+                    ncomputer(pat, size + 1,lb,rb,patt);
+		
                 }
                 ++ind;
             }
@@ -75,24 +100,28 @@ public:
                     auto node = m_cst.node(lb, rb);
                     auto depth = m_cst.depth(node);
                     auto deg = m_cst.degree(node);
-                    if (pat.size() == depth) {
+                    if (size == depth) {
                         size_t ind = 0;
                         while (ind < deg) {
                             auto w = m_cst.select_child(node, ind + 1);
                             auto symbol = m_cst.edge(w, depth + 1);
                             if (symbol != 1) {
-                                pat.push_back(symbol);
-                                ncomputer(pat, size + 1,lb,rb);
-                                pat.pop_back();
+                                pat[0]=symbol;
+	patt.push_back(symbol);
+                                ncomputer(pat, size + 1,lb,rb,patt);
+	patt.pop_back();
+                                //pat.pop_back();
                             }
                             ++ind;
                         }
                     } else {
-                        auto symbol = m_cst.edge(node, pat.size() + 1);
+                        auto symbol = m_cst.edge(node, size + 1);
                         if (symbol != 1) {
-                            pat.push_back(symbol);
-                            ncomputer(pat, size + 1,lb,rb);
-                            pat.pop_back();
+                            pat[0]=symbol;
+				patt.push_back(symbol);
+                            ncomputer(pat, size + 1,lb,rb,patt);
+				patt.pop_back();
+                            //pat.pop_back();
                         }
                     }
                 } else {
@@ -127,15 +156,21 @@ public:
         }
         std::cout << "DONE" << std::endl;
         std::cout << "COMPUTE DISCOUNTS" << std::endl;
-
+		
         m_n1.resize(max_ngram_count + 1);
         m_n2.resize(max_ngram_count + 1);
         m_n3.resize(max_ngram_count + 1);
         m_n4.resize(max_ngram_count + 1);
         uint64_t lb = 0, rb = m_cst.size() - 1;
-        string_type pat(1);
-        ncomputer(pat, 0,lb,rb);
+        std::vector<uint64_t> pat(1);
+        std::vector<uint64_t> patt(1);
+        ncomputer(pat, 0,lb,rb,patt);
 
+	cout<<m_n1.size()<<endl;
+	for(int i=0 ; i<m_n1.size();i++)
+	{
+		cout<<m_n1[i]<<" ";
+	}
         m_Y.resize(max_ngram_count + 1);
         m_D1.resize(max_ngram_count + 1);
         m_D2.resize(max_ngram_count + 1);
@@ -159,12 +194,12 @@ public:
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
-        written_bytes += sdsl::serialize(m_N1plus_dotdot,out, child,"n1plusdotdot");
-	    written_bytes += sdsl::serialize(m_N3plus_dot,out, child,"N3plusdot");
-        written_bytes += sdsl::serialize_vector(m_n1,out, child,"N1");
-        written_bytes += sdsl::serialize_vector(m_n2,out, child,"N2");
-        written_bytes += sdsl::serialize_vector(m_n3,out, child,"N3");
-        written_bytes += sdsl::serialize_vector(m_n4,out, child,"N4");
+        written_bytes += sdsl::serialize(m_N1plus_dotdot,out, child,"N1plusdotdot");
+	written_bytes += sdsl::serialize(m_N3plus_dot,out, child,"N3plusdot");
+        written_bytes += sdsl::serialize_vector(m_n1,out, child,"n1");
+        written_bytes += sdsl::serialize_vector(m_n2,out, child,"n2");
+        written_bytes += sdsl::serialize_vector(m_n3,out, child,"n3");
+        written_bytes += sdsl::serialize_vector(m_n4,out, child,"n4");
         written_bytes += sdsl::serialize_vector(m_Y,out, child,"Y");
         written_bytes += sdsl::serialize_vector(m_D1,out, child,"D1");
         written_bytes += sdsl::serialize_vector(m_D2,out, child,"D2");
@@ -177,6 +212,8 @@ public:
     {
         m_cst.load(in);
         m_cst_rev.load(in);
+
+	cout<<m_n1.size()<<endl;
 
         sdsl::read_member(m_N1plus_dotdot,in);
         sdsl::read_member(m_N3plus_dot,in);
@@ -197,8 +234,10 @@ public:
         if (this != &a) {
             m_cst.swap(a.m_cst);
             m_cst_rev.swap(a.m_cst_rev);
-	        std::swap(m_N1plus_dotdot,a.m_N1plus_dotdot);
+
+	    std::swap(m_N1plus_dotdot,a.m_N1plus_dotdot);
             std::swap(m_N3plus_dot,a.m_N3plus_dot);
+
             m_n1.swap(a.m_n1);
             m_n2.swap(a.m_n2);
             m_n3.swap(a.m_n3);
@@ -212,6 +251,6 @@ public:
 
     uint64_t vocab_size() const
     {
-        return m_cst.csa.sigma - 2;
+        return m_cst.csa.sigma - 3; // -3 is for deducting the count for 0, and 1, and 3
     }
 };
