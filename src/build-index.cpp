@@ -37,85 +37,63 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-int main(int argc, const char* argv[])
+template<class t_idx>
+void create_and_store(collection& col)
 {
     using clock = std::chrono::high_resolution_clock;
+    auto start = clock::now();
+    t_idx idx(col);
+    auto stop = clock::now();
+    std::cout << "index construction in (s): "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
+    auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+    std::ofstream ofs(output_file);
+    if (ofs.is_open()) {
+        std::cout << "writing index to file : " << output_file << std::endl;
+        auto bytes = sdsl::serialize(idx, ofs);
+        std::cout << "index size : " << bytes / (1024 * 1024) << " MB" << std::endl;
+        std::cout << "writing space usage visualization to file : " << output_file + ".html" << std::endl;
+        std::ofstream vofs(output_file + ".html");
+        sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
+    } else {
+        std::cerr << "cannot write index to file : " << output_file << std::endl;
+    }
+}
 
+int main(int argc, const char* argv[])
+{
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
     /* parse collection directory */
     collection col(args.collection_dir);
 
-    /* create index */
-
+    /* create indexes */
     {
+        // define the index type with csa_sada
         using csa_type = sdsl::csa_sada_int<>;
         using cst_type = sdsl::cst_sct3<csa_type>;
+        using index_type = index_succinct<cst_type>;
 
-        auto start = clock::now();
-        index_succinct<cst_type> idx(col);
-        auto stop = clock::now();
-        std::cout << "index construction in (s): "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
-        auto output_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-        std::ofstream ofs(output_file);
-        if (ofs.is_open()) {
-            std::cout << "writing index to file : " << output_file << std::endl;
-            auto bytes = sdsl::serialize(idx, ofs);
-            std::cout << "index size : " << bytes / (1024 * 1024) << " MB" << std::endl;
-            std::cout << "writing space usage visualization to file : " << output_file + ".html" << std::endl;
-            std::ofstream vofs(output_file + ".html");
-            sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
-        } else {
-            std::cerr << "cannot write index to file : " << output_file << std::endl;
-        }
+        create_and_store<index_type>(col);
     }
 
     {
+        // define the index type with csa_wt (wt_int)
         using csa_type = sdsl::csa_wt_int<>;
         using cst_type = sdsl::cst_sct3<csa_type>;
+        using index_type = index_succinct<cst_type>;
 
-        auto start = clock::now();
-        index_succinct<cst_type> idx(col);
-        auto stop = clock::now();
-        std::cout << "index construction in (s): "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
-        auto output_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-        std::ofstream ofs(output_file);
-        if (ofs.is_open()) {
-            std::cout << "writing index to file : " << output_file << std::endl;
-            auto bytes = sdsl::serialize(idx, ofs);
-            std::cout << "index size : " << bytes / (1024 * 1024) << " MB" << std::endl;
-            std::cout << "writing space usage visualization to file : " << output_file + ".html" << std::endl;
-            std::ofstream vofs(output_file + ".html");
-            sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
-        } else {
-            std::cerr << "cannot write index to file : " << output_file << std::endl;
-        }
+        create_and_store<index_type>(col);
     }
 
     {
+        // define the index type with csa_wt (wt_huff)
         using csa_type = sdsl::csa_wt<sdsl::wt_huff_int<> >;
         using cst_type = sdsl::cst_sct3<csa_type>;
+        using index_type = index_succinct<cst_type>;
 
-        auto start = clock::now();
-        index_succinct<cst_type> idx(col);
-        auto stop = clock::now();
-        std::cout << "index construction in (s): "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
-        auto output_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-        std::ofstream ofs(output_file);
-        if (ofs.is_open()) {
-            std::cout << "writing index to file : " << output_file << std::endl;
-            auto bytes = sdsl::serialize(idx, ofs);
-            std::cout << "index size : " << bytes / (1024 * 1024) << " MB" << std::endl;
-            std::cout << "writing space usage visualization to file : " << output_file + ".html" << std::endl;
-            std::ofstream vofs(output_file + ".html");
-            sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
-        } else {
-            std::cerr << "cannot write index to file : " << output_file << std::endl;
-        }
+        create_and_store<index_type>(col);
     }
     return 0;
 }

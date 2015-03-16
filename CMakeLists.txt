@@ -40,10 +40,12 @@ else()
 endif()
 
 add_subdirectory(external/sdsl-lite)
+add_subdirectory(external/googletest)
 
 include_directories(${CMAKE_HOME_DIRECTORY}/include
-                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
-                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
+                    ${CMAKE_HOME_DIRECTORY}/external/googletest/include
+                    ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
+                    ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
                     )
 
 add_executable(build-index.x src/build-index.cpp)
@@ -57,3 +59,8 @@ target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(query-index-stupid.x src/query-index-stupid.cpp)
 target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
+
+add_executable(unit-test.x src/unit-test.cpp)
+target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
+enable_testing()
+add_test(TestsPass unit-test.x)

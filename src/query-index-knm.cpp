@@ -47,7 +47,7 @@ parse_args(int argc, const char* argv[])
     args.pattern_file = "";
     args.collection_dir = "";
     args.ismkn = false;
-    args.ngramsize=1;
+    args.ngramsize = 1;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:m:")) != -1) {
         switch (op) {
         case 'p':
@@ -252,7 +252,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
         double backoff_prob = pkn(idx, pat2);
-	denominator = 0;
+        denominator = 0;
         int c = 0;
         uint64_t lb = 0, rb = idx.m_cst.size() - 1;
         backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
@@ -298,7 +298,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
         double backoff_prob = pkn(idx, pat2);
-	denominator = 0;
+        denominator = 0;
         int c = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
@@ -363,7 +363,7 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         }
     } else if (size == 1 || ngramsize == 1) //for unigram
     {
-	denominator = 0;
+        denominator = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
         dot_LB = lbrev;
@@ -372,8 +372,9 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
         int c = N1PlusBack(idx, lbrev, rbrev, pat);
         if (!ismkn) {
             double output = c / denominator;
-            cout<<"Lowest Order "<<" numerator is: "<<c<<" denomiator is: "<<denominator<<endl;
-	    cout<<"Lowest Order probability "<<output<<endl;
+            cout << "Lowest Order "
+                 << " numerator is: " << c << " denomiator is: " << denominator << endl;
+            cout << "Lowest Order probability " << output << endl;
 
             return output;
         } else {
@@ -409,7 +410,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
         if (pattern_deq.size() > ngramsize) {
             pattern_deq.pop_front();
         }
-        std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());        
+        std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
         double score = pkn(idx, pattern);
         final_score += log10(score);
     }
@@ -424,9 +425,9 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     int M = 0;
     std::chrono::nanoseconds total_time(0);
     for (std::vector<uint64_t> pattern : patterns) {
-	
-	pattern.push_back(ENDTAG);
-	pattern.insert(pattern.begin(), STARTTAG);
+
+        pattern.push_back(ENDTAG);
+        pattern.insert(pattern.begin(), STARTTAG);
         M += pattern.size() + 1; // +1 for adding </s>
         // run the query
         auto start = clock::now();
@@ -461,7 +462,7 @@ int main(int argc, const char* argv[])
     using csa_type = sdsl::csa_sada_int<>;
     using cst_type = sdsl::cst_sct3<csa_type>;
     index_succinct<cst_type> idx;
-    
+
     auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
         std::cout << "loading index from file '" << index_file << "'" << std::endl;
@@ -473,16 +474,14 @@ int main(int argc, const char* argv[])
 
     /* print precomputed parameters */
 
-	for(int size=1;size<=ngramsize;size++)
-	{
-        	cout<<idx.m_n1[size]<<" ";////XXXXX fails
-	}
-	cout<<endl;
-	cout<<"------------------------------------------------"<<endl;
-        cout<<idx.m_N1plus_dotdot<<endl;
-	cout<<idx.m_N3plus_dot<<endl;
-	cout<<"------------------------------------------------"<<endl;
-
+    for (int size = 1; size <= ngramsize; size++) {
+        cout << idx.m_n1[size] << " "; ////XXXXX fails
+    }
+    cout << endl;
+    cout << "------------------------------------------------" << endl;
+    cout << idx.m_N1plus_dotdot << endl;
+    cout << idx.m_N3plus_dot << endl;
+    cout << "------------------------------------------------" << endl;
 
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
@@ -506,7 +505,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-//        run_queries(idx, patterns);
+        //        run_queries(idx, patterns);
     }
     return 0;
 }

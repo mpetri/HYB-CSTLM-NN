@@ -76,7 +76,7 @@ int main(int argc, const char* argv[])
                 sdsl_input.push_back(num);
             }
             sdsl_input.push_back(4ULL); //TODO added
-            sdsl_input.push_back(1ULL); 
+            sdsl_input.push_back(1ULL);
         }
         sdsl_input.push_back(0ULL);
         sdsl::util::bit_compress(sdsl_input);
