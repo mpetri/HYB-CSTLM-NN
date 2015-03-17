@@ -8,7 +8,7 @@
 template <class t_cst>
 class index_succinct {
 public:
-    static const int max_ngram_count = 2;
+    static const int max_ngram_count = 20;
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
     typedef typename t_cst::csa_type csa_type;
@@ -161,14 +161,14 @@ public:
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += sdsl::serialize(m_N1plus_dotdot, out, child, "N1plusdotdot");
         written_bytes += sdsl::serialize(m_N3plus_dot, out, child, "N3plusdot");
-        written_bytes += sdsl::serialize_vector(m_n1, out, child, "n1");
-        written_bytes += sdsl::serialize_vector(m_n2, out, child, "n2");
-        written_bytes += sdsl::serialize_vector(m_n3, out, child, "n3");
-        written_bytes += sdsl::serialize_vector(m_n4, out, child, "n4");
-        written_bytes += sdsl::serialize_vector(m_Y, out, child, "Y");
-        written_bytes += sdsl::serialize_vector(m_D1, out, child, "D1");
-        written_bytes += sdsl::serialize_vector(m_D2, out, child, "D2");
-        written_bytes += sdsl::serialize_vector(m_D3, out, child, "D3");
+        written_bytes += sdsl::serialize(m_n1, out, child, "n1");
+        written_bytes += sdsl::serialize(m_n2, out, child, "n2");
+        written_bytes += sdsl::serialize(m_n3, out, child, "n3");
+        written_bytes += sdsl::serialize(m_n4, out, child, "n4");
+        written_bytes += sdsl::serialize(m_Y, out, child, "Y");
+        written_bytes += sdsl::serialize(m_D1, out, child, "D1");
+        written_bytes += sdsl::serialize(m_D2, out, child, "D2");
+        written_bytes += sdsl::serialize(m_D3, out, child, "D3");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -181,15 +181,15 @@ public:
         sdsl::read_member(m_N1plus_dotdot, in);
         sdsl::read_member(m_N3plus_dot, in);
 
-        sdsl::load_vector(m_n1, in);
-        sdsl::load_vector(m_n2, in);
-        sdsl::load_vector(m_n3, in);
-        sdsl::load_vector(m_n4, in);
+        sdsl::load(m_n1, in);
+        sdsl::load(m_n2, in);
+        sdsl::load(m_n3, in);
+        sdsl::load(m_n4, in);
 
-        sdsl::load_vector(m_Y, in);
-        sdsl::load_vector(m_D1, in);
-        sdsl::load_vector(m_D2, in);
-        sdsl::load_vector(m_D3, in);
+        sdsl::load(m_Y, in);
+        sdsl::load(m_D1, in);
+        sdsl::load(m_D2, in);
+        sdsl::load(m_D3, in);
     }
 
     void swap(index_succinct& a)
