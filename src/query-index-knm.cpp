@@ -473,9 +473,32 @@ int main(int argc, const char* argv[])
     }
 
     /* print precomputed parameters */
-
-    for (int size = 1; size <= ngramsize; size++) {
-        cout << idx.m_n1[size] << " "; ////XXXXX fails
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n1[size] << " ";
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n2[size] << " ";
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n3[size] << " "; 
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n4[size] << " "; 
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_D1[size] << " "; 
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_D2[size] << " ";
+    }
+    cout << endl;
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_D3[size] << " ";
     }
     cout << endl;
     cout << "------------------------------------------------" << endl;
