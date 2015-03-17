@@ -243,13 +243,9 @@ int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t>
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx, std::vector<uint64_t> pat)
+double highestorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
 {
-    int size = pat.size();
-    double probability = 0;
-
-    if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
-        std::vector<uint64_t> pat2 = pat;
+	std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
         double backoff_prob = pkn(idx, pat2);
         denominator = 0;
@@ -286,15 +282,19 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             N1PlusFront(idx, lb, rb, pat);
         }
         if (ismkn) {
-            double gamma = (idx.m_D1[ngramsize] * N1) + (idx.m_D2[ngramsize] * N2) + (idx.m_D3[ngramsize] * N3);
+            double gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
             double output = (numerator / denominator) + (gamma / denominator) * backoff_prob;
             return output;
         } else {
             double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
             return output;
         }
-    } else if (size < ngramsize && size != 1) { //for lower order ngrams
+	return 0;
+}
 
+template <class t_idx>
+double lowerorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
+{
         std::vector<uint64_t> pat2 = pat;
         pat2.erase(pat2.begin());
         double backoff_prob = pkn(idx, pat2);
@@ -361,8 +361,12 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
             return output;
         }
-    } else if (size == 1 || ngramsize == 1) //for unigram
-    {
+	return 0;
+}
+
+template <class t_idx>
+double lowestorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
+{
         denominator = 0;
         uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
         backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
@@ -394,6 +398,22 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
             double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
             return output;
         }
+	return 0;
+}
+
+template <class t_idx>
+double pkn(const t_idx& idx, std::vector<uint64_t> pat)
+{
+    int size = pat.size();
+    double probability = 0;
+
+    if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
+       	probability = highestorder(idx, pat, ngramsize);
+    } else if (size < ngramsize && size != 1) { //for lower order ngrams
+	probability = lowerorder(idx, pat, size);
+    } else if (size == 1 || ngramsize == 1) //for unigram
+    {
+	probability = lowestorder(idx, pat, size);
     }
     return probability;
 }
@@ -473,37 +493,56 @@ int main(int argc, const char* argv[])
     }
 
     /* print precomputed parameters */
+    cout << "------------------------------------------------" << endl;
+    cout << "-------------PRECOMPUTED QUANTITIES-------------" << endl;
+    cout << "------------------------------------------------" << endl;
+    cout << "n1 = ";
     for (int size = 0; size <= ngramsize; size++) {
         cout << idx.m_n1[size] << " ";
     }
     cout << endl;
+    cout << "n2 = ";
     for (int size = 0; size <= ngramsize; size++) {
         cout << idx.m_n2[size] << " ";
     }
     cout << endl;
+    cout << "n3 = ";
     for (int size = 0; size <= ngramsize; size++) {
-        cout << idx.m_n3[size] << " "; 
+        cout << idx.m_n3[size] << " ";
     }
     cout << endl;
+    cout << "n4 = ";
     for (int size = 0; size <= ngramsize; size++) {
-        cout << idx.m_n4[size] << " "; 
-    }
-    cout << endl;
-    for (int size = 0; size <= ngramsize; size++) {
-        cout << idx.m_D1[size] << " "; 
-    }
-    cout << endl;
-    for (int size = 0; size <= ngramsize; size++) {
-        cout << idx.m_D2[size] << " ";
-    }
-    cout << endl;
-    for (int size = 0; size <= ngramsize; size++) {
-        cout << idx.m_D3[size] << " ";
+        cout << idx.m_n4[size] << " ";
     }
     cout << endl;
     cout << "------------------------------------------------" << endl;
-    cout << idx.m_N1plus_dotdot << endl;
-    cout << idx.m_N3plus_dot << endl;
+    cout << "Y = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_Y[size] << " ";
+    }
+    if (ismkn) {
+        cout << endl;
+        cout << "D1 = ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D1[size] << " ";
+        }
+        cout << endl;
+        cout << "D2 = ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D2[size] << " ";
+        }
+        cout << endl;
+        cout << "D3+= ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D3[size] << " ";
+        }
+    }
+    cout << endl;
+    cout << "------------------------------------------------" << endl;
+    cout << "N1+(..) = " << idx.m_N1plus_dotdot << endl;
+    cout << "N3+(.) = " << idx.m_N3plus_dot << endl;
+    cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
 
     /* parse pattern file */
@@ -528,7 +567,7 @@ int main(int argc, const char* argv[])
     }
 
     {
-        //        run_queries(idx, patterns);
+        run_queries(idx, patterns);
     }
     return 0;
 }
