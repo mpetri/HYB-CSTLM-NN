@@ -18,8 +18,8 @@ bool ismkn;
 uint64_t STARTTAG = 3;
 uint64_t ENDTAG = 4;
 int freq = 0;
-uint64_t dot_LB = -5, dot_RB = -5;
-uint64_t dot_LB_dot = -5, dot_RB_dot = -5;
+uint64_t dot_LB = 0, dot_RB = 0;
+uint64_t dot_LB_dot = 0, dot_RB_dot = 0;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -243,77 +243,172 @@ int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t>
 }
 
 template <class t_idx>
-double highestorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
+double highestorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
 {
-	std::vector<uint64_t> pat2 = pat;
-        pat2.erase(pat2.begin());
-        double backoff_prob = pkn(idx, pat2);
-        denominator = 0;
-        int c = 0;
-        uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-        backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
-        c = rb - lb + 1;
-        if (c == 1 && lb != rb) {
-            c = 0;
-        }
-        double D = discount(idx, c);
+    std::vector<uint64_t> pat2 = pat;
+    pat2.erase(pat2.begin());
+    double backoff_prob = pkn(idx, pat2);
+    denominator = 0;
+    int c = 0;
+    uint64_t lb = 0, rb= idx.m_cst_rev.size() - 1;
 
-        double numerator = 0;
-        if (c - D > 0) {
-            numerator = c - D;
-        }
+    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
+    backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), lb, rb);
+    cout << "XXXdot_LB= " << lb << "  dot_RB= " << rb << endl;
 
-        pat.pop_back();
-        lb = 0;
-        rb = idx.m_cst.size() - 1;
-        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
-        freq = rb - lb + 1;
-        if (freq == 1 && lb != rb) {
-            freq = 0;
-        }
-        denominator = freq;
-        if (denominator == 0) {
-            cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-            double output = backoff_prob; //TODO check this
-            return output;
-        }
+    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
+    backward_search(idx.m_cst_rev.csa, dot_LB , dot_RB, pat.rbegin()+1, pat.rend(), dot_LB , dot_RB);
+    cout << "XXXdot_LB= " << dot_LB  << "  dot_RB= " << dot_RB << endl;
 
-        if (freq > 0) {
-            N1PlusFront(idx, lb, rb, pat);
-        }
-        if (ismkn) {
-            double gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-            double output = (numerator / denominator) + (gamma / denominator) * backoff_prob;
-            return output;
-        } else {
-            double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
-            return output;
-        }
-	return 0;
+	std::exit(1);
+
+
+
+    c = dot_LB - dot_RB + 1;
+    if (c == 1 && dot_LB != dot_RB) {
+        c = 0;
+    }
+    double D = discount(idx, c);
+
+    double numerator = 0;
+    if (c - D > 0) {
+        numerator = c - D;
+    }
+
+    pat.pop_back();
+
+    if (dot_LB_dot == 0 && dot_RB_dot == 0) {
+        dot_LB_dot = 0;
+        dot_RB_dot = idx.m_cst.size() - 1;
+    }
+    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_LB_dot= " << dot_RB_dot << endl;
+    backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
+    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_LB_dot= " << dot_RB_dot << endl;
+    freq = dot_RB_dot - dot_RB_dot + 1;
+    if (freq == 1 && dot_LB_dot != dot_RB_dot) {
+        freq = 0;
+    }
+
+    if (denominator == 0) {
+        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+        double output = backoff_prob; //TODO check this
+        return output;
+    }
+
+    if (freq > 0) {
+        N1PlusFront(idx, dot_LB_dot, dot_RB_dot, pat);
+    }
+    if (ismkn) {
+        double gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
+        double output = (numerator / denominator) + (gamma / denominator) * backoff_prob;
+        return output;
+    } else {
+        double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
+        cout << "Highest Order"
+             << " N is: " << N << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
+        cout << "Highest Order probability " << output << endl;
+        cout << "------------------------------------------------" << endl;
+        return output;
+    }
+    return 0;
 }
 
 template <class t_idx>
-double lowerorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
+double lowerorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
 {
-        std::vector<uint64_t> pat2 = pat;
-        pat2.erase(pat2.begin());
-        double backoff_prob = pkn(idx, pat2);
-        denominator = 0;
-        int c = 0;
-        uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
-        dot_LB = lbrev;
-        dot_RB = rbrev;
-        freq = rbrev - lbrev + 1;
-        if (freq == 1 && lbrev != rbrev) {
-            freq = 0;
-        }
+    std::vector<uint64_t> pat2 = pat;
+    pat2.erase(pat2.begin());
+    double backoff_prob = pkn(idx, pat2);
+    denominator = 0;
+    int c = 0;
+    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
 
-        std::vector<uint64_t> patrev = pat; //TODO replace this
-        reverse(patrev.begin(), patrev.end());
+    backward_search(idx.m_cst_rev.csa, dot_LB, dot_RB, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
+
+    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
+    freq = dot_RB - dot_LB + 1;
+    if (freq == 1 && dot_LB != dot_RB) {
+        freq = 0;
+    }
+
+    std::vector<uint64_t> patrev = pat; //TODO replace this
+    reverse(patrev.begin(), patrev.end());
+    if (freq > 0) {
+        c = N1PlusBack(idx, dot_LB, dot_RB, patrev); //TODO fix this
+    }
+    double D = discount(idx, freq);
+
+    double numerator = 0;
+    if (c - D > 0) {
+        numerator = c - D;
+    }
+
+    pat.pop_back();
+
+    //takes care of the first call - Bigram level
+    if (dot_LB_dot == 0 && dot_RB_dot == 0) {
+        dot_LB_dot = 0;
+        dot_RB_dot = idx.m_cst.size() - 1;
+    }
+    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_RB_dot= " << dot_RB_dot << endl;
+    backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
+    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_RB_dot= " << dot_RB_dot << endl;
+    freq = dot_RB_dot - dot_LB_dot + 1;
+    if (freq == 1 && dot_LB_dot != dot_RB_dot) {
+        freq = 0;
+    }
+    double denominator = 0;
+    if (freq != 1) {
+        N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);
+    } else {
+        denominator = 1;
+        N = 1; //TODO fix this
+    }
+    if (denominator == 0) {
+        cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
+        double output = backoff_prob;
+        return output;
+    }
+
+    if (ismkn) {
+        double gamma = 0;
         if (freq > 0) {
-            c = N1PlusBack(idx, lbrev, rbrev, patrev); //TODO fix this
+            N1PlusFront(idx, dot_LB_dot, dot_RB_dot, pat);
         }
+        gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
+        double output = numerator / denominator + (gamma / denominator) * backoff_prob;
+        return output;
+    } else {
+        double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
+        cout << "Lower Order"
+             << " N is: " << N << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
+        cout << "Lower Order probability " << output << endl;
+        cout << "------------------------------------------------" << endl;
+        return output;
+    }
+    return 0;
+}
+
+template <class t_idx>
+double lowestorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
+{
+    denominator = 0;
+    uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
+    backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
+    dot_LB = lbrev;
+    dot_RB = rbrev;
+    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
+    denominator = idx.m_N1plus_dotdot;
+    int c = N1PlusBack(idx, lbrev, rbrev, pat);
+    if (!ismkn) {
+        double output = (double)c / denominator;
+        cout << "Lowest Order numerator is: "
+             << c << " denomiator is: " << denominator << endl;
+        cout << "Lowest Order probability " << output << endl;
+        cout << "------------------------------------------------" << endl;
+        return output;
+    } else {
+
         double D = discount(idx, freq);
 
         double numerator = 0;
@@ -321,84 +416,15 @@ double lowerorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
             numerator = c - D;
         }
 
-        pat.pop_back();
-
-        uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-        //takes care of the first call - Bigram level
-        if (dot_LB_dot == -5 && dot_RB_dot == -5) {
-            dot_LB_dot = lb;
-            dot_RB_dot = rb;
-        }
-        backward_search(idx.m_cst.csa, lb, rb, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
-        dot_LB_dot = lb;
-        dot_RB_dot = rb;
-        freq = rb - lb + 1;
-        if (freq == 1 && lb != rb) {
-            freq = 0;
-        }
-        double denominator = 0;
-        if (freq != 1) {
-            N1PlusFrontBack_Front(idx, pat, lb, rb);
-        } else {
-            denominator = 1;
-            N = 1; //TODO fix this
-        }
-        if (denominator == 0) {
-            cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
-            double output = backoff_prob;
-            return output;
-        }
-
-        if (ismkn) {
-            double gamma = 0;
-            if (freq > 0) {
-                N1PlusFront(idx, lb, rb, pat);
-            }
-            gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-            double output = numerator / denominator + (gamma / denominator) * backoff_prob;
-            return output;
-        } else {
-            double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
-            return output;
-        }
-	return 0;
-}
-
-template <class t_idx>
-double lowestorder(const t_idx& idx, std::vector<uint64_t> pat,int size)
-{
-        denominator = 0;
-        uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-        backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-        dot_LB = lbrev;
-        dot_RB = rbrev;
-        denominator = idx.m_N1plus_dotdot;
-        int c = N1PlusBack(idx, lbrev, rbrev, pat);
-        if (!ismkn) {
-            double output = c / denominator;
-            cout << "Lowest Order "
-                 << " numerator is: " << c << " denomiator is: " << denominator << endl;
-            cout << "Lowest Order probability " << output << endl;
-
-            return output;
-        } else {
-
-            double D = discount(idx, freq);
-
-            double numerator = 0;
-            if (c - D > 0) {
-                numerator = c - D;
-            }
-
-            double gamma = 0;
-            N1 = idx.m_n1[1];
-            N2 = idx.m_n2[1];
-            N3 = idx.m_N3plus_dot;
-            gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-            double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
-            return output;
-        }
-	return 0;
+        double gamma = 0;
+        N1 = idx.m_n1[1];
+        N2 = idx.m_n2[1];
+        N3 = idx.m_N3plus_dot;
+        gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
+        double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
+        return output;
+    }
+    return 0;
 }
 
 template <class t_idx>
@@ -407,14 +433,14 @@ double pkn(const t_idx& idx, std::vector<uint64_t> pat)
     int size = pat.size();
     double probability = 0;
 
-    if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) { //for the highest order ngram, or the ngram that starts with <s>
-       	probability = highestorder(idx, pat, ngramsize);
-    } else if (size < ngramsize && size != 1) { //for lower order ngrams
-	probability = lowerorder(idx, pat, size);
-    } else if (size == 1 || ngramsize == 1) //for unigram
-    {
-	probability = lowestorder(idx, pat, size);
+    if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) {
+        probability = highestorder(idx, pat, ngramsize);
+    } else if (size < ngramsize && size != 1) {
+        probability = lowerorder(idx, pat, size);
+    } else if (size == 1 || ngramsize == 1) {
+        probability = lowestorder(idx, pat, size);
     }
+
     return probability;
 }
 
@@ -424,6 +450,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
+        cout << "------------------------------------------------" << endl;
         pattern_deq.push_back(word);
         if (word == STARTTAG)
             continue;
@@ -431,8 +458,14 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
+        cout << "PATTERN is = ";
+        for (int i = 0; i < pattern.size(); i++)
+            cout << pattern[i] << " ";
+        cout << endl;
+
         double score = pkn(idx, pattern);
         final_score += log10(score);
+        cout << "------------------------------------------------" << endl;
     }
     return final_score;
 }
