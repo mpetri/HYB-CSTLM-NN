@@ -250,18 +250,22 @@ double highestorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
     double backoff_prob = pkn(idx, pat2);
     denominator = 0;
     int c = 0;
-    uint64_t lb = 0, rb= idx.m_cst_rev.size() - 1;
+
+    ////////////////////////////////////////////////////////////////////////////
+    uint64_t lb = 11, rb= idx.m_cst_rev.size() - 1;
 
     cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
     backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), lb, rb);
+    cout<<&(*(pat.rbegin()+1))<<endl;
+    cout<<&(*(pat.rend()-1))<<endl;
     cout << "XXXdot_LB= " << lb << "  dot_RB= " << rb << endl;
-
     cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
-    backward_search(idx.m_cst_rev.csa, dot_LB , dot_RB, pat.rbegin()+1, pat.rend(), dot_LB , dot_RB);
+
+    backward_search(idx.m_cst_rev.csa, dot_LB , dot_RB, pat.rbegin()+1, pat.rend(), dot_LB , dot_RB);//TODO BOUNDS are not working
     cout << "XXXdot_LB= " << dot_LB  << "  dot_RB= " << dot_RB << endl;
 
 	std::exit(1);
-
+    ////////////////////////////////////////////////////////////////////////////
 
 
     c = dot_LB - dot_RB + 1;
