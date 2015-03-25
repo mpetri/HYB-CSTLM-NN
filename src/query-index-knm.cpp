@@ -12,14 +12,11 @@
 #include "collection.hpp"
 #include "index_succinct.hpp"
 
-int N = 0, N1 = 0, N2 = 0, N3 = 0, denominator = 0;
 int ngramsize;
 bool ismkn;
 uint64_t STARTTAG = 3;
 uint64_t ENDTAG = 4;
 int freq = 0;
-uint64_t dot_LB = 0, dot_RB = 0;
-uint64_t dot_LB_dot = 0, dot_RB_dot = 0;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -73,159 +70,13 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_idx>
-void N1PlusFrontBack_Back(const t_idx& idx, std::vector<uint64_t> pat, uint64_t lb, uint64_t rb)
-{
-    auto v = idx.m_cst_rev.node(lb, rb);
-    int size = pat.size();
-    freq = rb - lb + 1;
-    if (freq == 1 && lb != rb) {
-        freq = 0;
-    }
-    if (freq > 0) {
-        if (size == idx.m_cst_rev.depth(v)) {
-            auto w = idx.m_cst_rev.select_child(v, 1);
-            int symbol = idx.m_cst_rev.edge(w, size + 1);
-            denominator = idx.m_cst_rev.degree(v);
-            if (symbol == 1) {
-                denominator = denominator - 1;
-            }
-        } else {
-            int symbol = idx.m_cst_rev.edge(v, size + 1);
-            if (symbol != 1) {
-                denominator = 1;
-            }
-        }
-    }
-}
 
+// computes N_1+( * abc )
 template <class t_idx>
-void N1PlusFrontBack_Front(const t_idx& idx, std::vector<uint64_t> pat, uint64_t lb, uint64_t rb)
-{
-    auto v = idx.m_cst.node(lb, rb);
-    freq = rb - lb + 1;
-    if (freq == 1 && lb != rb) {
-        freq = 0;
-    }
-    int size = pat.size();
-    if (freq > 0) {
-        if (size == idx.m_cst.depth(v)) {
-            auto w = idx.m_cst.select_child(v, 1);
-            int root_id = idx.m_cst.id(idx.m_cst.root());
-            while (idx.m_cst.id(w) != root_id) {
-                int symbol = idx.m_cst.edge(w, size + 1);
-                if (symbol != 1) {
-                    N++;
-                    pat.push_back(symbol);
-                    uint64_t lbrev = idx.m_cst_rev.lb(w), rbrev = idx.m_cst_rev.rb(w);
-                    backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
-                    std::vector<uint64_t> patrev = pat; //TODO replace this
-                    reverse(patrev.begin(), patrev.end());
-                    N1PlusFrontBack_Back(idx, patrev, lbrev, rbrev);
-                    pat.pop_back();
-                }
-                w = idx.m_cst.sibling(w);
-            }
-        } else {
-            uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-            backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.rbegin(), pat.rend(), lbrev, rbrev);
-            N1PlusFrontBack_Back(idx, pat, lbrev, rbrev);
-        }
-    }
-}
-
-template <class t_idx>
-int discount(const t_idx& idx, int c)
-{
-    double D = 0;
-    if (ismkn) {
-        if (c == 1) {
-            if (idx.m_n1[ngramsize] != 0)
-                D = idx.m_D1[ngramsize];
-        } else if (c == 2) {
-            if (idx.m_n2[ngramsize] != 0)
-                D = idx.m_D2[ngramsize];
-        } else if (c >= 3) {
-            if (idx.m_n3[ngramsize] != 0)
-                D = idx.m_D3[ngramsize];
-        }
-    } else {
-        D = idx.m_Y[ngramsize];
-    }
-    return D;
-}
-
-template <class t_idx>
-void N1PlusFront(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t> pat)
-{
-    auto node = idx.m_cst.node(lb, rb);
-    int pat_size = pat.size();
-    int deg = idx.m_cst.degree(node);
-    if (pat_size == idx.m_cst.depth(node)) {
-        if (!ismkn) {
-            auto w = idx.m_cst.select_child(node, 1);
-            int symbol = idx.m_cst.edge(w, pat_size + 1);
-            N = deg;
-            if (symbol == 1) {
-                N = N - 1;
-            }
-        } else {
-            auto w = idx.m_cst.select_child(node, 1);
-            int root_id = idx.m_cst.id(idx.m_cst.root());
-            while (idx.m_cst.id(w) != root_id) {
-                int symbol = idx.m_cst.edge(w, pat_size + 1);
-                if (symbol != 1) {
-                    uint64_t leftbound = idx.m_cst.lb(w);
-                    uint64_t rightbound = idx.m_cst.rb(w);
-                    freq = rightbound - leftbound + 1;
-                    if (freq == 1 && rightbound != leftbound) {
-                        freq = 0;
-                    }
-                    if (freq == 1)
-                        N1 += 1;
-                    else if (freq == 2)
-                        N2 += 1;
-                    else if (freq >= 3)
-                        N3 += 1;
-                }
-                w = idx.m_cst.sibling(w);
-            }
-        }
-    } else {
-        int symbol = idx.m_cst.edge(node, pat.size() + 1);
-        if (!ismkn) {
-            if (symbol != 1) {
-                N = 1;
-            }
-        }
-        if (ismkn) {
-            if (symbol != 1) {
-                if (ismkn) {
-                    uint64_t leftbound = idx.m_cst.lb(node);
-                    uint64_t rightbound = idx.m_cst.rb(node);
-                    freq = rightbound - leftbound + 1;
-
-                    if (freq == 1 && rightbound != leftbound) {
-                        freq = 0;
-                    }
-                    if (freq == 1)
-                        N1 += 1;
-                    else if (freq == 2)
-                        N2 += 1;
-                    else if (freq >= 3)
-                        N3 += 1;
-                }
-            }
-        }
-    }
-}
-
-template <class t_idx>
-int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t> patrev)
+int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, int patrev_size)
 {
     int c = 0;
     auto node = idx.m_cst_rev.node(lb, rb);
-    int patrev_size = patrev.size();
     int deg = idx.m_cst_rev.degree(node);
     if (patrev_size == idx.m_cst_rev.depth(node)) {
         c = deg;
@@ -234,217 +85,101 @@ int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, std::vector<uint64_t>
         if (symbol == 1)
             c = c - 1;
     } else {
-        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1);
-        if (symbol != 1) {
+        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1); // trevor is suspicious about the symmetry with the above test!
+        if (symbol != 1) 
             c = 1;
-        }
     }
     return c;
 }
 
 template <class t_idx>
-double highestorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
+int discount(const t_idx& idx, int c)
 {
-    std::vector<uint64_t> pat2 = pat;
-    pat2.erase(pat2.begin());
-    double backoff_prob = pkn(idx, pat2);
-    denominator = 0;
-    int c = 0;
+    double D = idx.m_Y[ngramsize];
+    return D;
+}
 
-    ////////////////////////////////////////////////////////////////////////////
-    uint64_t lb = 11, rb= idx.m_cst_rev.size() - 1;
+template <class t_idx>
+double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin,
+                   std::vector<uint64_t>::iterator pattern_end,
+                   uint64_t& lb, uint64_t& rb)
+{
+    int size = std::distance(pattern_begin,pattern_end);
+    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, lb, rb);
+    uint64_t denominator = 0;
+    uint64_t c = 0;
+    cout<<"SYMBOL="<<*pattern_begin<<endl;
+    backward_search(idx.m_cst_rev.csa, lb , rb, *pattern_begin, lb , rb);
 
-    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
-    backward_search(idx.m_cst_rev.csa, lb, rb, pat.rbegin(), pat.rend(), lb, rb);
-    cout<<&(*(pat.rbegin()+1))<<endl;
-    cout<<&(*(pat.rend()-1))<<endl;
-    cout << "XXXdot_LB= " << lb << "  dot_RB= " << rb << endl;
-    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
-
-    backward_search(idx.m_cst_rev.csa, dot_LB , dot_RB, pat.rbegin()+1, pat.rend(), dot_LB , dot_RB);//TODO BOUNDS are not working
-    cout << "XXXdot_LB= " << dot_LB  << "  dot_RB= " << dot_RB << endl;
-
-	std::exit(1);
-    ////////////////////////////////////////////////////////////////////////////
-
-
-    c = dot_LB - dot_RB + 1;
-    if (c == 1 && dot_LB != dot_RB) {
+    c = rb - lb + 1;
+    if (c == 1 && lb != rb) {
         c = 0;
     }
+
     double D = discount(idx, c);
 
     double numerator = 0;
     if (c - D > 0) {
         numerator = c - D;
     }
-
-    pat.pop_back();
-
-    if (dot_LB_dot == 0 && dot_RB_dot == 0) {
-        dot_LB_dot = 0;
-        dot_RB_dot = idx.m_cst.size() - 1;
-    }
-    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_LB_dot= " << dot_RB_dot << endl;
-    backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
-    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_LB_dot= " << dot_RB_dot << endl;
-    freq = dot_RB_dot - dot_RB_dot + 1;
-    if (freq == 1 && dot_LB_dot != dot_RB_dot) {
-        freq = 0;
-    }
-
-    if (denominator == 0) {
-        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-        double output = backoff_prob; //TODO check this
-        return output;
-    }
-
-    if (freq > 0) {
-        N1PlusFront(idx, dot_LB_dot, dot_RB_dot, pat);
-    }
-    if (ismkn) {
-        double gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-        double output = (numerator / denominator) + (gamma / denominator) * backoff_prob;
-        return output;
-    } else {
-        double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
-        cout << "Highest Order"
-             << " N is: " << N << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
-        cout << "Highest Order probability " << output << endl;
-        cout << "------------------------------------------------" << endl;
-        return output;
-    }
     return 0;
 }
 
 template <class t_idx>
-double lowerorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
+double lowestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin, 
+                   std::vector<uint64_t>::iterator pattern_end,
+                   uint64_t& lb_rev, uint64_t& rb_rev)
 {
-    std::vector<uint64_t> pat2 = pat;
-    pat2.erase(pat2.begin());
-    double backoff_prob = pkn(idx, pat2);
-    denominator = 0;
-    int c = 0;
-    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
-
-    backward_search(idx.m_cst_rev.csa, dot_LB, dot_RB, pat.rbegin(), pat.rend(), dot_LB, dot_RB);
-
-    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
-    freq = dot_RB - dot_LB + 1;
-    if (freq == 1 && dot_LB != dot_RB) {
-        freq = 0;
-    }
-
-    std::vector<uint64_t> patrev = pat; //TODO replace this
-    reverse(patrev.begin(), patrev.end());
-    if (freq > 0) {
-        c = N1PlusBack(idx, dot_LB, dot_RB, patrev); //TODO fix this
-    }
-    double D = discount(idx, freq);
-
-    double numerator = 0;
-    if (c - D > 0) {
-        numerator = c - D;
-    }
-
-    pat.pop_back();
-
-    //takes care of the first call - Bigram level
-    if (dot_LB_dot == 0 && dot_RB_dot == 0) {
-        dot_LB_dot = 0;
-        dot_RB_dot = idx.m_cst.size() - 1;
-    }
-    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_RB_dot= " << dot_RB_dot << endl;
-    backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot);
-    cout << "dot_LB_dot= " << dot_LB_dot << "  dot_RB_dot= " << dot_RB_dot << endl;
-    freq = dot_RB_dot - dot_LB_dot + 1;
-    if (freq == 1 && dot_LB_dot != dot_RB_dot) {
-        freq = 0;
-    }
     double denominator = 0;
-    if (freq != 1) {
-        N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);
-    } else {
-        denominator = 1;
-        N = 1; //TODO fix this
-    }
-    if (denominator == 0) {
-        cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
-        double output = backoff_prob;
-        return output;
-    }
-
-    if (ismkn) {
-        double gamma = 0;
-        if (freq > 0) {
-            N1PlusFront(idx, dot_LB_dot, dot_RB_dot, pat);
-        }
-        gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-        double output = numerator / denominator + (gamma / denominator) * backoff_prob;
-        return output;
-    } else {
-        double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
-        cout << "Lower Order"
-             << " N is: " << N << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
-        cout << "Lower Order probability " << output << endl;
-        cout << "------------------------------------------------" << endl;
-        return output;
-    }
-    return 0;
-}
-
-template <class t_idx>
-double lowestorder(const t_idx& idx, std::vector<uint64_t> pat, int size)
-{
-    denominator = 0;
-    uint64_t lbrev = 0, rbrev = idx.m_cst_rev.size() - 1;
-    backward_search(idx.m_cst_rev.csa, lbrev, rbrev, pat.begin(), pat.end(), lbrev, rbrev);
-    dot_LB = lbrev;
-    dot_RB = rbrev;
-    cout << "dot_LB= " << dot_LB << "  dot_RB= " << dot_RB << endl;
+    int pattern_size = std::distance(pattern_begin, pattern_end);
+    lb_rev = 0;
+    rb_rev = idx.m_cst_rev.size() - 1;
+    backward_search(idx.m_cst_rev.csa, lb_rev, rb_rev, *pattern_end, lb_rev, rb_rev);
     denominator = idx.m_N1plus_dotdot;
-    int c = N1PlusBack(idx, lbrev, rbrev, pat);
-    if (!ismkn) {
-        double output = (double)c / denominator;
-        cout << "Lowest Order numerator is: "
-             << c << " denomiator is: " << denominator << endl;
-        cout << "Lowest Order probability " << output << endl;
-        cout << "------------------------------------------------" << endl;
-        return output;
-    } else {
+    int c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
+    double probability = (double)c / denominator;
+/*
+    cout << "Lowest Order numerator is: "
+    << c << " denomiator is: " << denominator << endl;
+    cout << "Lowest Order probability " << probability << endl;
+    cout << "------------------------------------------------" << endl;
+*/
+    return probability;
+}
 
-        double D = discount(idx, freq);
-
-        double numerator = 0;
-        if (c - D > 0) {
-            numerator = c - D;
-        }
-
-        double gamma = 0;
-        N1 = idx.m_n1[1];
-        N2 = idx.m_n2[1];
-        N3 = idx.m_N3plus_dot;
-        gamma = (idx.m_D1[size] * N1) + (idx.m_D2[size] * N2) + (idx.m_D3[size] * N3);
-        double output = numerator / denominator + (gamma / denominator) * (1 / (double)idx.vocab_size());
-        return output;
-    }
-    return 0;
+void print(std::vector<uint64_t>::iterator pattern_begin,
+           std::vector<uint64_t>::iterator pattern_end)
+{
+	for(auto it = pattern_begin;it!=pattern_end;it++)
+        {
+		cout<<*it<<" ";
+	}
+	cout<<endl;
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx, std::vector<uint64_t> pat)
+double pkn(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin, 
+           std::vector<uint64_t>::iterator pattern_end,
+           uint64_t &lb,uint64_t &rb)
 {
-    int size = pat.size();
+    int size = std::distance(pattern_begin,pattern_end);
     double probability = 0;
-
-    if ((size == ngramsize && ngramsize != 1) || (pat[0] == STARTTAG)) {
-        probability = highestorder(idx, pat, ngramsize);
+    if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
+        cout<<".("<<lb<<","<<rb<<")."<<endl;
+        probability = highestorder(idx, pattern_begin, pattern_end, lb, rb);
+        cout<<"HIGHEST"<<endl;
+        print(pattern_begin,pattern_end);
+        cout<<"..("<<lb<<","<<rb<<").."<<endl;
+        exit(1);
     } else if (size < ngramsize && size != 1) {
-        probability = lowerorder(idx, pat, size);
+       // probability = lowerorder(idx, pat, size);
     } else if (size == 1 || ngramsize == 1) {
-        probability = lowestorder(idx, pat, size);
+        cout<<"...("<<lb<<","<<rb<<")..."<<endl;
+        probability = lowestorder(idx, pattern_begin, pattern_end, lb, rb);
+        cout<<"LOWEST"<<endl;
+        print(pattern_begin,pattern_end);
+        cout<<"("<<lb<<","<<rb<<")"<<endl;
     }
-
     return probability;
 }
 
@@ -467,7 +202,8 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
             cout << pattern[i] << " ";
         cout << endl;
 
-        double score = pkn(idx, pattern);
+        uint64_t lb = 0, rb = idx.m_cst_rev.size() - 1;
+        double score = pkn(idx, pattern.begin(),pattern.end(), lb, rb);
         final_score += log10(score);
         cout << "------------------------------------------------" << endl;
     }
@@ -578,7 +314,7 @@ int main(int argc, const char* argv[])
     cout << endl;
     cout << "------------------------------------------------" << endl;
     cout << "N1+(..) = " << idx.m_N1plus_dotdot << endl;
-    cout << "N3+(.) = " << idx.m_N3plus_dot << endl;
+    cout << "N3+(.) = " << idx.m_N3plus_dot << endl;//FIXME
     cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
 
