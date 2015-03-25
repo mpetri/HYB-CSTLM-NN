@@ -109,7 +109,7 @@ double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_be
     uint64_t denominator = 0;
     uint64_t c = 0;
     cout<<"SYMBOL="<<*pattern_begin<<endl;
-    backward_search(idx.m_cst_rev.csa, lb , rb, *pattern_begin, lb , rb);
+    backward_search(idx.m_cst.csa, lb , rb, *pattern_begin, lb , rb);
 
     c = rb - lb + 1;
     if (c == 1 && lb != rb) {
@@ -134,7 +134,7 @@ double lowestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_beg
     int pattern_size = std::distance(pattern_begin, pattern_end);
     lb_rev = 0;
     rb_rev = idx.m_cst_rev.size() - 1;
-    backward_search(idx.m_cst_rev.csa, lb_rev, rb_rev, *pattern_end, lb_rev, rb_rev);
+    backward_search(idx.m_cst.csa, lb_rev, rb_rev, *(pattern_end-1), lb_rev, rb_rev);
     denominator = idx.m_N1plus_dotdot;
     int c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
     double probability = (double)c / denominator;
@@ -170,7 +170,6 @@ double pkn(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin,
         cout<<"HIGHEST"<<endl;
         print(pattern_begin,pattern_end);
         cout<<"..("<<lb<<","<<rb<<").."<<endl;
-        exit(1);
     } else if (size < ngramsize && size != 1) {
        // probability = lowerorder(idx, pat, size);
     } else if (size == 1 || ngramsize == 1) {
