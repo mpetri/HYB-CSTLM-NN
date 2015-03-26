@@ -102,17 +102,19 @@ int discount(const t_idx& idx, int c)
 template <class t_idx>
 double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin,
                    std::vector<uint64_t>::iterator pattern_end,
-                   uint64_t& lb, uint64_t& rb)
+                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int size = std::distance(pattern_begin,pattern_end);
-    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, lb, rb);
+    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, lb_rev, rb_rev, char_pos,d);
+    auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
-    cout<<"SYMBOL="<<*pattern_begin<<endl;
-    backward_search(idx.m_cst.csa, lb , rb, *pattern_begin, lb , rb);
-
-    c = rb - lb + 1;
-    if (c == 1 && lb != rb) {
+    cout<<"SYMBOL="<<*pattern_begin<<" d="<<d<<endl;
+    forward_search(idx.m_cst_rev, node, d , *pattern_begin, char_pos);//FIXME d should be fixed
+    lb_rev = idx.m_cst_rev.lb(node);
+    rb_rev = idx.m_cst_rev.rb(node);
+    c = rb_rev - lb_rev + 1;
+    if (c == 1 && lb_rev != rb_rev) {
         c = 0;
     }
 
@@ -126,16 +128,19 @@ double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_be
 }
 
 template <class t_idx>
-double lowestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin, 
-                   std::vector<uint64_t>::iterator pattern_end,
-                   uint64_t& lb_rev, uint64_t& rb_rev)
+double lowestorder(const t_idx& idx, const std::vector<uint64_t>::iterator pattern_begin, 
+                   const std::vector<uint64_t>::iterator pattern_end,
+                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
+    auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     double denominator = 0;
     int pattern_size = std::distance(pattern_begin, pattern_end);
-    lb_rev = 0;
-    rb_rev = idx.m_cst_rev.size() - 1;
-    backward_search(idx.m_cst.csa, lb_rev, rb_rev, *(pattern_end-1), lb_rev, rb_rev);
+    cout<<"SYMBOL="<<*pattern_begin<<" d="<<d<<endl;
+    forward_search(idx.m_cst_rev, node, d, *(pattern_end-1), char_pos);
+    d++;
     denominator = idx.m_N1plus_dotdot;
+    lb_rev = idx.m_cst_rev.lb(node);
+    rb_rev = idx.m_cst_rev.rb(node);
     int c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
     double probability = (double)c / denominator;
 /*
@@ -158,26 +163,26 @@ void print(std::vector<uint64_t>::iterator pattern_begin,
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin, 
-           std::vector<uint64_t>::iterator pattern_end,
-           uint64_t &lb,uint64_t &rb)
+double pkn(const t_idx& idx, const std::vector<uint64_t>::iterator pattern_begin, 
+           const std::vector<uint64_t>::iterator pattern_end,
+           uint64_t &lb_rev,uint64_t &rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int size = std::distance(pattern_begin,pattern_end);
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
-        cout<<".("<<lb<<","<<rb<<")."<<endl;
-        probability = highestorder(idx, pattern_begin, pattern_end, lb, rb);
+        cout<<".("<<lb_rev<<","<<rb_rev<<")."<<endl;
+        probability = highestorder(idx, pattern_begin, pattern_end, lb_rev, rb_rev, char_pos, d);
         cout<<"HIGHEST"<<endl;
         print(pattern_begin,pattern_end);
-        cout<<"..("<<lb<<","<<rb<<").."<<endl;
+        cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
     } else if (size < ngramsize && size != 1) {
        // probability = lowerorder(idx, pat, size);
     } else if (size == 1 || ngramsize == 1) {
-        cout<<"...("<<lb<<","<<rb<<")..."<<endl;
-        probability = lowestorder(idx, pattern_begin, pattern_end, lb, rb);
+        cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
+        probability = lowestorder(idx, pattern_begin, pattern_end, lb_rev, rb_rev, char_pos, d);
         cout<<"LOWEST"<<endl;
         print(pattern_begin,pattern_end);
-        cout<<"("<<lb<<","<<rb<<")"<<endl;
+        cout<<"("<<lb_rev<<","<<rb_rev<<")"<<endl;
     }
     return probability;
 }
@@ -201,8 +206,9 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
             cout << pattern[i] << " ";
         cout << endl;
 
-        uint64_t lb = 0, rb = idx.m_cst_rev.size() - 1;
-        double score = pkn(idx, pattern.begin(),pattern.end(), lb, rb);
+        uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1;
+        uint64_t char_pos=0, d=0;
+        double score = pkn(idx, pattern.begin(),pattern.end(), lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
         cout << "------------------------------------------------" << endl;
     }
