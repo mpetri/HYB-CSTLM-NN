@@ -16,7 +16,6 @@ int ngramsize;
 bool ismkn;
 uint64_t STARTTAG = 3;
 uint64_t ENDTAG = 4;
-int freq = 0;
 
 typedef struct cmdargs {
     std::string pattern_file;
