@@ -70,7 +70,7 @@ parse_args(int argc, const char* argv[])
 }
 
 
-// computes N_1+( * abc )
+// computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
 template <class t_idx>
 int N1PlusBack(const t_idx& idx, uint64_t lb, uint64_t rb, int patrev_size)
 {
@@ -165,10 +165,14 @@ double highestorder(const t_idx& idx,
     }
 
     double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
-    cout << "Highest Order"
-    << " N1plus_front is: " << N1plus_front << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
-    cout << "Highest Order probability " << output << endl;
-    cout << "------------------------------------------------" << endl;
+    cout
+    << " Highest Order"
+    << " N1plus_front is: " << N1plus_front
+    << " D is: " << D
+    << " numerator is: " << numerator 
+    << " denomiator is: " << denominator << endl
+    << " Highest Order probability " << output << endl
+    << "------------------------------------------------" << endl;
     return output;
 }
 
@@ -190,12 +194,13 @@ double lowestorder(const t_idx& idx,
     rb_rev = idx.m_cst_rev.rb(node);
     int numerator = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
     double probability = (double)numerator / denominator;
-/*
-    cout << "Lowest Order numerator is: "
-    << c << " denomiator is: " << denominator << endl;
-    cout << "Lowest Order probability " << probability << endl;
-    cout << "------------------------------------------------" << endl;
-*/
+
+    cout 
+    << "Lowest Order numerator is: "<< numerator 
+    << " denomiator is: " << denominator << endl 
+    << "Lowest Order probability " << probability << endl 
+    << "------------------------------------------------" << endl;
+
     return probability;
 }
 
