@@ -177,6 +177,56 @@ double highestorder(const t_idx& idx,
 }
 
 template <class t_idx>
+double lowerorder(const t_idx& idx,
+                  const std::vector<uint64_t>::iterator& pattern_begin,
+                  const std::vector<uint64_t>::iterator& pattern_end,
+                  uint64_t& lb, uint64_t& rb,
+                  uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
+{
+    double backoff_prob = pkn(idx, , pattern_end,
+                              lb, rb,
+                              lb_rev, rb_rev, char_pos,d);
+
+    uint64_t c = 0;
+    if(backward_search(idx.m_cst_rev.csa, dot_LB, dot_RB, pat.rbegin(), pat.rend(), dot_LB, dot_RB)){
+        c = N1PlusBack(idx, dot_LB, dot_RB, patrev); //FIXME
+    }
+
+    double D = discount(idx, freq);
+    double numerator = 0;
+    if (c - D > 0) {
+        numerator = c - D;
+    }
+
+    uint64_t denominator = 0;
+    uint64_t N1plus_front = 0;
+    if(backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot)){
+        denominator = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
+	if(XXXX){//FIXME
+        	denominator = 1;
+        	N = 1; //TODO fix this
+	}
+    }else{
+        cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
+        double output = backoff_prob;
+        return output;
+    }
+
+    double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
+    cout 
+    << "Lower Order" << endl
+    << " N1plus_front is: " << N1plus_front << endl
+    << " D is: " << D << endl
+    << " numerator is: " << numerator << endl
+    << " denomiator is: " << denominator << endl
+    << "Lower Order probability " << output << endl
+    << "------------------------------------------------" << endl;
+    return output;
+}
+
+
+
+template <class t_idx>
 double lowestorder(const t_idx& idx, 
 		   const std::vector<uint64_t>::iterator& pattern_begin, 
                    const std::vector<uint64_t>::iterator& pattern_end,
@@ -228,19 +278,19 @@ double pkn(const t_idx& idx,
         probability = highestorder(idx, pattern_begin, pattern_end, 
 				   lb, rb, 
 				   lb_rev, rb_rev, char_pos, d);
-//        cout<<"HIGHEST"<<endl;
-//        print(pattern_begin,pattern_end);
-        cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
+        cout<<".("<<lb_rev<<","<<rb_rev<<")."<<endl;
     } else if (size < ngramsize && size != 1) {
-       // probability = lowerorder(idx, pat, size);
+        cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
+        probability = lowerorder(idx, pattern_begin, pattern_end,
+				 lb, rb,
+				 lb_rev, rb_rev, char_pos, d);
+        cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
     } else if (size == 1 || ngramsize == 1) {
         cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
         probability = lowestorder(idx, pattern_begin, pattern_end, 
 				  lb, rb, 
 			  	  lb_rev, rb_rev, char_pos, d);
-//        cout<<"LOWEST"<<endl;
-//        print(pattern_begin,pattern_end);
-        cout<<"....("<<lb_rev<<","<<rb_rev<<")...."<<endl;
+        cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
     }
     return probability;
 }
