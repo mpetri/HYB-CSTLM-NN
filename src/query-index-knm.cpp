@@ -98,6 +98,32 @@ int discount(const t_idx& idx, int c)
     return D;
 }
 
+// Computes N_1+( abc * )
+template <class t_idx>
+uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, const int& pattern_size)
+{
+    // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pat'
+    auto node = idx.m_cst.node(lb, rb);
+    uint64_t deg = idx.m_cst.degree(node);
+    uint64_t N1plus_front = 0;
+    if (pat_size == idx.m_cst.depth(node)) {
+	// TODO make this an option, as you could avoid several calls otherwise
+        auto w = idx.m_cst.select_child(node, 1);
+        int symbol = idx.m_cst.edge(w, pattern_size + 1);
+        N1plus_front = deg;
+        if (symbol == 1) {
+            N1plus_front = N1plus_front - 1;
+        }
+    } else {
+        int symbol = idx.m_cst.edge(node, pattern_size + 1);
+	// TODO make this an option
+        if (symbol != 1) {
+            N1plus_front = 1;
+        }
+    }
+    return N1plus_front;
+}
+
 template <class t_idx>
 double highestorder(const t_idx& idx, 
 		    const std::vector<uint64_t>::iterator& pattern_begin,
@@ -128,10 +154,11 @@ double highestorder(const t_idx& idx,
     }
 
     uint64_t denomiator = 0;
-    uint64_t N1plus_dot = 0;
+    uint64_t N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*pattern_begin , lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_dot = N1PlusFront(idx, dot_LB_dot, dot_RB_dot, pat);//FIXME
+	int pattern_size = std::distance(pattern.begin(),pattern.end());
+        N1plus_front = N1PlusFront(idx, lb, rb, pattern_size);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         double output = backoff_prob; 
@@ -162,8 +189,8 @@ double lowestorder(const t_idx& idx,
     denominator = idx.m_N1plus_dotdot;
     lb_rev = idx.m_cst_rev.lb(node);
     rb_rev = idx.m_cst_rev.rb(node);
-    int c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
-    double probability = (double)c / denominator;
+    int numerator = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);//TODO precompute this
+    double probability = (double)numerator / denominator;
 /*
     cout << "Lowest Order numerator is: "
     << c << " denomiator is: " << denominator << endl;
