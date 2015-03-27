@@ -106,7 +106,7 @@ uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, c
     auto node = idx.m_cst.node(lb, rb);
     uint64_t deg = idx.m_cst.degree(node);
     uint64_t N1plus_front = 0;
-    if (pat_size == idx.m_cst.depth(node)) {
+    if (pattern_size == idx.m_cst.depth(node)) {
 	// TODO make this an option, as you could avoid several calls otherwise
         auto w = idx.m_cst.select_child(node, 1);
         int symbol = idx.m_cst.edge(w, pattern_size + 1);
@@ -131,7 +131,7 @@ double highestorder(const t_idx& idx,
  	            uint64_t& lb, uint64_t& rb,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    int size = std::distance(pattern_begin,pattern_end);
+    int pattern_size = std::distance(pattern_begin,pattern_end);
     double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, 
  			      lb, rb,
 			      lb_rev, rb_rev, char_pos,d);
@@ -157,7 +157,6 @@ double highestorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*pattern_begin , lb, rb)>0){
 	denominator = rb - lb + 1;
-	int pattern_size = std::distance(pattern.begin(),pattern.end());
         N1plus_front = N1PlusFront(idx, lb, rb, pattern_size);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
@@ -165,9 +164,9 @@ double highestorder(const t_idx& idx,
         return output;
     }
 
-    double output = (numerator / denominator) + (D * N / denominator) * backoff_prob;
+    double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
     cout << "Highest Order"
-    << " N is: " << N << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
+    << " N1plus_front is: " << N1plus_front << " D is: " << D << " numerator is: " << numerator << " denomiator is: " << denominator << endl;
     cout << "Highest Order probability " << output << endl;
     cout << "------------------------------------------------" << endl;
     return output;
