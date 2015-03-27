@@ -99,12 +99,16 @@ int discount(const t_idx& idx, int c)
 }
 
 template <class t_idx>
-double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_begin,
-                   std::vector<uint64_t>::iterator pattern_end,
-                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
+double highestorder(const t_idx& idx, 
+		    const std::vector<uint64_t>::iterator& pattern_begin,
+                    const std::vector<uint64_t>::iterator& pattern_end,
+ 	            uint64_t& lb_rev_prime, uint64_t& rb_rev_prime, uint64_t& char_pos_prime, uint64_t& d_prime,
+                    uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int size = std::distance(pattern_begin,pattern_end);
-    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, lb_rev, rb_rev, char_pos,d);
+    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end, 
+ 			      lb_rev_prime, rb_rev_prime, char_pos_prime, d_prime,
+			      lb_rev, rb_rev, char_pos,d);
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
@@ -127,8 +131,10 @@ double highestorder(const t_idx& idx, std::vector<uint64_t>::iterator pattern_be
 }
 
 template <class t_idx>
-double lowestorder(const t_idx& idx, const std::vector<uint64_t>::iterator pattern_begin, 
-                   const std::vector<uint64_t>::iterator pattern_end,
+double lowestorder(const t_idx& idx, 
+		   const std::vector<uint64_t>::iterator& pattern_begin, 
+                   const std::vector<uint64_t>::iterator& pattern_end,
+		   uint64_t& lb_rev_prime, uint64_t& rb_rev_prime, uint64_t& char_pos_prime, uint64_t& d_prime,
                    uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
@@ -162,15 +168,19 @@ void print(std::vector<uint64_t>::iterator pattern_begin,
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx, const std::vector<uint64_t>::iterator pattern_begin, 
-           const std::vector<uint64_t>::iterator pattern_end,
+double pkn(const t_idx& idx, 
+	   const std::vector<uint64_t>::iterator& pattern_begin, 
+           const std::vector<uint64_t>::iterator& pattern_end,
+	   uint64_t& lb_rev_prime, uint64_t& rb_rev_prime, uint64_t& char_pos_prime, uint64_t& d_prime,
            uint64_t &lb_rev,uint64_t &rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int size = std::distance(pattern_begin,pattern_end);
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
         cout<<".("<<lb_rev<<","<<rb_rev<<")."<<endl;
-        probability = highestorder(idx, pattern_begin, pattern_end, lb_rev, rb_rev, char_pos, d);
+        probability = highestorder(idx, pattern_begin, pattern_end, 
+				   lb_rev_prime, rb_rev_prime, char_pos_prime, d_prime, 
+				   lb_rev, rb_rev, char_pos, d);
         cout<<"HIGHEST"<<endl;
         print(pattern_begin,pattern_end);
         cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
@@ -178,7 +188,9 @@ double pkn(const t_idx& idx, const std::vector<uint64_t>::iterator pattern_begin
        // probability = lowerorder(idx, pat, size);
     } else if (size == 1 || ngramsize == 1) {
         cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
-        probability = lowestorder(idx, pattern_begin, pattern_end, lb_rev, rb_rev, char_pos, d);
+        probability = lowestorder(idx, pattern_begin, pattern_end, 
+				  lb_rev_prime, rb_rev_prime, char_pos_prime, d_prime, 
+			  	  lb_rev, rb_rev, char_pos, d);
         cout<<"LOWEST"<<endl;
         print(pattern_begin,pattern_end);
         cout<<"("<<lb_rev<<","<<rb_rev<<")"<<endl;
@@ -205,9 +217,11 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
             cout << pattern[i] << " ";
         cout << endl;
 
-        uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1;
-        uint64_t char_pos=0, d=0;
-        double score = pkn(idx, pattern.begin(),pattern.end(), lb_rev, rb_rev, char_pos, d);
+        uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb_rev_prime=0, rb_rev_prime=idx.m_cst_rev.size() - 1;
+        uint64_t char_pos=0, d=0, char_pos_prime=0, d_prime=0;
+        double score = pkn(idx, pattern.begin(),pattern.end(),
+			   lb_rev_prime, rb_rev_prime, char_pos_prime, d_prime, 
+			   lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
         cout << "------------------------------------------------" << endl;
     }
