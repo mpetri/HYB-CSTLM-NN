@@ -208,30 +208,18 @@ double lowerorder(const t_idx& idx,
         numerator = c - D;
     }
 
-    uint64_t denominator = 0;
     uint64_t N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO FIXME CHECK: what happens to the bounds if this was false?
-        denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size- (backoff_level+1)));
+    uint64_t back_N1plus_front = 0;
+    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds if this was false?
+        back_N1plus_front = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
+	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)));
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob;
     }
 
-    uint64_t back_N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, dot_LB_dot, dot_RB_dot, pat.begin(), pat.end(), dot_LB_dot, dot_RB_dot)){
-        denominator = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
-	if(XXXX){//FIXME
-        	denominator = 1;
-        	N = 1; //TODO fix this
-	}
-    }else{
-        cout << "---- Undefined fractional number XXXW-backing-off---" << endl;
-        double output = backoff_prob;
-        return output;
-    }
     d++;
-    double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
+    double output = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
     cout 
     << "Lower Order" << endl
     << " N1plus_front is: " << N1plus_front << endl
