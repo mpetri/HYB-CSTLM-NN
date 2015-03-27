@@ -159,7 +159,7 @@ double highestorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level), lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1));
+        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)));
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob; 
@@ -211,7 +211,7 @@ double lowerorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds if this was false?
-        back_N1plus_front = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
+//        back_N1plus_front = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
 	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)));
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
@@ -225,7 +225,7 @@ double lowerorder(const t_idx& idx,
     << " N1plus_front is: " << N1plus_front << endl
     << " D is: " << D << endl
     << " numerator is: " << numerator << endl
-    << " denomiator is: " << denominator << endl
+    << " back_N1plus_front is: " << back_N1plus_front << endl
     << "Lower Order probability " << output << endl
     << "------------------------------------------------" << endl;
     return output;
