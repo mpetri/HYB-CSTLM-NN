@@ -84,7 +84,7 @@ int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev,
         if (symbol == 1)
             c = c - 1;
     } else {
-        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1); // trevor is suspicious about the symmetry with the above test!
+        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1); 
         if (symbol != 1) 
             c = 1;
     }
@@ -98,30 +98,52 @@ double discount(const t_idx& idx, const int& c)
     return D;
 }
 
-// Computes N_1+( abc * )
+// Computes N_1+( abc * ) or N_1+( * abc *) depending on isDotPatDot parameter
 template <class t_idx>
-uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, const int& pattern_size)
+uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, const int& pattern_size, const bool isDotPatDot)
 {
     // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pat'
     auto node = idx.m_cst.node(lb, rb);
     uint64_t deg = idx.m_cst.degree(node);
     uint64_t N1plus_front = 0;
+    uint64_t back_N1plus_front = 0;
     if (pattern_size == idx.m_cst.depth(node)) {
-	// TODO make this an option, as you could avoid several calls otherwise
         auto w = idx.m_cst.select_child(node, 1);
         int symbol = idx.m_cst.edge(w, pattern_size + 1);
         N1plus_front = deg;
         if (symbol == 1) {
             N1plus_front = N1plus_front - 1;
         }
+        if(isDotPatDot)//FIXME
+        {
+	    int root_id = idx.m_cst.id(idx.m_cst.root());
+            while (idx.m_cst.id(w) != root_id) {
+                int symbol = idx.m_cst.edge(w, size + 1);
+                if (symbol != 1) {
+                    uint64_t lb_prime, rb_prime;//FIXME
+                    backward_search(, , , , , );
+                    XXXX = N1PlusBack(, , , );
+                }
+                w = idx.m_cst.sibling(w);
+            }
+	    return back_N1plus_front;
+        }
+        return N1plus_front;
     } else {
         int symbol = idx.m_cst.edge(node, pattern_size + 1);
-	// TODO make this an option
-        if (symbol != 1) {
+	if (symbol != 1) {
             N1plus_front = 1;
         }
+        if(isDotPatDot)//FIXME
+        {
+	    uint64_t lb_prime = 0, rb_prime = 0;//FIXME
+            backward_search(, , , , ,);
+            XXXX = N1PlusBack(, , , );
+            return back_N1plus_front;
+	}
+	return N1plus_front;
     }
-    return N1plus_front;
+    return 0;
 }
 
 template <class t_idx>
@@ -159,7 +181,7 @@ double highestorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level), lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)));
+        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob; 
@@ -195,6 +217,7 @@ double lowerorder(const t_idx& idx,
     uint64_t freq = 0;
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     int pattern_size = std::distance(pattern_begin, pattern_end);
+
     if(forward_search(idx.m_cst_rev, node, d , *(pattern_begin+backoff_level), char_pos)>0){
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
@@ -211,8 +234,8 @@ double lowerorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds if this was false?
-//        back_N1plus_front = N1PlusFrontBack_Front(idx, pat, dot_LB_dot, dot_RB_dot);//FIXME
-	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)));
+        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true);
+	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob;
@@ -226,7 +249,7 @@ double lowerorder(const t_idx& idx,
     << " D is: " << D << endl
     << " numerator is: " << numerator << endl
     << " back_N1plus_front is: " << back_N1plus_front << endl
-    << "Lower Order probability " << output << endl
+    << " Lower Order probability " << output << endl
     << "------------------------------------------------" << endl;
     return output;
 }
@@ -255,7 +278,7 @@ double lowestorder(const t_idx& idx,
     cout 
     << "Lowest Order numerator is: "<< numerator << endl 
     << " denomiator is: " << denominator << endl 
-    << "Lowest Order probability " << probability << endl 
+    << " Lowest Order probability " << probability << endl 
     << "------------------------------------------------" << endl;
 
     return probability;
