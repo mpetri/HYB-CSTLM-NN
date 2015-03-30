@@ -123,9 +123,15 @@ uint64_t N1PlusFront(const t_idx& idx,
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 1) {
-                    uint64_t lb_rev_prime, rb_rev_prime;//FIXME
-                    backward_search(, , , , , );
-                    XXXX = N1PlusBack(, , , );
+
+		    uint64_t lb_prime = 0, rb_prime = idx.m_cst_rev.size()-1;//full interval - very inefficient
+                
+                    backward_search(idx.m_cst_rev,
+                                   lb_rev_prime, rb_rev_prime,
+                                   new_pattern.rbegin(), new_pattern.rend(),
+                                   lb_rev_prime, rb_rev_prime);//fresh search using full interval
+
+                    back_N1plus_front = N1PlusBack(idx, lb_rev_prime, rb_prev_rime, pattern_size+1);
                 }
                 w = idx.m_cst.sibling(w);
             }
