@@ -69,6 +69,15 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
+void print(const std::vector<uint64_t>::iterator& pattern_begin,
+           const std::vector<uint64_t>::iterator& pattern_end)
+{
+        for(auto it = pattern_begin;it!=pattern_end;it++)
+        {
+                cout<<*it<<" ";
+        }
+        cout<<endl;
+}
 
 // computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
 template <class t_idx>
@@ -135,10 +144,11 @@ uint64_t N1PlusFront(const t_idx& idx,
                                         *it, 
                                         lb_rev_prime, rb_rev_prime);  
             	    }
-                    back_N1plus_front = N1PlusBack(idx, lb_rev_prime, rb_rev_prime, pattern_size+1);
+                    back_N1plus_front += N1PlusBack(idx, lb_rev_prime, rb_rev_prime, pattern_size+1);
                 }
                 w = idx.m_cst.sibling(w);
             }
+            
 	    return back_N1plus_front;
         }
         return N1plus_front;
@@ -160,21 +170,18 @@ template <class t_idx>
 double highestorder(const t_idx& idx, 
 		    const std::vector<uint64_t>::iterator& pattern_begin,
                     const std::vector<uint64_t>::iterator& pattern_end,
-                    uint64_t backoff_level,
  	            uint64_t& lb, uint64_t& rb,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int pattern_size = std::distance(pattern_begin,pattern_end);
-    double backoff_prob = pkn(idx, (pattern_begin+backoff_level+1), pattern_end,
-			      backoff_level, 
+    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end,
  			      lb, rb,
 			      lb_rev, rb_rev, char_pos,d);
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
     cout<<"SYMBOL="<<*pattern_begin<<" d="<<d<<endl;
-
-    if(forward_search(idx.m_cst_rev, node, d, *(pattern_begin+backoff_level), char_pos)>0){
+    if(forward_search(idx.m_cst_rev, node, d, *(pattern_begin), char_pos)>0){
 	lb_rev = idx.m_cst_rev.lb(node);
     	rb_rev = idx.m_cst_rev.rb(node);
     	c = rb_rev - lb_rev + 1;
@@ -189,9 +196,9 @@ double highestorder(const t_idx& idx,
 
     uint64_t denomiator = 0;
     uint64_t N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin+backoff_level), lb, rb)>0){
+    if(backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)), false, c, pattern_begin, pattern_end - 1);
+        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-1), false, c, pattern_begin, pattern_end - 1);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob; 
@@ -213,22 +220,19 @@ template <class t_idx>
 double lowerorder(const t_idx& idx,
                   const std::vector<uint64_t>::iterator& pattern_begin,
                   const std::vector<uint64_t>::iterator& pattern_end,
-		  uint64_t backoff_level,
                   uint64_t& lb, uint64_t& rb,
                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    backoff_level++;
-    double backoff_prob = pkn(idx, (pattern_begin+backoff_level+1), pattern_end,
-			      backoff_level,
+    double backoff_prob = pkn(idx, (pattern_begin+1), pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos,d);
-
+    
     uint64_t c = 0;
     uint64_t freq = 0;
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     int pattern_size = std::distance(pattern_begin, pattern_end);
-
-    if(forward_search(idx.m_cst_rev, node, d , *(pattern_begin+backoff_level), char_pos)>0){
+    print(pattern_begin,pattern_end);
+    if(forward_search(idx.m_cst_rev, node, d , *(pattern_begin), char_pos)>0){
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
         c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);
@@ -243,9 +247,9 @@ double lowerorder(const t_idx& idx,
 
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds when this is false?
-        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true,c, pattern_begin, pattern_end);
-	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)), false, c, pattern_begin, pattern_end);
+    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin) , lb, rb)>0){//TODO CHECK: what happens to the bounds when this is false?
+        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-1),true,c, pattern_begin, pattern_end);
+	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-1), false, c, pattern_begin, pattern_end);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob;
@@ -268,11 +272,9 @@ template <class t_idx>
 double lowestorder(const t_idx& idx, 
 		   const std::vector<uint64_t>::iterator& pattern_begin, 
                    const std::vector<uint64_t>::iterator& pattern_end,
-  		   uint64_t backoff_level,
 		   uint64_t& lb, uint64_t& rb,
                    uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    backoff_level++;
     auto node = idx.m_cst_rev.node(lb_rev,rb_rev);
     double denominator = 0;
     int pattern_size = std::distance(pattern_begin, pattern_end);
@@ -294,44 +296,34 @@ double lowestorder(const t_idx& idx,
     return probability;
 }
 
-void print(const std::vector<uint64_t>::iterator& pattern_begin,
-           const std::vector<uint64_t>::iterator& pattern_end)
-{
-	for(auto it = pattern_begin;it!=pattern_end;it++)
-        {
-		cout<<*it<<" ";
-	}
-	cout<<endl;
-}
 
 template <class t_idx>
 double pkn(const t_idx& idx, 
 	   const std::vector<uint64_t>::iterator& pattern_begin, 
            const std::vector<uint64_t>::iterator& pattern_end,
-	   uint64_t backoff_level,
 	   uint64_t& lb, uint64_t& rb,
            uint64_t &lb_rev,uint64_t &rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     int size = std::distance(pattern_begin,pattern_end);
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
+	print(pattern_begin,pattern_end);
         cout<<".("<<lb_rev<<","<<rb_rev<<")."<<endl;
         probability = highestorder(idx, pattern_begin, pattern_end, 
-				   backoff_level,
 				   lb, rb, 
 				   lb_rev, rb_rev, char_pos, d);
         cout<<".("<<lb_rev<<","<<rb_rev<<")."<<endl;
     } else if (size < ngramsize && size != 1) {
+        print(pattern_begin,pattern_end);
+        if(size==0)exit(1);
         cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
         probability = lowerorder(idx, pattern_begin, pattern_end,
-				 backoff_level,
 				 lb, rb,
 				 lb_rev, rb_rev, char_pos, d);
         cout<<"..("<<lb_rev<<","<<rb_rev<<").."<<endl;
     } else if (size == 1 || ngramsize == 1) {
         cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
         probability = lowestorder(idx, pattern_begin, pattern_end, 
-				  backoff_level,
 				  lb, rb, 
 			  	  lb_rev, rb_rev, char_pos, d);
         cout<<"...("<<lb_rev<<","<<rb_rev<<")..."<<endl;
@@ -360,9 +352,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb=0, rb=idx.m_cst.size() - 1;
         uint64_t char_pos=0, d=0;
-	uint64_t backoff_level = 0;
         double score = pkn(idx, pattern.begin(),pattern.end(),
-			   backoff_level,
 			   lb, rb, 
 			   lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
