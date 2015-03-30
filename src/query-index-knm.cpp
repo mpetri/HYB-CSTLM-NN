@@ -74,17 +74,17 @@ parse_args(int argc, const char* argv[])
 template <class t_idx>
 int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size)
 {
-    int c = 0;
+    uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
-    int deg = idx.m_cst_rev.degree(node);
+    uint64_t deg = idx.m_cst_rev.degree(node);
     if (patrev_size == idx.m_cst_rev.depth(node)) {
         c = deg;
         auto w = idx.m_cst_rev.select_child(node, 1);
-        int symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
+        uint64_t symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
         if (symbol == 1)
             c = c - 1;
     } else {
-        int symbol = idx.m_cst_rev.edge(node, patrev_size + 1); 
+        uint64_t symbol = idx.m_cst_rev.edge(node, patrev_size + 1); 
         if (symbol != 1) 
             c = 1;
     }
@@ -102,7 +102,10 @@ double discount(const t_idx& idx, const int& c)
 template <class t_idx>
 uint64_t N1PlusFront(const t_idx& idx, 
                      const uint64_t& lb, const uint64_t& rb, 
-                     const int& pattern_size, const bool isDotPatDot, const uint64_t c)
+                     const int& pattern_size, 
+                     const bool isDotPatDot, const uint64_t c,
+                     std::vector<uint64_t>::iterator pattern_begin,
+                     std::vector<uint64_t>::iterator pattern_end)
 {
     // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
     auto node = idx.m_cst.node(lb, rb);
@@ -111,36 +114,36 @@ uint64_t N1PlusFront(const t_idx& idx,
     uint64_t back_N1plus_front = 0;
     if (pattern_size == idx.m_cst.depth(node)) {
         auto w = idx.m_cst.select_child(node, 1);
-        int symbol = idx.m_cst.edge(w, pattern_size + 1);
+        uint64_t symbol = idx.m_cst.edge(w, pattern_size + 1);
         N1plus_front = deg;
         if (symbol == 1) {
             N1plus_front = N1plus_front - 1;
         }
 
-        if(isDotPatDot)//FIXME
+        if(isDotPatDot)
         {
 	    int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
-                int symbol = idx.m_cst.edge(w, size + 1);
+                uint64_t symbol = idx.m_cst.edge(w, pattern_size + 1);
                 if (symbol != 1) {
-
-		    uint64_t lb_prime = 0, rb_prime = idx.m_cst_rev.size()-1;//full interval - very inefficient
-                
-                    backward_search(idx.m_cst_rev,
-                                   lb_rev_prime, rb_rev_prime,
-                                   new_pattern.rbegin(), new_pattern.rend(),
-                                   lb_rev_prime, rb_rev_prime);//fresh search using full interval
-
-                    back_N1plus_front = N1PlusBack(idx, lb_rev_prime, rb_prev_rime, pattern_size+1);
+		    uint64_t lb_rev_prime = 0, rb_rev_prime = idx.m_cst_rev.size()-1;//full interval - very inefficient
+                    *(pattern_end) = symbol;
+        	    for (auto it=pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
+            		++it;
+            	        backward_search(idx.m_cst_rev.csa, 
+                                        lb_rev_prime, rb_rev_prime, 
+                                        *it, 
+                                        lb_rev_prime, rb_rev_prime);  
+            	    }
+                    back_N1plus_front = N1PlusBack(idx, lb_rev_prime, rb_rev_prime, pattern_size+1);
                 }
                 w = idx.m_cst.sibling(w);
             }
 	    return back_N1plus_front;
         }
-
         return N1plus_front;
     } else {
-        int symbol = idx.m_cst.edge(node, pattern_size + 1);
+        uint64_t symbol = idx.m_cst.edge(node, pattern_size + 1);
 	if (symbol != 1) {
             N1plus_front = 1;
 	    if(isDotPatDot)
@@ -186,9 +189,9 @@ double highestorder(const t_idx& idx,
 
     uint64_t denomiator = 0;
     uint64_t N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level), lb, rb)>0){
+    if(backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin+backoff_level), lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false,c);
+        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)), false, c, pattern_begin, pattern_end - 1);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob; 
@@ -240,9 +243,9 @@ double lowerorder(const t_idx& idx,
 
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
-    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds if this was false?
-        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true,c);
-	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false,c);
+    if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds when this is false?
+        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true,c, pattern_begin, pattern_end);
+	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)), false, c, pattern_begin, pattern_end);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob;
