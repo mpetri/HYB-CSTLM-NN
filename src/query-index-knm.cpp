@@ -129,20 +129,25 @@ uint64_t N1PlusFront(const t_idx& idx,
             N1plus_front = N1plus_front - 1;
         }
 
+	//The inefficient block of code
         if(isDotPatDot)
         {
+	    std::vector<uint64_t> new_pattern;
+            for (auto it=pattern_begin; it != pattern_end;it++) {
+		new_pattern.push_back(*it);
+	    }
 	    int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 uint64_t symbol = idx.m_cst.edge(w, pattern_size + 1);
                 if (symbol != 1) {
 		    uint64_t lb_rev_prime = 0, rb_rev_prime = idx.m_cst_rev.size()-1;//full interval - very inefficient
-                    *(pattern_end) = symbol;
-        	    for (auto it=pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
-            		++it;
+		    new_pattern[new_pattern.size()-1]=symbol;
+        	    for (auto it=new_pattern.begin(); it != new_pattern.end() and lb_rev_prime <= rb_rev_prime;) {
             	        backward_search(idx.m_cst_rev.csa, 
                                         lb_rev_prime, rb_rev_prime, 
                                         *it, 
                                         lb_rev_prime, rb_rev_prime);  
+ 		        it++;
             	    }
                     back_N1plus_front += N1PlusBack(idx, lb_rev_prime, rb_rev_prime, pattern_size+1);
                 }
@@ -356,7 +361,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 			   lb, rb, 
 			   lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
-        cout << "------------------------------------------------" << endl;
+        cout << "-----------------------------------------------" << endl;
     }
     return final_score;
 }
@@ -369,15 +374,14 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     int M = 0;
     std::chrono::nanoseconds total_time(0);
     for (std::vector<uint64_t> pattern : patterns) {
-
+        M += pattern.size() + 1; // +1 for adding </s>
         pattern.push_back(ENDTAG);
         pattern.insert(pattern.begin(), STARTTAG);
-        M += pattern.size() + 1; // +1 for adding </s>
         // run the query
         auto start = clock::now();
         double sentenceprob = run_query_knm(idx, pattern);
         auto stop = clock::now();
-        perplexity += log10(sentenceprob);
+        perplexity += sentenceprob;
         // output score
         std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
         std::cout << " -> " << sentenceprob << endl;
