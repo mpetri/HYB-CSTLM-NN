@@ -100,9 +100,11 @@ double discount(const t_idx& idx, const int& c)
 
 // Computes N_1+( abc * ) or N_1+( * abc *) depending on isDotPatDot parameter
 template <class t_idx>
-uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, const int& pattern_size, const bool isDotPatDot)
+uint64_t N1PlusFront(const t_idx& idx, 
+                     const uint64_t& lb, const uint64_t& rb, 
+                     const int& pattern_size, const bool isDotPatDot, const uint64_t c)
 {
-    // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pat'
+    // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
     auto node = idx.m_cst.node(lb, rb);
     uint64_t deg = idx.m_cst.degree(node);
     uint64_t N1plus_front = 0;
@@ -114,13 +116,14 @@ uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, c
         if (symbol == 1) {
             N1plus_front = N1plus_front - 1;
         }
+
         if(isDotPatDot)//FIXME
         {
 	    int root_id = idx.m_cst.id(idx.m_cst.root());
             while (idx.m_cst.id(w) != root_id) {
                 int symbol = idx.m_cst.edge(w, size + 1);
                 if (symbol != 1) {
-                    uint64_t lb_prime, rb_prime;//FIXME
+                    uint64_t lb_rev_prime, rb_rev_prime;//FIXME
                     backward_search(, , , , , );
                     XXXX = N1PlusBack(, , , );
                 }
@@ -128,18 +131,16 @@ uint64_t N1PlusFront(const t_idx& idx, const uint64_t& lb, const uint64_t& rb, c
             }
 	    return back_N1plus_front;
         }
+
         return N1plus_front;
     } else {
         int symbol = idx.m_cst.edge(node, pattern_size + 1);
 	if (symbol != 1) {
             N1plus_front = 1;
-        }
-        if(isDotPatDot)//FIXME
-        {
-	    uint64_t lb_prime = 0, rb_prime = 0;//FIXME
-            backward_search(, , , , ,);
-            XXXX = N1PlusBack(, , , );
-            return back_N1plus_front;
+	    if(isDotPatDot)
+            {
+            	return c;
+	    }
 	}
 	return N1plus_front;
     }
@@ -181,7 +182,7 @@ double highestorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level), lb, rb)>0){
 	denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false);
+        N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false,c);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob; 
@@ -234,8 +235,8 @@ double lowerorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin+backoff_level) , lb, rb)>0){//TODO CHECK: what happens to the bounds if this was false?
-        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true);
-	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false);
+        back_N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),true,c);
+	N1plus_front = N1PlusFront(idx, lb, rb, (pattern_size-(backoff_level+1)),false,c);
     }else{
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
         return backoff_prob;
