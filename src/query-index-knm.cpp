@@ -79,6 +79,16 @@ void print(const std::vector<uint64_t>::iterator& pattern_begin,
         cout<<endl;
 }
 
+void print(const std::vector<uint64_t>::reverse_iterator& pattern_rbegin,
+           const std::vector<uint64_t>::reverse_iterator& pattern_rend)
+{
+        for(auto it = pattern_rend;it!=pattern_rbegin;it++)
+        {
+                cout<<*it<<" ";
+        }
+        cout<<endl;
+}
+
 // computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
 template <class t_idx>
 int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size, bool check_for_EOS=true)
@@ -280,6 +290,7 @@ double lowerorder(const t_idx& idx,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if(backward_search(idx.m_cst.csa, lb, rb,*(pattern_begin) , lb, rb)>0){//TODO CHECK: what happens to the bounds when this is false?
+	print(pattern_rbegin, pattern_rend);
         back_N1plus_front = N1PlusFrontBack(idx, lb, rb, c, pattern_rbegin, pattern_rend);
 	N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end-1);
     }else{
@@ -498,7 +509,6 @@ int main(int argc, const char* argv[])
     cout << endl;
     cout << "------------------------------------------------" << endl;
     cout << "N1+(..) = " << idx.m_N1plus_dotdot << endl;
-    cout << "N3+(.) = " << idx.m_N3plus_dot << endl;//FIXME
     cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
 
