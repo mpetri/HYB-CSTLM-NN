@@ -1,5 +1,5 @@
 #!/bin/bash
-datadir="/home/ehsan/research/LM/SDSL/lm-sdsl/UnitTestData/data"
+datadir="../UnitTestData/data"
 
 ./create-collection.x -i $datadir/training.data -c ../collections/unittest
 ./build-index.x -c ../collections/unittest
