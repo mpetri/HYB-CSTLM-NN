@@ -395,7 +395,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     int M = 0;
     std::chrono::nanoseconds total_time(0);
     std::ofstream output;
-    output.open("../UnitTestData/sdsl_output/output");
+    output.open("../UnitTestData/sdsl_output/output",std::ios_base::app);
     for (std::vector<uint64_t> pattern : patterns) {
         M += pattern.size() + 1; // +1 for adding </s>
         pattern.push_back(ENDTAG);
