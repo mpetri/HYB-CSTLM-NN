@@ -1,0 +1,9 @@
+Tool used for profiling (generating callgrind.out.x): 
+valgrind --tool=callgrind ./query-index-knm.x ...
+
+Tool used for visualizing (https://github.com/jrfonseca/gprof2dot)
+./gprof2dot.py -f callgrind callgrind.out.x | dot -Tsvg -o output.svg
+
+
+or kcachegrind:
+kcachegrind callgrind.out.x 

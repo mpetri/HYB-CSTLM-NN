@@ -1,73 +1,89 @@
 #include "gtest/gtest.h"
 #include "index_succinct.hpp"
-
 #include "sdsl/suffix_trees.hpp"
 
-using csa_type = sdsl::csa_wt_int<>;
-using cst_type = sdsl::cst_sct3<csa_type>;
-using index_type = index_succinct<cst_type>;
+struct triplet{
+  	std::string pattern; 
+	int order;
+	double perplexity;
+};
+
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
 
 class LMTest : public testing::Test {
 protected:  
-	virtual void SetUp() {
-		col = collection(col_path,false);
-		idx = index_type(col,false);
-	}
-	index_type idx;
-	collection col;
-	const std::string col_path = "../collections/toy/";
+	const std::string sdsl_path = "../UnitTestData/sdsl_output/output";
+	const std::string srilm_path = "../UnitTestData/srilm_output/output";
+	std::vector<triplet> sdsl_triplets;
+	std::vector<triplet> srilm_triplets;
+  	virtual void SetUp() {
+		{
+			std::ifstream file(sdsl_path);
+    			std::string line;
+    			while (std::getline(file, line)) {
+        			std::istringstream iss(line);
+				std::vector<std::string> x = split(line, '@');
+				triplet tri;
+				tri.pattern = x[0];
+				tri.order = std::stoi(x[1]);
+				tri.perplexity = std::stod(x[2]);
+				sdsl_triplets.push_back(tri);
+    			}
+		}
+		{
+			std::ifstream file(srilm_path);
+                	std::string line;
+                	while (std::getline(file, line)) {
+                        	std::istringstream iss(line);
+				std::vector<std::string> x = split(line, '@');
+                                triplet tri;
+                                tri.pattern = x[0];
+                                tri.order = std::stoi(x[1]);
+                                tri.perplexity = std::stod(x[2]);
+                                srilm_triplets.push_back(tri);
+                	}
+		}
+		
+        }
 };
 
-TEST_F(LMTest, EnsureZeroLast) {
-	 EXPECT_EQ(idx.m_cst.csa.text[idx.m_cst.size()-1],0ULL);
-	 EXPECT_EQ(idx.m_cst_rev.csa.text[idx.m_cst_rev.size()-1],0ULL);
+// checks the number of lines in the srilm and sdsl 
+// outputs that are used for testing
+TEST_F(LMTest, OutputsHaveSameSize){
+	EXPECT_EQ(srilm_triplets.size(),sdsl_triplets.size());
 }
 
-TEST_F(LMTest, Count ) {
-	// forward test
-	EXPECT_EQ( sdsl::count(idx.m_cst,{5ULL}), 4ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst,{0ULL}), 1ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst,{5ULL,5ULL}), 2ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst,{5ULL,4ULL,5ULL,5ULL,5ULL}), 1ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst,{5ULL,5ULL,5ULL,5ULL,5ULL}), 0ULL);
-	// backward test
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{5ULL}), 4ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{0ULL}), 1ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{5ULL,5ULL}), 2ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{5ULL,4ULL,5ULL,5ULL,5ULL}), 0ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{5ULL,5ULL,5ULL,4ULL,5ULL}), 1ULL);
-	EXPECT_EQ( sdsl::count(idx.m_cst_rev,{5ULL,5ULL,5ULL,5ULL,5ULL}), 0ULL);
-}
 
-TEST_F(LMTest, BackwardSearchSingleSym ) {
+// checks whether the outputs are aligned
+// alignment is done based on pattern and ngram-order
+TEST_F(LMTest, OutputsAreAlligned){
+	for(unsigned int i=0;i<srilm_triplets.size();i++)
 	{
-		uint64_t sym = 1;
-		size_t lb,rb = 0;
-		//forward
-		sdsl::backward_search(idx.m_cst.csa,0,idx.m_cst.csa.size()-1,sym,lb,rb);
-		EXPECT_EQ(lb,1ULL);
-		EXPECT_EQ(rb,4ULL);
-		// backward
-		sdsl::backward_search(idx.m_cst_rev.csa,0,idx.m_cst.csa.size()-1,sym,lb,rb);
-		EXPECT_EQ(lb,1ULL);
-		EXPECT_EQ(rb,4ULL);
-	}
-	{
-		uint64_t sym = 4;
-		size_t lb,rb = 0;
-		//forward
-		sdsl::backward_search(idx.m_cst.csa,0,idx.m_cst.csa.size()-1,sym,lb,rb);
-		EXPECT_EQ(lb,11ULL);
-		EXPECT_EQ(rb,17ULL);
-		// backward
-		sdsl::backward_search(idx.m_cst_rev.csa,0,idx.m_cst.csa.size()-1,sym,lb,rb);
-		EXPECT_EQ(lb,11ULL);
-		EXPECT_EQ(rb,17ULL);
+		triplet srilm = srilm_triplets[i];
+        	triplet sdsl  = sdsl_triplets[i];
+		EXPECT_EQ(srilm.order,sdsl.order);
+		EXPECT_EQ(srilm.pattern,sdsl.pattern);
 	}
 }
 
-TEST_F(LMTest, vocab_size ) {
-	EXPECT_EQ( idx.vocab_size() , 7ULL );
+// checks whether perplexities match
+// precision of comparison is set to 1e-4
+TEST_F(LMTest, Perplexity) {
+	for(unsigned int i=0;i<srilm_triplets.size();i++)
+        {
+		triplet srilm = srilm_triplets[i];
+		triplet sdsl  = sdsl_triplets[i];
+		EXPECT_NEAR(sdsl.perplexity, srilm.perplexity, 1e-4);
+	}
 }
 
 int main(int argc, char* argv[])
