@@ -171,6 +171,11 @@ uint64_t N1PlusFront(const t_idx& idx,
     return 0;
 }
 
+// Computes the probability of P( x | a b c ... ) using raw occurrence counts.
+// Note that the backoff probability uses the lower order variants of this method.
+//      idx -- the index
+//      pattern -- iterators into pattern (is this in order or reversed order???)
+//      lb, rb -- left and right bounds on the forward CST (spanning the full index for this method???)
 template <class t_idx>
 double highestorder(const t_idx& idx, 
 		    const std::vector<uint64_t>::iterator& pattern_begin,
