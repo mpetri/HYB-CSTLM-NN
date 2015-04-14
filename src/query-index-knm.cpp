@@ -114,11 +114,11 @@ double discount(const t_idx& idx)
 //  Computes N_1+( * ab * )
 //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
 //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
-//  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_front
+//  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
 template <class t_idx>
 uint64_t N1PlusFrontBack(const t_idx& idx,
                          const uint64_t& lb, const uint64_t& rb,
-                         const uint64_t n1plus_front,
+                         const uint64_t n1plus_back,
                          const std::vector<uint64_t>::iterator& pattern_begin,
                          const std::vector<uint64_t>::iterator& pattern_end,
                          bool check_for_EOS = true)
@@ -161,7 +161,7 @@ uint64_t N1PlusFrontBack(const t_idx& idx,
         return back_N1plus_front;
     } else {
         // special case, only one way of extending this pattern to the right
-        return n1plus_front;
+        return n1plus_back;
     }
 }
 
@@ -236,7 +236,8 @@ double highestorder(const t_idx& idx,
         N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
     } else {
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-        return backoff_prob;
+        cout<< "Highest Order probability is = Lower Order probability "<<backoff_prob<<endl;
+	return backoff_prob;
     }
 
     double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
@@ -283,8 +284,15 @@ double lowerorder(const t_idx& idx,
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
         back_N1plus_front = N1PlusFrontBack(idx, lb, rb, c, pattern_begin, pattern_end - 1);
         N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
-    } else {
+	
+	if(back_N1plus_front == 0)//TODO check
+		// if back_N1plus_front fails to find a full extention to 
+		// both left and right, it replaces 0 with extention to right
+		// computed by N1plus_front instead. 
+		back_N1plus_front = N1plus_front;
+     } else {
         cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+	cout<< "Lower Order probability is = Lower/Lowest Order probability "<<backoff_prob<<endl;
         return backoff_prob;
     }
 
