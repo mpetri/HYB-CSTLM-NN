@@ -402,7 +402,16 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     std::ofstream output;
     output.open("../UnitTestData/sdsl_output/output",std::ios_base::app);
     for (std::vector<uint64_t> pattern : patterns) {
-        M += pattern.size() + 1; // +1 for adding </s>
+	int pattern_size = pattern.size();
+	std::string pattern_string;
+        //for generating the unittest output
+	{
+		std::ostringstream pstring;
+	        std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(pstring, " "));
+                pattern_string = pstring.str();
+                pattern_string.pop_back();//removes extra space
+	}
+        M += pattern_size + 1; // +1 for adding </s>
         pattern.push_back(ENDTAG);
         pattern.insert(pattern.begin(), STARTTAG);
         // run the query
@@ -411,13 +420,13 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         auto stop = clock::now();
         perplexity += sentenceprob;
         // output logprob and perplexity 
-        std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
-	double intermediate_perplexity = pow(10,-(1 / (double)M) * sentenceprob);
-	std::cout<< " -> log10prob = " << sentenceprob << "  ppl = "<< intermediate_perplexity <<endl;
+	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
+	std::cout<< pattern_string<<" -> log10prob = " << sentenceprob << "  ppl = "<< intermediate_perplexity <<endl;
         total_time += (stop - start);
-	std::ostringstream pstring;
-	std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(pstring, " "));
-	output<<pstring.str()<<"@"<<ngramsize<<"@"<<intermediate_perplexity<<"\n";
+	//for generating the unittest output
+	{
+		output<<pattern_string<<"@"<<ngramsize<<"@"<<intermediate_perplexity<<"\n";
+	}
     }
     output.close();
     std::cout << "time in milliseconds = "
