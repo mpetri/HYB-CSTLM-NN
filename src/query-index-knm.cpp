@@ -473,7 +473,7 @@ int main(int argc, const char* argv[])
     /* print precomputed parameters */
     cout << "------------------------------------------------" << endl;
     cout << "-------------PRECOMPUTED QUANTITIES-------------" << endl;
-    cout << "------------------------------------------------" << endl;
+    cout << "-------------Based on actual counts-------------" << endl;
     cout << "n1 = ";
     for (int size = 0; size <= ngramsize; size++) {
         cout << idx.m_n1[size] << " ";
@@ -517,11 +517,60 @@ int main(int argc, const char* argv[])
         }
     }
     cout << endl;
+
+    cout << "------------------------------------------------" << endl;
+    cout << "-------------PRECOMPUTED QUANTITIES-------------" << endl;
+    cout << "-------------Based on continuation counts-------" << endl;
+    cout << "n1_cnt = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n1_cnt[size] << " ";
+    }
+    cout << endl;
+    cout << "n2_cnt = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n2_cnt[size] << " ";
+    }
+    cout << endl;
+    cout << "n3_cnt = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n3_cnt[size] << " ";
+    }
+    cout << endl;
+    cout << "n4_cnt = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_n4_cnt[size] << " ";
+    }
+    cout << endl;
+    cout << "------------------------------------------------" << endl;
+    cout << "Y_cnt = ";
+    for (int size = 0; size <= ngramsize; size++) {
+        cout << idx.m_Y_cnt[size] << " ";
+    }
+    if (ismkn) {
+        cout << endl;
+        cout << "D1_cnt = ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D1_cnt[size] << " ";
+        }
+        cout << endl;
+        cout << "D2_cnt = ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D2_cnt[size] << " ";
+        }
+        cout << endl;
+        cout << "D3+_cnt= ";
+        for (int size = 0; size <= ngramsize; size++) {
+            cout << idx.m_D3_cnt[size] << " ";
+        }
+    }
+    cout << endl;
+
     cout << "------------------------------------------------" << endl;
     cout << "N1+(..) = " << idx.m_N1plus_dotdot << endl;
+//    cout << "N3+(.) = "<< idx.m_N3plus_dot<< endl;
     cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
-
+    exit(1);
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
