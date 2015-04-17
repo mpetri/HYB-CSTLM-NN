@@ -105,10 +105,12 @@ int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev,
 }
 
 template <class t_idx>
-double discount(const t_idx& idx)
+double discount(const t_idx& idx, int level, bool cnt=false)
 {
-    double D = idx.m_Y[ngramsize];
-    return D;
+    if(cnt)
+	return idx.m_Y_cnt[level];
+    else
+	return idx.m_Y[level];
 }
 
 //  Computes N_1+( * ab * )
@@ -204,13 +206,14 @@ uint64_t N1PlusFront(const t_idx& idx,
 //      pattern -- iterators into pattern (is this in order or reversed order???)
 //      lb, rb -- left and right bounds on the forward CST (spanning the full index for this method???)
 template <class t_idx>
-double highestorder(const t_idx& idx,
+double highestorder(const t_idx& idx, uint64_t level,
                     const std::vector<uint64_t>::iterator& pattern_begin,
                     const std::vector<uint64_t>::iterator& pattern_end,
                     uint64_t& lb, uint64_t& rb,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    double backoff_prob = pkn(idx, pattern_begin + 1, pattern_end,
+    double backoff_prob = pkn(idx, level, 
+			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -222,9 +225,13 @@ double highestorder(const t_idx& idx,
         rb_rev = idx.m_cst_rev.rb(node);
         c = rb_rev - lb_rev + 1;
     }
-
-    double D = discount(idx);
-
+    int pattern_size = std::distance(pattern_begin, pattern_end);
+    double D = 0;
+    if(pattern_size == ngramsize)
+	D = discount(idx,ngramsize);
+    else
+	//which is the special case of n<ngramsize that starts with <s>
+	D = discount(idx,pattern_size,true);
     double numerator = 0;
     if (c - D > 0) {
         numerator = c - D;
@@ -253,13 +260,15 @@ double highestorder(const t_idx& idx,
 }
 
 template <class t_idx>
-double lowerorder(const t_idx& idx,
+double lowerorder(const t_idx& idx, uint64_t level,
                   const std::vector<uint64_t>::iterator& pattern_begin,
                   const std::vector<uint64_t>::iterator& pattern_end,
                   uint64_t& lb, uint64_t& rb,
                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    double backoff_prob = pkn(idx, pattern_begin + 1, pattern_end,
+    level = level - 1;
+    double backoff_prob = pkn(idx, level, 
+			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
 
@@ -273,7 +282,7 @@ double lowerorder(const t_idx& idx,
         c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);
     }
 
-    double D = discount(idx);
+    double D = discount(idx,level,true);
     double numerator = 0;
     if (c - D > 0) {
         numerator = c - D;
@@ -335,7 +344,7 @@ double lowestorder(const t_idx& idx,
 }
 
 template <class t_idx>
-double pkn(const t_idx& idx,
+double pkn(const t_idx& idx, uint64_t level,
            const std::vector<uint64_t>::iterator& pattern_begin,
            const std::vector<uint64_t>::iterator& pattern_end,
            uint64_t& lb, uint64_t& rb,
@@ -346,7 +355,8 @@ double pkn(const t_idx& idx,
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
         print(pattern_begin, pattern_end);
         cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
-        probability = highestorder(idx, pattern_begin, pattern_end,
+        probability = highestorder(idx, level,
+				   pattern_begin, pattern_end,
                                    lb, rb,
                                    lb_rev, rb_rev, char_pos, d);
         cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
@@ -356,7 +366,8 @@ double pkn(const t_idx& idx,
             exit(1);
         cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
 
-        probability = lowerorder(idx, pattern_begin, pattern_end,
+        probability = lowerorder(idx, level,
+				 pattern_begin, pattern_end,
                                  lb, rb,
                                  lb_rev, rb_rev, char_pos, d);
 
@@ -391,7 +402,8 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb = 0, rb = idx.m_cst.size() - 1;
         uint64_t char_pos = 0, d = 0;
-        double score = pkn(idx, pattern.begin(), pattern.end(),
+        double score = pkn(idx, ngramsize, 
+			   pattern.begin(), pattern.end(),
                            lb, rb,
                            lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
@@ -570,7 +582,7 @@ int main(int argc, const char* argv[])
 //    cout << "N3+(.) = "<< idx.m_N3plus_dot<< endl;
     cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
-    exit(1);
+    
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
