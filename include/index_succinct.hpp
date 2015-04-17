@@ -41,7 +41,6 @@ public:
     N1PlusBack(std::vector<uint64_t> pat, bool check_for_EOS = true)
     {
         int pat_size = pat.size();
-	std::cout<<"pat_size= "<<pat_size<<std::endl;
         uint64_t n1plus_back = 0;
         uint64_t lb_rev = 0, rb_rev = m_cst_rev.size() - 1;
         if (backward_search(m_cst_rev.csa, lb_rev, rb_rev, pat.rbegin(), pat.rend(), lb_rev, rb_rev) > 0) {
@@ -93,17 +92,13 @@ public:
 	    pat.push_back(symbol);
             {	
 		uint64_t n1plus_back=0;
+
 		if(pat[0]!=3)
                 	n1plus_back = N1PlusBack(pat);
 		else
 			//special case where the pattern starts with <s>: acutal count is used
 			n1plus_back = ActualCount(pat);
-		if(pat.size()==2){
-		for(unsigned i = 0 ; i < pat.size();++i)
-		{
-			std::cout << pat[i] << ' ';
-		}
-		std::cout<<" ---- "<<n1plus_back<<std::endl;}
+
                 if (n1plus_back == 1) {
                     m_n1_cnt[size] += 1;
                 } else if (n1plus_back == 2) {
