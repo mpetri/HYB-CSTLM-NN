@@ -7,7 +7,7 @@
 #include <math.h>
 #include <algorithm>
 #include <string>
-
+#include <iomanip>
 #include "utils.hpp"
 #include "collection.hpp"
 #include "index_succinct.hpp"
@@ -219,11 +219,14 @@ double highestorder(const t_idx& idx, uint64_t level,
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
+
     cout << "SYMBOL=" << *pattern_begin << " d=" << d << endl;
     if (forward_search(idx.m_cst_rev, node, d, *pattern_begin, char_pos) > 0) {
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
         c = rb_rev - lb_rev + 1;
+        cout<<"XXXXXXXX c "<<c<<" rb_rev: "<<rb_rev<<" lb_rev: "<<lb_rev<<endl;
+
     }
     int pattern_size = std::distance(pattern_begin, pattern_end);
     double D = 0;
@@ -402,7 +405,8 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb = 0, rb = idx.m_cst.size() - 1;
         uint64_t char_pos = 0, d = 0;
-        double score = pkn(idx, ngramsize, 
+        int size = std::distance(pattern.begin(), pattern.end());
+        double score = pkn(idx,size, 
 			   pattern.begin(), pattern.end(),
                            lb, rb,
                            lb_rev, rb_rev, char_pos, d);
@@ -441,20 +445,19 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         perplexity += sentenceprob;
         // output logprob and perplexity 
 	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
-	std::cout<< pattern_string<<" -> log10prob = " << sentenceprob << "  ppl = "<< intermediate_perplexity <<endl;
+	std::cout<< pattern_string<<" -> log10prob = " <<std::setprecision(10)<< sentenceprob << "  ppl = "<<std::setprecision(10)<< intermediate_perplexity <<endl;
         total_time += (stop - start);
 	//for generating the unittest output
 	{
-		output<<pattern_string<<"@"<<ngramsize<<"@"<<intermediate_perplexity<<"\n";
+		output<<pattern_string<<"@"<<ngramsize<<"@"<<std::setprecision(10)<<intermediate_perplexity<<"\n";
 	}
     }
     output.close();
     std::cout << "time in milliseconds = "
               << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
               << " ms" << endl;
-    perplexity = (1 / (double)M) * perplexity;
-    perplexity = pow(10, (-perplexity));
-    std::cout << "Test Corpus Perplexity = " << perplexity << endl;
+    perplexity = perplexity/M;
+    cout <<"Test Corpus Perplexity is: "<<std::setprecision(10) <<pow(10, -perplexity) << endl;
 }
 
 int main(int argc, const char* argv[])
