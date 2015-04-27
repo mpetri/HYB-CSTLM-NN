@@ -13,11 +13,14 @@ const std::string KEY_TEXT = "TEXT";
 const std::string KEY_TEXTREV = "TEXTREV";
 const std::string KEY_SA = "SA";
 const std::string KEY_SAREV = "SAREV";
+const std::string KEY_VOCAB = "VOCAB";
 
 std::vector<std::string> collection_keys = { KEY_TEXT,
                                              KEY_TEXTREV,
                                              KEY_SA,
-                                             KEY_SAREV };
+                                             KEY_SAREV,
+                                             KEY_VOCAB
+                                            };
 
 struct collection {
     std::string path;
@@ -42,6 +45,9 @@ struct collection {
         /* make sure the necessary files are present */
         if (!utils::file_exists(path + "/" + KEY_PREFIX + KEY_TEXT)) {
             throw std::runtime_error("collection path does not contain text.");
+        }
+        if (!utils::file_exists(path + "/" + KEY_PREFIX + KEY_VOCAB)) {
+            throw std::runtime_error("collection path does not contain vocabulary.");
         }
         /* register files that are present */
         for (const auto& key : collection_keys) {

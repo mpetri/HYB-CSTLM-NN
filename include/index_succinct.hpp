@@ -2,15 +2,20 @@
 
 #include "utils.hpp"
 #include "collection.hpp"
+#include "vocab_uncompressed.hpp"
 
 #include <sdsl/suffix_arrays.hpp>
 
-template <class t_cst>
+template <
+class t_cst,
+class t_vocab = vocab_uncompressed
+>
 class index_succinct {
 public:
     static const int max_ngram_count = 20;
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
+    typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::string_type string_type;
     t_cst m_cst;
@@ -27,6 +32,7 @@ public:
     std::vector<double> m_D2;
     std::vector<double> m_D3;
 
+    vocab_type m_vocab;
 public:
     void
     ncomputer(std::vector<uint64_t> pat, int size, uint64_t lb, uint64_t rb)
@@ -151,6 +157,10 @@ public:
                 m_D3[size] = 3 - 4 * m_Y[size] * (double)m_n4[size] / m_n3[size];
         }
         if(output) std::cout << "DONE" << std::endl;
+        if(output) std::cout << "CREATE VOCAB" << std::endl;
+        m_vocab = vocab_type(col);
+
+        if(output) std::cout << "DONE" << std::endl;
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
@@ -169,6 +179,7 @@ public:
         written_bytes += sdsl::serialize(m_D1, out, child, "D1");
         written_bytes += sdsl::serialize(m_D2, out, child, "D2");
         written_bytes += sdsl::serialize(m_D3, out, child, "D3");
+        written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -190,6 +201,8 @@ public:
         sdsl::load(m_D1, in);
         sdsl::load(m_D2, in);
         sdsl::load(m_D3, in);
+
+        sdsl::load(m_vocab, in);
     }
 
     void swap(index_succinct& a)
@@ -209,11 +222,12 @@ public:
             m_D1.swap(a.m_D1);
             m_D2.swap(a.m_D2);
             m_D3.swap(a.m_D3);
+            m_vocab.swap(a.m_vocab);
         }
     }
 
     uint64_t vocab_size() const
     {
-        return m_cst.csa.sigma - 2; // -2 is for deducting the count for 0, and 1
+        return m_vocab.size();
     }
 };
