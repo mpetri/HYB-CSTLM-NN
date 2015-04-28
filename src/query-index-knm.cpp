@@ -16,6 +16,7 @@ int ngramsize;
 bool ismkn;
 const int STARTTAG = 3;
 const int ENDTAG = 4;
+const int UNKTAG = 2;
 
 typedef struct cmdargs {
     std::string pattern_file;
@@ -206,13 +207,13 @@ uint64_t N1PlusFront(const t_idx& idx,
 //      pattern -- iterators into pattern (is this in order or reversed order???)
 //      lb, rb -- left and right bounds on the forward CST (spanning the full index for this method???)
 template <class t_idx>
-double highestorder(const t_idx& idx, uint64_t level,
+double highestorder(const t_idx& idx, uint64_t level, const bool unk,
                     const std::vector<uint64_t>::iterator& pattern_begin,
                     const std::vector<uint64_t>::iterator& pattern_end,
                     uint64_t& lb, uint64_t& rb,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
-    double backoff_prob = pkn(idx, level, 
+    double backoff_prob = pkn(idx, level, unk,
 			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
@@ -263,14 +264,14 @@ double highestorder(const t_idx& idx, uint64_t level,
 }
 
 template <class t_idx>
-double lowerorder(const t_idx& idx, uint64_t level,
+double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
                   const std::vector<uint64_t>::iterator& pattern_begin,
                   const std::vector<uint64_t>::iterator& pattern_end,
                   uint64_t& lb, uint64_t& rb,
                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     level = level - 1;
-    double backoff_prob = pkn(idx, level, 
+    double backoff_prob = pkn(idx, level, unk,
 			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
@@ -324,7 +325,8 @@ double lowerorder(const t_idx& idx, uint64_t level,
 template <class t_idx>
 double lowestorder(const t_idx& idx,
                    const uint64_t& pattern,
-                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
+                   uint64_t& lb_rev, uint64_t& rb_rev, 
+                   uint64_t& char_pos, uint64_t& d)
 {
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     double denominator = 0;
@@ -346,8 +348,26 @@ double lowestorder(const t_idx& idx,
     return probability;
 }
 
+//special lowest order handler for P_{KN}(unknown)
 template <class t_idx>
-double pkn(const t_idx& idx, uint64_t level,
+double lowestorder_unk(const t_idx& idx)
+{
+    double denominator = idx.m_N1plus_dotdot;
+    double probability = discount(idx,1,true) / denominator;
+
+    
+    cout
+        << " Lowest Order (UNK) numerator is: " << discount(idx,1,true) << endl
+        << " denomiator is: " << denominator << endl
+        << " Lowest Order probability " << probability << endl
+        << "------------------------------------------------" << endl;
+
+    return probability;
+}
+
+
+template <class t_idx>
+double pkn(const t_idx& idx, uint64_t level, const bool unk,
            const std::vector<uint64_t>::iterator& pattern_begin,
            const std::vector<uint64_t>::iterator& pattern_end,
            uint64_t& lb, uint64_t& rb,
@@ -358,7 +378,7 @@ double pkn(const t_idx& idx, uint64_t level,
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
         print(pattern_begin, pattern_end);
         cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
-        probability = highestorder(idx, level,
+        probability = highestorder(idx, level, unk,
 				   pattern_begin, pattern_end,
                                    lb, rb,
                                    lb_rev, rb_rev, char_pos, d);
@@ -369,7 +389,7 @@ double pkn(const t_idx& idx, uint64_t level,
             exit(1);
         cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
 
-        probability = lowerorder(idx, level,
+        probability = lowerorder(idx, level, unk,
 				 pattern_begin, pattern_end,
                                  lb, rb,
                                  lb_rev, rb_rev, char_pos, d);
@@ -377,8 +397,12 @@ double pkn(const t_idx& idx, uint64_t level,
         cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
     } else if (size == 1 || ngramsize == 1) {
         cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
-        probability = lowestorder(idx, *(pattern_end - 1),
-                                  lb_rev, rb_rev, char_pos, d);
+	if(!unk){
+        	probability = lowestorder(idx, *(pattern_end - 1),
+                	                  lb_rev, rb_rev, char_pos, d);
+	}else{
+	        probability = lowestorder_unk(idx);
+	}
         cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
     }
     return probability;
@@ -406,7 +430,10 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb = 0, rb = idx.m_cst.size() - 1;
         uint64_t char_pos = 0, d = 0;
         int size = std::distance(pattern.begin(), pattern.end());
-        double score = pkn(idx,size, 
+	bool unk = false;
+	if(pattern.back()==77777)
+		unk = true;
+        double score = pkn(idx,size,unk, 
 			   pattern.begin(), pattern.end(),
                            lb, rb,
                            lb_rev, rb_rev, char_pos, d);
@@ -423,18 +450,9 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     double perplexity = 0;
     int M = 0;
     std::chrono::nanoseconds total_time(0);
-    std::ofstream output;
-    output.open("../UnitTestData/sdsl_output/output",std::ios_base::app);
     for (std::vector<uint64_t> pattern : patterns) {
 	int pattern_size = pattern.size();
 	std::string pattern_string;
-        //for generating the unittest output
-	{
-		std::ostringstream pstring;
-	        std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(pstring, " "));
-                pattern_string = pstring.str();
-                pattern_string.pop_back();//removes extra space
-	}
         M += pattern_size + 1; // +1 for adding </s>
         pattern.push_back(ENDTAG);
         pattern.insert(pattern.begin(), STARTTAG);
@@ -447,12 +465,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
 	std::cout<< pattern_string<<" -> log10prob = " <<std::setprecision(10)<< sentenceprob << "  ppl = "<<std::setprecision(10)<< intermediate_perplexity <<endl;
         total_time += (stop - start);
-	//for generating the unittest output
-	{
-		output<<pattern_string<<"@"<<ngramsize<<"@"<<std::setprecision(10)<<intermediate_perplexity<<"\n";
-	}
     }
-    output.close();
     std::cout << "time in milliseconds = "
               << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
               << " ms" << endl;
