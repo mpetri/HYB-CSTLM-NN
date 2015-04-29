@@ -478,7 +478,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
 }
 
 template <class t_idx>
-double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
+double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, int& M)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
@@ -501,7 +501,10 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec)
         int size = std::distance(pattern.begin(), pattern.end());
 	bool unk = false;
 	if(pattern.back()==77777)
+	{
 		unk = true;
+		M = M - 1;//excluding OOV from the perplexity score - identical to srilm ppl
+	}
         double score = pkn(idx,size,unk, 
 			   pattern.begin(), pattern.end(),
                            lb, rb,
@@ -527,7 +530,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), STARTTAG);
         // run the query
         auto start = clock::now();
-        double sentenceprob = run_query_knm(idx, pattern);
+        double sentenceprob = run_query_knm(idx, pattern, M);
         auto stop = clock::now();
         perplexity += sentenceprob;
         // output logprob and perplexity 
