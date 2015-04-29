@@ -68,7 +68,7 @@ TEST_F(LMTest, Perplexity) {
 	{
 		triplet srilm = srilm_triplets[i];
 		double perplexity = gate(idx, srilm.pattern, srilm.order, false);
-		cout<<"order "<<srilm.order<<" perplexity-srilm "<<srilm.perplexity<<" perplexity-sdsl "<<perplexity<<endl;
+	//	cout<<"order "<<srilm.order<<" perplexity-srilm "<<srilm.perplexity<<" perplexity-sdsl "<<perplexity<<endl;
 		EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
 	}
 }
