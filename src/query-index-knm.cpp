@@ -106,12 +106,12 @@ int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev,
 }
 
 template <class t_idx>
-double discount(const t_idx& idx, int level, bool cnt=false)
+double discount(const t_idx& idx, int level, bool cnt = false)
 {
-    if(cnt)
-	return idx.m_Y_cnt[level];
+    if (cnt)
+        return idx.m_Y_cnt[level];
     else
-	return idx.m_Y[level];
+        return idx.m_Y[level];
 }
 
 //  Computes N_1+( * ab * )
@@ -214,28 +214,27 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     double backoff_prob = pkn(idx, level, unk,
-			      pattern_begin + 1, pattern_end,
+                              pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
 
-    cout << "SYMBOL=" << *pattern_begin << " d=" << d << endl;
+    //cout << "SYMBOL=" << *pattern_begin << " d=" << d << endl;
     if (forward_search(idx.m_cst_rev, node, d, *pattern_begin, char_pos) > 0) {
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
         c = rb_rev - lb_rev + 1;
-        cout<<"XXXXXXXX c "<<c<<" rb_rev: "<<rb_rev<<" lb_rev: "<<lb_rev<<endl;
-
+        //  cout<<"XXXXXXXX c "<<c<<" rb_rev: "<<rb_rev<<" lb_rev: "<<lb_rev<<endl;
     }
     int pattern_size = std::distance(pattern_begin, pattern_end);
     double D = 0;
-    if(pattern_size == ngramsize)
-	D = discount(idx,ngramsize);
+    if (pattern_size == ngramsize)
+        D = discount(idx, ngramsize);
     else
-	//which is the special case of n<ngramsize that starts with <s>
-	D = discount(idx,pattern_size,true);
+        //which is the special case of n<ngramsize that starts with <s>
+        D = discount(idx, pattern_size, true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -246,12 +245,13 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
         denominator = rb - lb + 1;
         N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
     } else {
-        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-        cout<< "Highest Order probability is = Lower Order probability "<<backoff_prob<<endl;
-	return backoff_prob;
+        //    cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+        //    cout<< "Highest Order probability is = Lower Order probability "<<backoff_prob<<endl;
+        return backoff_prob;
     }
 
     double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
+    /*
     cout
         << " Highest Order" << endl
         << " N1plus_front is: " << N1plus_front << endl
@@ -260,6 +260,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
         << " denomiator is: " << denominator << endl
         << " Highest Order probability " << output << endl
         << "------------------------------------------------" << endl;
+*/
     return output;
 }
 
@@ -272,21 +273,21 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 {
     level = level - 1;
     double backoff_prob = pkn(idx, level, unk,
-			      pattern_begin + 1, pattern_end,
+                              pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
 
     uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     int pattern_size = std::distance(pattern_begin, pattern_end);
-    print(pattern_begin, pattern_end);
+    //    print(pattern_begin, pattern_end);
     if (forward_search(idx.m_cst_rev, node, d, *(pattern_begin), char_pos) > 0) {
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
         c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);
     }
 
-    double D = discount(idx,level,true);
+    double D = discount(idx, level, true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -297,20 +298,21 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
         back_N1plus_front = N1PlusFrontBack(idx, lb, rb, c, pattern_begin, pattern_end - 1);
         N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
-	
-	if(back_N1plus_front == 0)//TODO check
-		// if back_N1plus_front fails to find a full extention to 
-		// both left and right, it replaces 0 with extention to right
-		// computed by N1plus_front instead. 
-		back_N1plus_front = N1plus_front;
-     } else {
-        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
-	cout<< "Lower Order probability is = Lower/Lowest Order probability "<<backoff_prob<<endl;
+
+        if (back_N1plus_front == 0) //TODO check
+            // if back_N1plus_front fails to find a full extention to
+            // both left and right, it replaces 0 with extention to right
+            // computed by N1plus_front instead.
+            back_N1plus_front = N1plus_front;
+    } else {
+        //cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+        //cout<< "Lower Order probability is = Lower/Lowest Order probability "<<backoff_prob<<endl;
         return backoff_prob;
     }
 
     d++;
     double output = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
+    /*
     cout
         << "Lower Order" << endl
         << " N1plus_front is: " << N1plus_front << endl
@@ -319,18 +321,19 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         << " back_N1plus_front is: " << back_N1plus_front << endl
         << " Lower Order probability " << output << endl
         << "------------------------------------------------" << endl;
+*/
     return output;
 }
 
 template <class t_idx>
 double lowestorder(const t_idx& idx,
                    const uint64_t& pattern,
-                   uint64_t& lb_rev, uint64_t& rb_rev, 
+                   uint64_t& lb_rev, uint64_t& rb_rev,
                    uint64_t& char_pos, uint64_t& d)
 {
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     double denominator = 0;
-    cout << "SYMBOL=" << pattern << " d=" << d << endl;
+    //    cout << "SYMBOL=" << pattern << " d=" << d << endl;
     forward_search(idx.m_cst_rev, node, d, pattern, char_pos);
     d++;
     denominator = idx.m_N1plus_dotdot;
@@ -338,13 +341,13 @@ double lowestorder(const t_idx& idx,
     rb_rev = idx.m_cst_rev.rb(node);
     int numerator = N1PlusBack(idx, lb_rev, rb_rev, 1); //TODO precompute this
     double probability = (double)numerator / denominator;
-
+    /*
     cout
         << "Lowest Order numerator is: " << numerator << endl
         << " denomiator is: " << denominator << endl
         << " Lowest Order probability " << probability << endl
         << "------------------------------------------------" << endl;
-
+*/
     return probability;
 }
 
@@ -353,17 +356,16 @@ template <class t_idx>
 double lowestorder_unk(const t_idx& idx)
 {
     double denominator = idx.m_N1plus_dotdot;
-    double probability = discount(idx,1,true) / denominator;
-    
+    double probability = discount(idx, 1, true) / denominator;
+    /*    
     cout
         << " Lowest Order (UNK) numerator is: " << discount(idx,1,true) << endl
         << " denomiator is: " << denominator << endl
         << " Lowest Order probability " << probability << endl
         << "------------------------------------------------" << endl;
-
+*/
     return probability;
 }
-
 
 template <class t_idx>
 double pkn(const t_idx& idx, uint64_t level, const bool unk,
@@ -375,34 +377,34 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
     int size = std::distance(pattern_begin, pattern_end);
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
-        print(pattern_begin, pattern_end);
-        cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
+        //        print(pattern_begin, pattern_end);
+        //        cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
         probability = highestorder(idx, level, unk,
-				   pattern_begin, pattern_end,
+                                   pattern_begin, pattern_end,
                                    lb, rb,
                                    lb_rev, rb_rev, char_pos, d);
-        cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
+        //        cout << ".(" << lb_rev << "," << rb_rev << ")." << endl;
     } else if (size < ngramsize && size != 1) {
-        print(pattern_begin, pattern_end);
+        //        print(pattern_begin, pattern_end);
         if (size == 0)
             exit(1);
-        cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
+        //        cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
 
         probability = lowerorder(idx, level, unk,
-				 pattern_begin, pattern_end,
+                                 pattern_begin, pattern_end,
                                  lb, rb,
                                  lb_rev, rb_rev, char_pos, d);
 
-        cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
+        //        cout << "..(" << lb_rev << "," << rb_rev << ").." << endl;
     } else if (size == 1 || ngramsize == 1) {
-        cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
-	if(!unk){
-        	probability = lowestorder(idx, *(pattern_end - 1),
-                	                  lb_rev, rb_rev, char_pos, d);
-	}else{
-	        probability = lowestorder_unk(idx);
-	}
-        cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
+        //        cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
+        if (!unk) {
+            probability = lowestorder(idx, *(pattern_end - 1),
+                                      lb_rev, rb_rev, char_pos, d);
+        } else {
+            probability = lowestorder_unk(idx);
+        }
+        //        cout << "...(" << lb_rev << "," << rb_rev << ")..." << endl;
     }
     return probability;
 }
@@ -413,7 +415,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, ui
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
-        cout << "------------------------------------------------" << endl;
+        //        cout << "------------------------------------------------" << endl;
         pattern_deq.push_back(word);
         if (word == STARTTAG)
             continue;
@@ -421,26 +423,25 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, ui
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-        cout << "PATTERN is = ";
-        for (int i = 0; i < pattern.size(); i++)
-            cout << pattern[i] << " ";
-        cout << endl;
+        //        cout << "PATTERN is = ";
+        //        for (int i = 0; i < pattern.size(); i++)
+        //            cout << pattern[i] << " ";
+        //        cout << endl;
 
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb = 0, rb = idx.m_cst.size() - 1;
         uint64_t char_pos = 0, d = 0;
         int size = std::distance(pattern.begin(), pattern.end());
-	bool unk = false;
-	if(pattern.back()==77777)
-	{
-		unk = true;
-		M = M - 1;// excluding OOV from perplexity - identical to SRILM ppl
-	}
-        double score = pkn(idx,size,unk, 
-			   pattern.begin(), pattern.end(),
+        bool unk = false;
+        if (pattern.back() == 77777) {
+            unk = true;
+            M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
+        }
+        double score = pkn(idx, size, unk,
+                           pattern.begin(), pattern.end(),
                            lb, rb,
                            lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
-        cout << "-----------------------------------------------" << endl;
+        //        cout << "-----------------------------------------------" << endl;
     }
     return final_score;
 }
@@ -452,9 +453,12 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     double perplexity = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
+    int ind = 1;
     for (std::vector<uint64_t> pattern : patterns) {
-	int pattern_size = pattern.size();
-	std::string pattern_string;
+        cout << ind << endl;
+        ind++;
+        int pattern_size = pattern.size();
+        std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
         pattern.push_back(ENDTAG);
         pattern.insert(pattern.begin(), STARTTAG);
@@ -463,16 +467,16 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = run_query_knm(idx, pattern, M);
         auto stop = clock::now();
         perplexity += sentenceprob;
-        // output logprob and perplexity 
-	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
-	std::cout<< pattern_string<<" -> log10prob = " <<std::setprecision(10)<< sentenceprob << "  ppl = "<<std::setprecision(10)<< intermediate_perplexity <<endl;
+        // output logprob and perplexity
+        //	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
+        //	std::cout<< pattern_string<<" -> log10prob = " <<std::setprecision(10)<< sentenceprob << "  ppl = "<<std::setprecision(10)<< intermediate_perplexity <<endl;
         total_time += (stop - start);
     }
     std::cout << "time in milliseconds = "
               << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
               << " ms" << endl;
-    perplexity = perplexity/M;
-    cout <<"Test Corpus Perplexity is: "<<std::setprecision(10) <<pow(10, -perplexity) << endl;
+    perplexity = perplexity / M;
+    cout << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity) << endl;
 }
 
 int main(int argc, const char* argv[])
@@ -597,10 +601,10 @@ int main(int argc, const char* argv[])
 
     cout << "------------------------------------------------" << endl;
     cout << "N1+(..) = " << idx.m_N1plus_dotdot << endl;
-//    cout << "N3+(.) = "<< idx.m_N3plus_dot<< endl;
+    //    cout << "N3+(.) = "<< idx.m_N3plus_dot<< endl;
     cout << "------------------------------------------------" << endl;
     cout << "------------------------------------------------" << endl;
-    
+
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {

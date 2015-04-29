@@ -12,7 +12,7 @@ class t_vocab = vocab_uncompressed
 >
 class index_succinct {
 public:
-    static const int max_ngram_count = 20;
+    static const int max_ngram_count = 4;
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
     typedef t_vocab vocab_type;
