@@ -245,7 +245,7 @@ public:
 
         if(output) std::cout << "DONE" << std::endl;
         if(output) std::cout << "CREATE VOCAB" << std::endl;
-        m_vocab = vocab_type(col);
+       	    m_vocab = vocab_type(col);
 
         if(output) std::cout << "DONE" << std::endl;
 
@@ -292,6 +292,7 @@ public:
         written_bytes += sdsl::serialize(m_D3_cnt, out, child, "D3_cnt");
 
         sdsl::structure_tree::add_size(child, written_bytes);
+
         return written_bytes;
     }
 
@@ -357,6 +358,6 @@ public:
 
     uint64_t vocab_size() const
     {
-        return m_vocab.size();
+	return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 };
