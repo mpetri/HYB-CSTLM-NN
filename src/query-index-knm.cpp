@@ -81,7 +81,9 @@ void print(const std::vector<uint64_t>::iterator& pattern_begin,
 
 // computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
 template <class t_idx>
-int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size, bool check_for_EOS = true)
+int N1PlusBack(const t_idx& idx, 
+	       const uint64_t& lb_rev, const uint64_t& rb_rev, 
+               int patrev_size, bool check_for_EOS = true)
 {
     uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -217,8 +219,41 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
 			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
+    
+    uint64_t denominator =0 ;
+    uint64_t N1plus_front = 0;
+    if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
+        denominator = rb - lb + 1;
+        N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
+    } else {
+        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+        cout<< "Highest Order probability is = Lower Order probability "<<backoff_prob<<endl;
+        return backoff_prob;
+    }
+
+    int pattern_size = std::distance(pattern_begin, pattern_end);
+    double D = 0;
+    if(pattern_size == ngramsize)
+        D = discount(idx,ngramsize);
+    else
+        //which is the special case of n<ngramsize that starts with <s>
+        D = discount(idx,pattern_size,true);
+
+    if(unk)
+    {
+	    double output = (D * N1plus_front / denominator) * backoff_prob;
+	    cout
+        	<< " Highest Order" << endl
+	        << " N1plus_front is: " << N1plus_front << endl
+        	<< " D is: " << D << endl
+        	<< " denomiator is: " << denominator << endl
+	        << " Highest Order probability " << output << endl
+        	<< "------------------------------------------------" << endl;
+	    return output;
+
+    }
+
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
-    uint64_t denominator = 0;
     uint64_t c = 0;
 
     cout << "SYMBOL=" << *pattern_begin << " d=" << d << endl;
@@ -229,6 +264,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
         cout<<"XXXXXXXX c "<<c<<" rb_rev: "<<rb_rev<<" lb_rev: "<<lb_rev<<endl;
 
     }
+/*
     int pattern_size = std::distance(pattern_begin, pattern_end);
     double D = 0;
     if(pattern_size == ngramsize)
@@ -236,11 +272,12 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     else
 	//which is the special case of n<ngramsize that starts with <s>
 	D = discount(idx,pattern_size,true);
+*/
     double numerator = 0;
     if (c - D > 0) {
         numerator = c - D;
     }
-
+/*
     uint64_t N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
         denominator = rb - lb + 1;
@@ -250,7 +287,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
         cout<< "Highest Order probability is = Lower Order probability "<<backoff_prob<<endl;
 	return backoff_prob;
     }
-
+*/
     double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
     cout
         << " Highest Order" << endl
@@ -275,6 +312,37 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 			      pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
+    uint64_t N1plus_front = 0;
+    uint64_t back_N1plus_front = 0;
+    if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
+        back_N1plus_front = N1PlusFrontBack(idx, lb, rb, 0, pattern_begin, pattern_end - 1);
+        N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
+
+        if(back_N1plus_front == 0)//TODO check
+                // if back_N1plus_front fails to find a full extention to 
+                // both left and right, it replaces 0 with extention to right
+                // computed by N1plus_front instead. 
+                back_N1plus_front = N1plus_front;
+     } else {
+        cout << "---- Undefined fractional number XXXZ - Backing-off ---" << endl;
+        cout<< "Lower Order probability is = Lower/Lowest Order probability "<<backoff_prob<<endl;
+        return backoff_prob;
+    }
+    
+    double D = discount(idx,level,true);
+
+    if(unk)
+    {
+    	double output = (D * N1plus_front / back_N1plus_front) * backoff_prob;
+    	cout
+            << "Lower Order" << endl
+            << " N1plus_front is: " << N1plus_front << endl
+            << " D is: " << D << endl
+            << " back_N1plus_front is: " << back_N1plus_front << endl
+            << " Lower Order probability " << output << endl
+            << "------------------------------------------------" << endl;
+	return output;
+    }
 
     uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -286,12 +354,12 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);
     }
 
-    double D = discount(idx,level,true);
+//    double D = discount(idx,level,true);
     double numerator = 0;
     if (c - D > 0) {
         numerator = c - D;
     }
-
+/*
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
@@ -308,7 +376,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 	cout<< "Lower Order probability is = Lower/Lowest Order probability "<<backoff_prob<<endl;
         return backoff_prob;
     }
-
+*/
     d++;
     double output = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
     cout
@@ -354,8 +422,9 @@ double lowestorder_unk(const t_idx& idx)
 {
     double denominator = idx.m_N1plus_dotdot;
     double probability = discount(idx,1,true) / denominator;
-
-    
+//    double probability =(double) 1/idx.vocab_size();
+//    cout << "idx.m_vocab.size() "<<idx.vocab_size() <<endl;
+   
     cout
         << " Lowest Order (UNK) numerator is: " << discount(idx,1,true) << endl
         << " denomiator is: " << denominator << endl
