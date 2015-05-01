@@ -72,7 +72,6 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-
 // Computes the probability of P( x | a b c ... ) using raw occurrence counts.
 // Note that the backoff probability uses the lower order variants of this method.
 //      idx -- the index
@@ -86,7 +85,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d)
 {
     double backoff_prob = pkn(idx, level, unk,
-			      pattern_begin + 1, pattern_end,
+                              pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -100,11 +99,11 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     }
     int pattern_size = std::distance(pattern_begin, pattern_end);
     double D = 0;
-    if(pattern_size == ngramsize)
-	D = idx.discount(ngramsize);
+    if (pattern_size == ngramsize)
+        D = idx.discount(ngramsize);
     else
-	//which is the special case of n<ngramsize that starts with <s>
-	D = idx.discount(pattern_size,true);
+        //which is the special case of n<ngramsize that starts with <s>
+        D = idx.discount(pattern_size, true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -115,7 +114,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
         denominator = rb - lb + 1;
         N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
     } else {
-		return backoff_prob;
+        return backoff_prob;
     }
 
     double output = (numerator / denominator) + (D * N1plus_front / denominator) * backoff_prob;
@@ -131,7 +130,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 {
     level = level - 1;
     double backoff_prob = pkn(idx, level, unk,
-			      pattern_begin + 1, pattern_end,
+                              pattern_begin + 1, pattern_end,
                               lb, rb,
                               lb_rev, rb_rev, char_pos, d);
 
@@ -144,7 +143,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         c = idx.N1PlusBack(lb_rev, rb_rev, pattern_size);
     }
 
-    double D = idx.discount(level,true);
+    double D = idx.discount(level, true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -155,13 +154,13 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
         back_N1plus_front = idx.N1PlusFrontBack(lb, rb, c, pattern_begin, pattern_end - 1);
         N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
-	
-	if(back_N1plus_front == 0)//TODO check
-		// if back_N1plus_front fails to find a full extention to 
-		// both left and right, it replaces 0 with extention to right
-		// computed by N1plus_front instead. 
-		back_N1plus_front = N1plus_front;
-     } else {
+
+        if (back_N1plus_front == 0) //TODO check
+            // if back_N1plus_front fails to find a full extention to
+            // both left and right, it replaces 0 with extention to right
+            // computed by N1plus_front instead.
+            back_N1plus_front = N1plus_front;
+    } else {
         return backoff_prob;
     }
 
@@ -173,7 +172,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 template <class t_idx>
 double lowestorder(const t_idx& idx,
                    const uint64_t& pattern,
-                   uint64_t& lb_rev, uint64_t& rb_rev, 
+                   uint64_t& lb_rev, uint64_t& rb_rev,
                    uint64_t& char_pos, uint64_t& d)
 {
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -193,10 +192,9 @@ template <class t_idx>
 double lowestorder_unk(const t_idx& idx)
 {
     double denominator = idx.m_N1plus_dotdot;
-    double probability = idx.discount(1,true) / denominator;
+    double probability = idx.discount(1, true) / denominator;
     return probability;
 }
-
 
 template <class t_idx>
 double pkn(const t_idx& idx, uint64_t level, const bool unk,
@@ -209,7 +207,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == STARTTAG)) {
         probability = highestorder(idx, level, unk,
-				   pattern_begin, pattern_end,
+                                   pattern_begin, pattern_end,
                                    lb, rb,
                                    lb_rev, rb_rev, char_pos, d);
     } else if (size < ngramsize && size != 1) {
@@ -217,18 +215,18 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
             exit(1);
 
         probability = lowerorder(idx, level, unk,
-				 pattern_begin, pattern_end,
+                                 pattern_begin, pattern_end,
                                  lb, rb,
                                  lb_rev, rb_rev, char_pos, d);
 
     } else if (size == 1 || ngramsize == 1) {
-		if(!unk){
-	        	probability = lowestorder(idx, *(pattern_end - 1),
-	                	                  lb_rev, rb_rev, char_pos, d);
-		}else{
-		        probability = lowestorder_unk(idx);
-		}
-	}
+        if (!unk) {
+            probability = lowestorder(idx, *(pattern_end - 1),
+                                      lb_rev, rb_rev, char_pos, d);
+        } else {
+            probability = lowestorder_unk(idx);
+        }
+    }
     return probability;
 }
 
@@ -248,14 +246,13 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, ui
         uint64_t lb_rev = 0, rb_rev = idx.m_cst_rev.size() - 1, lb = 0, rb = idx.m_cst.size() - 1;
         uint64_t char_pos = 0, d = 0;
         int size = std::distance(pattern.begin(), pattern.end());
-	bool unk = false;
-	if(pattern.back()==77777)
-	{
-		unk = true;
-		M = M - 1;// excluding OOV from perplexity - identical to SRILM ppl
-	}
-        double score = pkn(idx,size,unk, 
-			   pattern.begin(), pattern.end(),
+        bool unk = false;
+        if (pattern.back() == 77777) {
+            unk = true;
+            M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
+        }
+        double score = pkn(idx, size, unk,
+                           pattern.begin(), pattern.end(),
                            lb, rb,
                            lb_rev, rb_rev, char_pos, d);
         final_score += log10(score);
@@ -263,19 +260,18 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, ui
     return final_score;
 }
 
-
 template <class t_idx>
 double gate(const t_idx& idx, std::vector<uint64_t> pattern, int nngramsize, bool iismkn)
 {
-	ngramsize = nngramsize;
-	ismkn = iismkn;
-	int pattern_size = pattern.size();
-	std::string pattern_string;
+    ngramsize = nngramsize;
+    ismkn = iismkn;
+    int pattern_size = pattern.size();
+    std::string pattern_string;
     pattern.push_back(ENDTAG);
     pattern.insert(pattern.begin(), STARTTAG);
     // run the query
-	uint64_t M = pattern_size+1;
+    uint64_t M = pattern_size + 1;
     double sentenceprob = run_query_knm(idx, pattern, M);
-	double perplexity = pow(10,-(1 / (double) M) * sentenceprob);
-	return perplexity;
+    double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
+    return perplexity;
 }

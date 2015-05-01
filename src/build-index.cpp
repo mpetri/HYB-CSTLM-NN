@@ -37,7 +37,7 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-template<class t_idx>
+template <class t_idx>
 void create_and_store(collection& col)
 {
     using clock = std::chrono::high_resolution_clock;

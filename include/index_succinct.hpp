@@ -6,10 +6,8 @@
 
 #include <sdsl/suffix_arrays.hpp>
 
-template <
-class t_cst,
-class t_vocab = vocab_uncompressed
->
+template <class t_cst,
+          class t_vocab = vocab_uncompressed>
 class index_succinct {
 public:
     static const int max_ngram_count = 10;
@@ -43,16 +41,14 @@ public:
     std::vector<double> m_D2_cnt;
     std::vector<double> m_D3_cnt;
 
-
 public:
-
     // computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
     int N1PlusBack(const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size, bool check_for_EOS = true) const
     {
         uint64_t c = 0;
         auto node = m_cst_rev.node(lb_rev, rb_rev);
         if (patrev_size == m_cst_rev.depth(node)) {
-            c =m_cst_rev.degree(node);
+            c = m_cst_rev.degree(node);
             if (check_for_EOS) {
                 auto w = m_cst_rev.select_child(node, 1);
                 uint64_t symbol = m_cst_rev.edge(w, patrev_size + 1);
@@ -61,7 +57,7 @@ public:
             }
         } else {
             if (check_for_EOS) {
-                uint64_t symbol =m_cst_rev.edge(node, patrev_size + 1);
+                uint64_t symbol = m_cst_rev.edge(node, patrev_size + 1);
                 if (symbol != 1)
                     c = 1;
             } else {
@@ -71,13 +67,12 @@ public:
         return c;
     }
 
-
-    double discount(int level, bool cnt=false) const
+    double discount(int level, bool cnt = false) const
     {
-        if(cnt)
-        return m_Y_cnt[level];
+        if (cnt)
+            return m_Y_cnt[level];
         else
-        return m_Y[level];
+            return m_Y[level];
     }
 
     //  Computes N_1+( * ab * )
@@ -163,13 +158,13 @@ public:
         }
     }
 
-    uint64_t ActualCount(std::vector<uint64_t>pat)
+    uint64_t ActualCount(std::vector<uint64_t> pat)
     {
-    	uint64_t lb = 0 , rb = m_cst.size()-1;
-            if (backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0) 
-    		return rb-lb+1;
-    	else
-    		return 0;
+        uint64_t lb = 0, rb = m_cst.size() - 1;
+        if (backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0)
+            return rb - lb + 1;
+        else
+            return 0;
     }
 
     void
@@ -185,15 +180,15 @@ public:
             }
         }
         if (size != 0) {
-	    pat.push_back(symbol);
-            {	
-		uint64_t n1plus_back=0;
+            pat.push_back(symbol);
+            {
+                uint64_t n1plus_back = 0;
 
-		if(pat[0]!=3)
-                	n1plus_back = N1PlusBack(pat);
-		else
-			//special case where the pattern starts with <s>: acutal count is used
-			n1plus_back = ActualCount(pat);
+                if (pat[0] != 3)
+                    n1plus_back = N1PlusBack(pat);
+                else
+                    //special case where the pattern starts with <s>: acutal count is used
+                    n1plus_back = ActualCount(pat);
 
                 if (n1plus_back == 1) {
                     m_n1_cnt[size] += 1;
@@ -215,7 +210,7 @@ public:
             } else if (freq >= 3) {
                 if (freq == 3) {
                     m_n3[size] += 1;
-                } else if (freq == 4) { 
+                } else if (freq == 4) {
                     m_n4[size] += 1;
                 }
                 if (size == 1)
@@ -228,7 +223,7 @@ public:
             while (m_cst.id(w) != root_id) {
                 symbol = m_cst.edge(w, 1);
                 if (symbol != 1 && symbol != 0) {
-                    ncomputer(symbol,pat, size + 1, m_cst.lb(w), m_cst.rb(w));
+                    ncomputer(symbol, pat, size + 1, m_cst.lb(w), m_cst.rb(w));
                 }
                 w = m_cst.sibling(w);
             }
@@ -302,10 +297,10 @@ public:
         m_n4_cnt.resize(max_ngram_count + 1);
 
         uint64_t lb = 0, rb = m_cst.size() - 1;
-	uint64_t symbol=0;
+        uint64_t symbol = 0;
         std::vector<uint64_t> pat;
-	m_N1plus_dotdot=0;
-	m_N3plus_dot=0;
+        m_N1plus_dotdot = 0;
+        m_N3plus_dot = 0;
         ncomputer(symbol, pat, 0, lb, rb);
 
         m_Y.resize(max_ngram_count + 1);
@@ -328,11 +323,14 @@ public:
                 m_D3[size] = 3 - 4 * m_Y[size] * (double)m_n4[size] / m_n3[size];
         }
 
-        if(output) std::cout << "DONE" << std::endl;
-        if(output) std::cout << "CREATE VOCAB" << std::endl;
-       	    m_vocab = vocab_type(col);
+        if (output)
+            std::cout << "DONE" << std::endl;
+        if (output)
+            std::cout << "CREATE VOCAB" << std::endl;
+        m_vocab = vocab_type(col);
 
-        if(output) std::cout << "DONE" << std::endl;
+        if (output)
+            std::cout << "DONE" << std::endl;
 
         for (int size = 1; size <= max_ngram_count; size++) {
             m_Y_cnt[size] = (double)m_n1_cnt[size] / (m_n1_cnt[size] + 2 * m_n2_cnt[size]);
@@ -443,6 +441,6 @@ public:
 
     uint64_t vocab_size() const
     {
-	return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
+        return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 };
