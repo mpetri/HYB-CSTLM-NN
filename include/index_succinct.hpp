@@ -45,43 +45,131 @@ public:
 
 
 public:
-    int
-    N1PlusBack(std::vector<uint64_t> pat, bool check_for_EOS = true)
+
+    // computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
+    int N1PlusBack(const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size, bool check_for_EOS = true) const
     {
-        int pat_size = pat.size();
-        uint64_t n1plus_back = 0;
-        uint64_t lb_rev = 0, rb_rev = m_cst_rev.size() - 1;
-        if (backward_search(m_cst_rev.csa, lb_rev, rb_rev, pat.rbegin(), pat.rend(), lb_rev, rb_rev) > 0) {
-            auto node = m_cst_rev.node(lb_rev, rb_rev);
-            if (pat_size == m_cst_rev.depth(node)) {
-                n1plus_back = m_cst_rev.degree(node);
-                if (check_for_EOS) {
-                    auto w = m_cst_rev.select_child(node, 1);
-                    uint64_t symbol = m_cst_rev.edge(w, pat_size + 1);
-                    if (symbol == 1)
-                        n1plus_back = n1plus_back - 1;
-                }
+        uint64_t c = 0;
+        auto node = m_cst_rev.node(lb_rev, rb_rev);
+        if (patrev_size == m_cst_rev.depth(node)) {
+            c =m_cst_rev.degree(node);
+            if (check_for_EOS) {
+                auto w = m_cst_rev.select_child(node, 1);
+                uint64_t symbol = m_cst_rev.edge(w, patrev_size + 1);
+                if (symbol == 1)
+                    c = c - 1;
+            }
+        } else {
+            if (check_for_EOS) {
+                uint64_t symbol =m_cst_rev.edge(node, patrev_size + 1);
+                if (symbol != 1)
+                    c = 1;
             } else {
-                if (check_for_EOS) {
-                    uint64_t symbol = m_cst_rev.edge(node, pat_size + 1);
-                    if (symbol != 1)
-                        n1plus_back = 1;
-                } else {
-                    n1plus_back = 1;
-                }
+                c = 1;
             }
         }
-        return n1plus_back;
+        return c;
     }
 
-    int
-    ActualCount(std::vector<uint64_t>pat)
+
+    double discount(int level, bool cnt=false) const
     {
-	uint64_t lb = 0 , rb = m_cst.size()-1;
-        if (backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0) 
-		return rb-lb+1;
-	else
-		return 0;
+        if(cnt)
+        return m_Y_cnt[level];
+        else
+        return m_Y[level];
+    }
+
+    //  Computes N_1+( * ab * )
+    //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
+    //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
+    //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
+    uint64_t N1PlusFrontBack(const uint64_t& lb, const uint64_t& rb,
+                             const uint64_t n1plus_back,
+                             const std::vector<uint64_t>::iterator& pattern_begin,
+                             const std::vector<uint64_t>::iterator& pattern_end,
+                             bool check_for_EOS = true) const
+    {
+        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
+        // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
+        int pattern_size = std::distance(pattern_begin, pattern_end);
+        auto node = m_cst.node(lb, rb);
+        uint64_t back_N1plus_front = 0;
+        uint64_t lb_rev_prime = 0, rb_rev_prime = idx.m_cst_rev.size() - 1;
+        uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
+        // this is a full search for the pattern in reverse order in the reverse tree!
+        for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
+            backward_search(m_cst_rev.csa,
+                            lb_rev_prime, rb_rev_prime,
+                            *it,
+                            lb_rev_prime, rb_rev_prime);
+            it++;
+        }
+        // this is when the pattern matches a full edge in the CST
+        if (pattern_size == m_cst.depth(node)) {
+            auto w = m_cst.select_child(node, 1);
+            int root_id = m_cst.id(idx.m_cst.root());
+            while (m_cst.id(w) != root_id) {
+                lb_rev_stored = lb_rev_prime;
+                rb_rev_stored = rb_rev_prime;
+                uint64_t symbol = m_cst.edge(w, pattern_size + 1);
+                if (symbol != 1 || !check_for_EOS) {
+                    // find the symbol to the right
+                    // (which is first in the reverse order)
+                    backward_search(m_cst_rev.csa,
+                                    lb_rev_stored, rb_rev_stored,
+                                    symbol,
+                                    lb_rev_stored, rb_rev_stored);
+
+                    back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, pattern_size + 1, check_for_EOS);
+                }
+                w = m_cst.sibling(w);
+            }
+            return back_N1plus_front;
+        } else {
+            // special case, only one way of extending this pattern to the right
+            return n1plus_back;
+        }
+    }
+
+    // Computes N_1+( abc * )
+    uint64_t N1PlusFront(const uint64_t& lb, const uint64_t& rb,
+                         std::vector<uint64_t>::iterator pattern_begin,
+                         std::vector<uint64_t>::iterator pattern_end,
+                         bool check_for_EOS = true) const
+    {
+        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
+        auto node = m_cst.node(lb, rb);
+        int pattern_size = std::distance(pattern_begin, pattern_end);
+        uint64_t N1plus_front = 0;
+        if (pattern_size == m_cst.depth(node)) {
+            auto w = m_cst.select_child(node, 1);
+            N1plus_front = m_cst.degree(node);
+            if (check_for_EOS) {
+                uint64_t symbol = m_cst.edge(w, pattern_size + 1);
+                if (symbol == 1) {
+                    N1plus_front = N1plus_front - 1;
+                }
+            }
+            return N1plus_front;
+        } else {
+            if (check_for_EOS) {
+                uint64_t symbol = m_cst.edge(node, pattern_size + 1);
+                if (symbol != 1) {
+                    N1plus_front = 1;
+                }
+            }
+            return N1plus_front;
+        }
+    }
+
+    uint64_t ActualCount(std::vector<uint64_t>pat)
+    {
+    	uint64_t lb = 0 , rb = m_cst.size()-1;
+            if (backward_search(m_cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0) 
+    		return rb-lb+1;
+    	else
+    		return 0;
     }
 
     void
@@ -140,7 +228,6 @@ public:
             while (m_cst.id(w) != root_id) {
                 symbol = m_cst.edge(w, 1);
                 if (symbol != 1 && symbol != 0) {
-//                    pat.push_back(symbol);
                     ncomputer(symbol,pat, size + 1, m_cst.lb(w), m_cst.rb(w));
                 }
                 w = m_cst.sibling(w);
@@ -156,7 +243,6 @@ public:
                         while (m_cst.id(w) != root_id) {
                             symbol = m_cst.edge(w, depth + 1);
                             if (symbol != 1) {
-//                                pat.push_back(symbol);
                                 ncomputer(symbol, pat, size + 1, m_cst.lb(w), m_cst.rb(w));
                             }
                             w = m_cst.sibling(w);
@@ -164,7 +250,6 @@ public:
                     } else {
                         symbol = m_cst.edge(node, size + 1);
                         if (symbol != 1) {
-//                            pat.push_back(symbol);
                             ncomputer(symbol, pat, size + 1, m_cst.lb(node), m_cst.rb(node));
                         }
                     }

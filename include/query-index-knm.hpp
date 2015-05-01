@@ -72,127 +72,6 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-// computes N_1+( * abc ) equivalent to computing N_1+ ( cba *) in the reverse suffix tree
-template <class t_idx>
-int N1PlusBack(const t_idx& idx, const uint64_t& lb_rev, const uint64_t& rb_rev, int patrev_size, bool check_for_EOS = true)
-{
-    uint64_t c = 0;
-    auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
-    if (patrev_size == idx.m_cst_rev.depth(node)) {
-        c = idx.m_cst_rev.degree(node);
-        if (check_for_EOS) {
-            auto w = idx.m_cst_rev.select_child(node, 1);
-            uint64_t symbol = idx.m_cst_rev.edge(w, patrev_size + 1);
-            if (symbol == 1)
-                c = c - 1;
-        }
-    } else {
-        if (check_for_EOS) {
-            uint64_t symbol = idx.m_cst_rev.edge(node, patrev_size + 1);
-            if (symbol != 1)
-                c = 1;
-        } else {
-            c = 1;
-        }
-    }
-    return c;
-}
-
-template <class t_idx>
-double discount(const t_idx& idx, int level, bool cnt=false)
-{
-    if(cnt)
-	return idx.m_Y_cnt[level];
-    else
-	return idx.m_Y[level];
-}
-
-//  Computes N_1+( * ab * )
-//  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
-//  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
-//  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-template <class t_idx>
-uint64_t N1PlusFrontBack(const t_idx& idx,
-                         const uint64_t& lb, const uint64_t& rb,
-                         const uint64_t n1plus_back,
-                         const std::vector<uint64_t>::iterator& pattern_begin,
-                         const std::vector<uint64_t>::iterator& pattern_end,
-                         bool check_for_EOS = true)
-{
-    // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
-    // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
-    int pattern_size = std::distance(pattern_begin, pattern_end);
-    auto node = idx.m_cst.node(lb, rb);
-    uint64_t back_N1plus_front = 0;
-    uint64_t lb_rev_prime = 0, rb_rev_prime = idx.m_cst_rev.size() - 1;
-    uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
-    // this is a full search for the pattern in reverse order in the reverse tree!
-    for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
-        backward_search(idx.m_cst_rev.csa,
-                        lb_rev_prime, rb_rev_prime,
-                        *it,
-                        lb_rev_prime, rb_rev_prime);
-        it++;
-    }
-    // this is when the pattern matches a full edge in the CST
-    if (pattern_size == idx.m_cst.depth(node)) {
-        auto w = idx.m_cst.select_child(node, 1);
-        int root_id = idx.m_cst.id(idx.m_cst.root());
-        while (idx.m_cst.id(w) != root_id) {
-            lb_rev_stored = lb_rev_prime;
-            rb_rev_stored = rb_rev_prime;
-            uint64_t symbol = idx.m_cst.edge(w, pattern_size + 1);
-            if (symbol != 1 || !check_for_EOS) {
-                // find the symbol to the right
-                // (which is first in the reverse order)
-                backward_search(idx.m_cst_rev.csa,
-                                lb_rev_stored, rb_rev_stored,
-                                symbol,
-                                lb_rev_stored, rb_rev_stored);
-
-                back_N1plus_front += N1PlusBack(idx, lb_rev_stored, rb_rev_stored, pattern_size + 1, check_for_EOS);
-            }
-            w = idx.m_cst.sibling(w);
-        }
-        return back_N1plus_front;
-    } else {
-        // special case, only one way of extending this pattern to the right
-        return n1plus_back;
-    }
-}
-
-// Computes N_1+( abc * )
-template <class t_idx>
-uint64_t N1PlusFront(const t_idx& idx,
-                     const uint64_t& lb, const uint64_t& rb,
-                     std::vector<uint64_t>::iterator pattern_begin,
-                     std::vector<uint64_t>::iterator pattern_end,
-                     bool check_for_EOS = true)
-{
-    // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
-    auto node = idx.m_cst.node(lb, rb);
-    int pattern_size = std::distance(pattern_begin, pattern_end);
-    uint64_t N1plus_front = 0;
-    if (pattern_size == idx.m_cst.depth(node)) {
-        auto w = idx.m_cst.select_child(node, 1);
-        N1plus_front = idx.m_cst.degree(node);
-        if (check_for_EOS) {
-            uint64_t symbol = idx.m_cst.edge(w, pattern_size + 1);
-            if (symbol == 1) {
-                N1plus_front = N1plus_front - 1;
-            }
-        }
-        return N1plus_front;
-    } else {
-        if (check_for_EOS) {
-            uint64_t symbol = idx.m_cst.edge(node, pattern_size + 1);
-            if (symbol != 1) {
-                N1plus_front = 1;
-            }
-        }
-        return N1plus_front;
-    }
-}
 
 // Computes the probability of P( x | a b c ... ) using raw occurrence counts.
 // Note that the backoff probability uses the lower order variants of this method.
@@ -222,10 +101,10 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     int pattern_size = std::distance(pattern_begin, pattern_end);
     double D = 0;
     if(pattern_size == ngramsize)
-	D = discount(idx,ngramsize);
+	D = idx.discount(ngramsize);
     else
 	//which is the special case of n<ngramsize that starts with <s>
-	D = discount(idx,pattern_size,true);
+	D = idx.discount(pattern_size,true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -234,7 +113,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
         denominator = rb - lb + 1;
-        N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
     } else {
 		return backoff_prob;
     }
@@ -262,10 +141,10 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     if (forward_search(idx.m_cst_rev, node, d, *(pattern_begin), char_pos) > 0) {
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
-        c = N1PlusBack(idx, lb_rev, rb_rev, pattern_size);
+        c = idx.N1PlusBack(lb_rev, rb_rev, pattern_size);
     }
 
-    double D = discount(idx,level,true);
+    double D = idx.discount(level,true);
     double numerator = 0;
     if (!unk && c - D > 0) {
         numerator = c - D;
@@ -274,8 +153,8 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
-        back_N1plus_front = N1PlusFrontBack(idx, lb, rb, c, pattern_begin, pattern_end - 1);
-        N1plus_front = N1PlusFront(idx, lb, rb, pattern_begin, pattern_end - 1);
+        back_N1plus_front = idx.N1PlusFrontBack(lb, rb, c, pattern_begin, pattern_end - 1);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
 	
 	if(back_N1plus_front == 0)//TODO check
 		// if back_N1plus_front fails to find a full extention to 
@@ -304,7 +183,7 @@ double lowestorder(const t_idx& idx,
     denominator = idx.m_N1plus_dotdot;
     lb_rev = idx.m_cst_rev.lb(node);
     rb_rev = idx.m_cst_rev.rb(node);
-    int numerator = N1PlusBack(idx, lb_rev, rb_rev, 1); //TODO precompute this
+    int numerator = idx.N1PlusBack(lb_rev, rb_rev, 1); //TODO precompute this
     double probability = (double)numerator / denominator;
     return probability;
 }
@@ -314,7 +193,7 @@ template <class t_idx>
 double lowestorder_unk(const t_idx& idx)
 {
     double denominator = idx.m_N1plus_dotdot;
-    double probability = discount(idx,1,true) / denominator;
+    double probability = idx.discount(1,true) / denominator;
     return probability;
 }
 
