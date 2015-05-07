@@ -5,6 +5,7 @@
 #include "vocab_uncompressed.hpp"
 #include "precomputed_stats.hpp"
 #include "constants.hpp"
+#include "compressed_counts.hpp"
 
 #include <sdsl/suffix_arrays.hpp>
 
@@ -13,7 +14,7 @@ template <class t_cst,
     class t_vocab = vocab_uncompressed,
     uint32_t t_max_ngram_count = 10
     >
-class index_succinct {
+class index_succinct_store_n1fb {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
@@ -24,10 +25,11 @@ public: // data
     t_cst m_cst;
     t_cst m_cst_rev;
     precomputed_stats m_precomputed;
+    compressed_counts m_n1plusfrontback;
     vocab_type m_vocab;
 public:
-    index_succinct() = default;
-    index_succinct(collection& col, bool output = true)
+    index_succinct_store_n1fb() = default;
+    index_succinct_store_n1fb(collection& col, bool output = true)
     {
         using clock = std::chrono::high_resolution_clock;
 
@@ -69,6 +71,17 @@ public:
                       << ")" << std::endl;
 
         if (output)
+            std::cout << "PRECOMPUTE N1PLUSFRONTBACK" << std::endl;
+
+        start = clock::now();
+        m_n1plusfrontback = compressed_counts(m_cst,t_max_ngram_count);
+        stop = clock::now();
+        if (output)
+            std::cout << "DONE ("
+                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
+                      << ")" << std::endl;
+
+        if (output)
             std::cout << "COMPUTE DISCOUNTS" << std::endl;
         
         start = clock::now(); 
@@ -100,6 +113,7 @@ public:
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
+        written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
 
         sdsl::structure_tree::add_size(child, written_bytes);
@@ -112,15 +126,17 @@ public:
         m_cst.load(in);
         m_cst_rev.load(in);
         sdsl::load(m_precomputed, in);
+        sdsl::load(m_n1plusfrontback, in);
         sdsl::load(m_vocab, in);
     }
 
-    void swap(index_succinct& a)
+    void swap(index_succinct_store_n1fb& a)
     {
         if (this != &a) {
             m_cst.swap(a.m_cst);
             m_cst_rev.swap(a.m_cst_rev);
             std::swap(m_precomputed,a.m_precomputed);
+            std::swap(m_n1plusfrontback,a.m_n1plusfrontback);
             m_vocab.swap(a.m_vocab);
         }
     }
@@ -176,46 +192,9 @@ public:
                              const std::vector<uint64_t>::iterator& pattern_end,
                              bool check_for_EOS = true) const
     {
-        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
-        // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
-        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        auto node = m_cst.node(lb, rb);
-        uint64_t back_N1plus_front = 0;
-        uint64_t lb_rev_prime = 0, rb_rev_prime = m_cst_rev.size() - 1;
-        uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
-        // this is a full search for the pattern in reverse order in the reverse tree!
-        for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
-            backward_search(m_cst_rev.csa,
-                            lb_rev_prime, rb_rev_prime,
-                            *it,
-                            lb_rev_prime, rb_rev_prime);
-            it++;
-        }
-        // this is when the pattern matches a full edge in the CST
-        if (pattern_size == m_cst.depth(node)) {
-            auto w = m_cst.select_child(node, 1);
-            auto root_id = m_cst.id(m_cst.root());
-            while (m_cst.id(w) != root_id) {
-                lb_rev_stored = lb_rev_prime;
-                rb_rev_stored = rb_rev_prime;
-                uint64_t symbol = m_cst.edge(w, pattern_size + 1);
-                if (symbol != EOS_SYM || !check_for_EOS) {
-                    // find the symbol to the right
-                    // (which is first in the reverse order)
-                    backward_search(m_cst_rev.csa,
-                                    lb_rev_stored, rb_rev_stored,
-                                    symbol,
-                                    lb_rev_stored, rb_rev_stored);
 
-                    back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, pattern_size + 1, check_for_EOS);
-                }
-                w = m_cst.sibling(w);
-            }
-            return back_N1plus_front;
-        } else {
-            // special case, only one way of extending this pattern to the right
-            return n1plus_back;
-        }
+        auto node = m_cst.node(lb, rb);
+        return m_n1plusfrontback.lookup(m_cst,node);
     }
 
     // Computes N_1+( abc * )
@@ -226,7 +205,7 @@ public:
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         auto node = m_cst.node(lb, rb);
-        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        auto pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front = 0;
         if (pattern_size == m_cst.depth(node)) {
             auto w = m_cst.select_child(node, 1);

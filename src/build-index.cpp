@@ -2,7 +2,7 @@
 #include "sdsl/suffix_trees.hpp"
 
 #include "utils.hpp"
-#include "index_succinct.hpp"
+#include "index_types.hpp"
 
 typedef struct cmdargs {
     std::string collection_dir;
@@ -70,30 +70,13 @@ int main(int argc, const char* argv[])
 
     /* create indexes */
     {
-        // define the index type with csa_sada
-        using csa_type = sdsl::csa_sada_int<>;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        using index_type = index_succinct<cst_type>;
-
-        create_and_store<index_type>(col);
-    }
-
-    {
         // define the index type with csa_wt (wt_int)
         using csa_type = sdsl::csa_wt_int<>;
         using cst_type = sdsl::cst_sct3<csa_type>;
-        using index_type = index_succinct<cst_type>;
+        using index_type = index_succinct_store_n1fb<cst_type>;
 
         create_and_store<index_type>(col);
     }
 
-    {
-        // define the index type with csa_wt (wt_huff)
-        using csa_type = sdsl::csa_wt<sdsl::wt_huff_int<> >;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        using index_type = index_succinct<cst_type>;
-
-        create_and_store<index_type>(col);
-    }
     return 0;
 }

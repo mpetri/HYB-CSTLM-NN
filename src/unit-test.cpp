@@ -1,7 +1,8 @@
 #include "gtest/gtest.h"
 #include "index_succinct.hpp"
 #include "sdsl/suffix_trees.hpp"
-#include "query-index-knm.hpp"
+
+#include "knm.hpp"
 
 using csa_type = sdsl::csa_wt_int<>;
 using cst_type = sdsl::cst_sct3<csa_type>;
@@ -66,7 +67,7 @@ TEST_F(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < srilm_triplets.size(); i++) {
         triplet srilm = srilm_triplets[i];
-        double perplexity = gate(idx, srilm.pattern, srilm.order, false);
+        double perplexity = gate(idx, srilm.pattern, srilm.order);
         //	cout<<"order "<<srilm.order<<" perplexity-srilm "<<srilm.perplexity<<" perplexity-sdsl "<<perplexity<<endl;
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
