@@ -314,10 +314,13 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
             uint64_t n1plus_back=0;
 
             if(pat[0]!=PAT_START_SYM)
+                // is there a good reason we're not using the cst_rev?
                 n1plus_back = N1PlusBack(cst_rev,pat);
-            else
+            else {
                 //special case where the pattern starts with <s>: acutal count is used
-                n1plus_back = ActualCount(cst,pat);
+                //n1plus_back = ActualCount(cst,pat);
+                n1plus_back = freq; // FIXME: Ehsan to verify this is valid
+            }
 
             if (n1plus_back == 1) {
                 ps.n1_cnt[size] += 1;
@@ -354,6 +357,10 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
             if (symbol != EOS_SYM && symbol != EOF_SYM) {
                 ncomputer(ps,cst,cst_rev,symbol,pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
             }
+            else {
+                // this is called twice, for the top level sub-trees rooted with 0, 1
+                //std::cout << "S1: node " << root_id << " child " << 1 << " symbol " << symbol << "\n";
+            }
             w = cst.sibling(w);
         }
     } else {
@@ -364,22 +371,28 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
                 if (size == depth) {
                     auto w = cst.select_child(node, 1);
                     auto root_id = cst.id(cst.root());
-                    auto first = true;
+                    auto i = 1;
 
                     while (cst.id(w) != root_id) {
-                        // this can only happen in first call (due to sort order)
-                        if (!first) symbol = cst.edge(w, depth + 1);
-                        if (first || symbol != EOS_SYM) {
+                        // FIXME: this can only happen in first call (due to sort order)
+                        symbol = cst.edge(w, depth + 1);
+                        if (symbol == EOS_SYM) // FIXME: but this line is never run on "undoc" example; why?
+                            std::cout << "S2: node " << cst.id(node) << " child " << i
+                                << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
+                        if (symbol != EOS_SYM) {
                             ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
                         }
                         w = cst.sibling(w);
-                        first = false;
+                        i += 1;
                     }
                 } else {
                     // is the next symbol on the edge a sentinel; if so, stop
                     symbol = cst.edge(node, size + 1);
                     if (symbol != EOS_SYM) {
                         ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(node), cst.rb(node),max_ngram_count);
+                    } else {
+                        // this is called many times, in many cases with size << depth
+                        //std::cout << "S3: node " << cst.id(node) << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
                     }
                 }
             } else {

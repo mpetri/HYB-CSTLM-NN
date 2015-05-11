@@ -29,7 +29,7 @@ public: // data
     precomputed_stats m_precomputed;
     compressed_counts m_n1plusfrontback;
     vocab_type m_vocab;
-    compressed_sentinel_flag m_csf, m_csf_rev; // trevor: temporary?
+    //compressed_sentinel_flag m_csf, m_csf_rev; // trevor: temporary?
 public:
     index_succinct_store_n1fb() = default;
     index_succinct_store_n1fb(collection& col)
@@ -83,17 +83,17 @@ public:
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
-        LOG(INFO) << "CREATE EDGE FLAG";
-        start = clock::now(); 
-        m_csf = compressed_sentinel_flag(m_cst);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //LOG(INFO) << "CREATE EDGE FLAG";
+        //start = clock::now(); 
+        //m_csf = compressed_sentinel_flag(m_cst);
+        //stop = clock::now();
+        //LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        LOG(INFO) << "CREATE EDGE FLAG REV";
-        start = clock::now(); 
-        m_csf_rev = compressed_sentinel_flag(m_cst_rev);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //LOG(INFO) << "CREATE EDGE FLAG REV";
+        //start = clock::now(); 
+        //m_csf_rev = compressed_sentinel_flag(m_cst_rev);
+        //stop = clock::now();
+        //LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
@@ -104,8 +104,8 @@ public:
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
-        written_bytes += m_csf.serialize(out, child, "sentinel");
-        written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
+        //written_bytes += m_csf.serialize(out, child, "sentinel");
+        //written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
 
         sdsl::structure_tree::add_size(child, written_bytes);
