@@ -5,9 +5,9 @@
 
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
-	uint64_t max_ngram_count;
-	double N1plus_dotdot;
-	double N3plus_dot;
+    uint64_t max_ngram_count;
+    double N1plus_dotdot;
+    double N3plus_dot;
     std::vector<double> n1;
     std::vector<double> n2;
     std::vector<double> n3;
@@ -27,8 +27,8 @@ struct precomputed_stats {
 
     precomputed_stats() = default;
     precomputed_stats(size_t max_ngram) {
-    	max_ngram_count = max_ngram;
-    	auto size = max_ngram_count+1;
+        max_ngram_count = max_ngram;
+        auto size = max_ngram_count+1;
         n1.resize(size);
         n2.resize(size);
         n3.resize(size);
@@ -106,104 +106,104 @@ struct precomputed_stats {
     }
 
     void print(bool ismkn,uint32_t ngramsize) const {
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
-	    std::cout << "-------------Based on actual counts-------------" << std::endl;
-	    std::cout << "n1 = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n1[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n2 = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n2[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n3 = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n3[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n4 = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n4[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "Y = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << Y[size] << " ";
-	    }
-	    if (ismkn) {
-	        std::cout << std::endl;
-	        std::cout << "D1 = ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D1[size] << " ";
-	        }
-	        std::cout << std::endl;
-	        std::cout << "D2 = ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D2[size] << " ";
-	        }
-	        std::cout << std::endl;
-	        std::cout << "D3+= ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D3[size] << " ";
-	        }
-	    }
-	    std::cout << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
+        std::cout << "-------------Based on actual counts-------------" << std::endl;
+        std::cout << "n1 = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n1[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n2 = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n2[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n3 = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n3[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n4 = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n4[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "Y = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << Y[size] << " ";
+        }
+        if (ismkn) {
+            std::cout << std::endl;
+            std::cout << "D1 = ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D1[size] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "D2 = ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D2[size] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "D3+= ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D3[size] << " ";
+            }
+        }
+        std::cout << std::endl;
 
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
-	    std::cout << "-------------Based on continuation counts-------" << std::endl;
-	    std::cout << "n1_cnt = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n1_cnt[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n2_cnt = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n2_cnt[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n3_cnt = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n3_cnt[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "n4_cnt = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << n4_cnt[size] << " ";
-	    }
-	    std::cout << std::endl;
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "Y_cnt = ";
-	    for (uint32_t size = 0; size <= ngramsize; size++) {
-	        std::cout << Y_cnt[size] << " ";
-	    }
-	    if (ismkn) {
-	        std::cout << std::endl;
-	        std::cout << "D1_cnt = ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D1_cnt[size] << " ";
-	        }
-	        std::cout << std::endl;
-	        std::cout << "D2_cnt = ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D2_cnt[size] << " ";
-	        }
-	        std::cout << std::endl;
-	        std::cout << "D3+_cnt= ";
-	        for (uint32_t size = 0; size <= ngramsize; size++) {
-	            std::cout << D3_cnt[size] << " ";
-	        }
-	    }
-	    std::cout << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
+        std::cout << "-------------Based on continuation counts-------" << std::endl;
+        std::cout << "n1_cnt = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n1_cnt[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n2_cnt = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n2_cnt[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n3_cnt = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n3_cnt[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "n4_cnt = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << n4_cnt[size] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "Y_cnt = ";
+        for (uint32_t size = 0; size <= ngramsize; size++) {
+            std::cout << Y_cnt[size] << " ";
+        }
+        if (ismkn) {
+            std::cout << std::endl;
+            std::cout << "D1_cnt = ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D1_cnt[size] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "D2_cnt = ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D2_cnt[size] << " ";
+            }
+            std::cout << std::endl;
+            std::cout << "D3+_cnt= ";
+            for (uint32_t size = 0; size <= ngramsize; size++) {
+                std::cout << D3_cnt[size] << " ";
+            }
+        }
+        std::cout << std::endl;
 
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "N1+(..) = " << N1plus_dotdot << std::endl;
-	    std::cout << "------------------------------------------------" << std::endl;
-	    std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "N1+(..) = " << N1plus_dotdot << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
+        std::cout << "------------------------------------------------" << std::endl;
     }
 };
 
@@ -252,7 +252,7 @@ struct precomputed_stats {
 // 	return ps;
 // }
 
-template<class t_cst>
+    template<class t_cst>
 int N1PlusBack(const t_cst& cst,std::vector<uint64_t> pat, bool check_for_EOS = true)
 {
     auto pat_size = pat.size();
@@ -265,13 +265,13 @@ int N1PlusBack(const t_cst& cst,std::vector<uint64_t> pat, bool check_for_EOS = 
             if (check_for_EOS) {
                 auto w = cst.select_child(node, 1);
                 uint64_t symbol = cst.edge(w, pat_size + 1);
-                if (symbol == 1)
+                if (symbol == EOS_SYM)
                     n1plus_back = n1plus_back - 1;
             }
         } else {
             if (check_for_EOS) {
                 uint64_t symbol = cst.edge(node, pat_size + 1);
-                if (symbol != 1)
+                if (symbol != EOS_SYM)
                     n1plus_back = 1;
             } else {
                 n1plus_back = 1;
@@ -285,37 +285,39 @@ template<class t_cst>
 int
 ActualCount(const t_cst& cst,std::vector<uint64_t>pat)
 {
-uint64_t lb = 0 , rb = cst.size()-1;
+    uint64_t lb = 0 , rb = cst.size()-1;
     if (backward_search(cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0) 
-	return rb-lb+1;
-else
-	return 0;
+        return rb-lb+1;
+    else
+        return 0;
 }
 
 
 template<class t_cst>
 void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
-	uint64_t symbol, std::vector<uint64_t> pat, uint64_t size, uint64_t lb, uint64_t rb,uint32_t max_ngram_count)
+        uint64_t symbol, std::vector<uint64_t> pat, uint64_t size, uint64_t lb, uint64_t rb,uint32_t max_ngram_count)
 {
-    auto freq = 0;
+    auto freq = 0u;
     if (lb == rb)
         freq = 1;
     if (size != 0 && lb != rb) {
         freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
+            // FIXME: how can this happen? from the above assignment, this is impossible 
+            // (integer overflow, maybe? seems very odd...)
             freq = 0;
         }
     }
     if (size != 0) {
-    pat.push_back(symbol);
+        pat.push_back(symbol);
         {	
-	uint64_t n1plus_back=0;
+            uint64_t n1plus_back=0;
 
-	if(pat[0]!=PAT_START_SYM)
-    	n1plus_back = N1PlusBack(cst_rev,pat);
-	else
-		//special case where the pattern starts with <s>: acutal count is used
-		n1plus_back = ActualCount(cst,pat);
+            if(pat[0]!=PAT_START_SYM)
+                n1plus_back = N1PlusBack(cst_rev,pat);
+            else
+                //special case where the pattern starts with <s>: acutal count is used
+                n1plus_back = ActualCount(cst,pat);
 
             if (n1plus_back == 1) {
                 ps.n1_cnt[size] += 1;
@@ -349,7 +351,7 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
         auto root_id = cst.id(cst.root());
         while (cst.id(w) != root_id) {
             symbol = cst.edge(w, 1);
-            if (symbol != 1 && symbol != 0) {
+            if (symbol != EOS_SYM && symbol != EOF_SYM) {
                 ncomputer(ps,cst,cst_rev,symbol,pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
             }
             w = cst.sibling(w);
@@ -362,20 +364,26 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
                 if (size == depth) {
                     auto w = cst.select_child(node, 1);
                     auto root_id = cst.id(cst.root());
+                    auto first = true;
+
                     while (cst.id(w) != root_id) {
-                        symbol = cst.edge(w, depth + 1);
-                        if (symbol != 1) {
+                        // this can only happen in first call (due to sort order)
+                        if (!first) symbol = cst.edge(w, depth + 1);
+                        if (first || symbol != EOS_SYM) {
                             ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
                         }
                         w = cst.sibling(w);
+                        first = false;
                     }
                 } else {
+                    // is the next symbol on the edge a sentinel; if so, stop
                     symbol = cst.edge(node, size + 1);
-                    if (symbol != 1) {
+                    if (symbol != EOS_SYM) {
                         ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(node), cst.rb(node),max_ngram_count);
                     }
                 }
             } else {
+                // else what? freq == 0, not sure what this means.
             }
         }
     }
@@ -384,12 +392,12 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
 template<class t_cst>
 precomputed_stats
 precompute_statistics(collection& ,const t_cst& cst,const t_cst& cst_rev,uint64_t max_ngram_len) {
-	precomputed_stats ps(max_ngram_len);
+    precomputed_stats ps(max_ngram_len);
 
     uint64_t lb = 0, rb = cst.size() - 1;
-	uint64_t symbol=0;
+    uint64_t symbol=0;
     std::vector<uint64_t> pat;
-	ncomputer(ps,cst,cst_rev,symbol, pat, 0, lb, rb,max_ngram_len);
+    ncomputer(ps,cst,cst_rev,symbol, pat, 0, lb, rb,max_ngram_len);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         ps.Y[size] = ps.n1[size] / (ps.n1[size] + 2 * ps.n2[size]);
@@ -411,5 +419,5 @@ precompute_statistics(collection& ,const t_cst& cst,const t_cst& cst_rev,uint64_
             ps.D3_cnt[size] = 3 - 4 * ps.Y_cnt[size] * (double)ps.n4_cnt[size] / ps.n3_cnt[size];
     }
 
-	return ps;
+    return ps;
 }
