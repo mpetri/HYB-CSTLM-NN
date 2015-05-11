@@ -40,7 +40,7 @@ which will create the *undoc* folder and put a single file in there.
 Quick work-around for the missing *vocab* file
 ```
 touch ../collections/undoc/text.VOCAB
-````
+```
 Next run
 ``` 
 ./build-index.x -c ../collections/undoc
