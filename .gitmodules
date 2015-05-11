@@ -4,3 +4,6 @@
 [submodule "external/googletest"]
 	path = external/googletest
 	url = https://git.chromium.org/git/external/googletest.git
+[submodule "external/easyloggingpp"]
+	path = external/easyloggingpp
+	url = https://github.com/easylogging/easyloggingpp.git

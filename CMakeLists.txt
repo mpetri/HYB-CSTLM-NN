@@ -46,6 +46,7 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include
                     ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
+                    ${CMAKE_HOME_DIRECTORY}/external/easyloggingpp/src/
                     )
 
 add_executable(build-index.x src/build-index.cpp)
@@ -62,5 +63,6 @@ target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
+target_compile_options(unit-test.x PUBLIC -DLMSDSL_NO_LOGGING)
 enable_testing()
 add_test(TestsPass unit-test.x)

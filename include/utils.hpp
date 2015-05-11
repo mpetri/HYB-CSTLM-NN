@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "logging.hpp"
+
 namespace utils {
 
 bool
@@ -39,8 +41,7 @@ create_directory(std::string dir)
 {
     if (!directory_exists(dir)) {
         if (mkdir(dir.c_str(), 0777) == -1) {
-            perror("could not create directory");
-            exit(EXIT_FAILURE);
+            LOG(FATAL) << "could not create directory";
         }
     }
 }

@@ -11,6 +11,8 @@
 
 const double d = 0.4;
 
+#include "logging.hpp"
+
 typedef struct cmdargs {
     std::string pattern_file;
     std::string collection_dir;
@@ -43,7 +45,7 @@ parse_args(int argc, const char* argv[])
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
-        std::cerr << "Missing command line parameters.\n";
+        LOG(ERROR) << "Missing command line parameters.\n";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -132,7 +134,7 @@ void run_queries(t_idx& idx, const std::string& col_dir, const std::vector<std::
     using clock = std::chrono::high_resolution_clock;
     auto index_file = col_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
-        std::cout << "loading index from file '" << index_file << "'" << std::endl;
+        LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
 
         std::chrono::nanoseconds total_time(0);
@@ -146,11 +148,9 @@ void run_queries(t_idx& idx, const std::string& col_dir, const std::vector<std::
             std::cout << " -> " << score;
             total_time += (stop - start);
         }
-        std::cout << "time in milliseconds = "
-                  << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
-                  << " ms" << endl;
+        LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
     } else {
-        std::cerr << "index does not exist. build it first" << std::endl;
+        LOG(FATAL) << "index does not exist. build it first";
     }
 }
 
@@ -166,7 +166,7 @@ int main(int argc, const char* argv[])
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
-        std::cout << "reading input file '" << args.pattern_file << "'" << std::endl;
+        LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
             std::vector<uint64_t> tokens;
@@ -178,7 +178,7 @@ int main(int argc, const char* argv[])
             }
         }
     } else {
-        std::cerr << "cannot read pattern file '" << args.pattern_file << "'" << std::endl;
+        LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
         return EXIT_FAILURE;
     }
 

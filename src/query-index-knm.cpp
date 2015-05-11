@@ -15,6 +15,10 @@
 
 #include "knm.hpp"
 
+#include "logging.hpp"
+
+using namespace std::chrono;
+
 typedef struct cmdargs {
     std::string pattern_file;
     std::string collection_dir;
@@ -60,7 +64,7 @@ parse_args(int argc, const char* argv[])
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
-        std::cerr << "Missing command line parameters.\n";
+        LOG(ERROR) << "Missing command line parameters.\n";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -75,10 +79,9 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     double perplexity = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    int ind = 1;
+    uint64_t ind = 1;
     for (std::vector<uint64_t> pattern : patterns) {
-        cout << ind << endl;
-        ind++;
+        LOG(INFO) << "Run pattern" << ind++;
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
@@ -89,16 +92,11 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = run_query_knm(idx, pattern, M,ngramsize);
         auto stop = clock::now();
         perplexity += sentenceprob;
-        // output logprob and perplexity
-        //	double intermediate_perplexity = pow(10,-(1 / (double) (pattern_size+1 )) * sentenceprob);
-        //	std::cout<< pattern_string<<" -> log10prob = " <<std::setprecision(10)<< sentenceprob << "  ppl = "<<std::setprecision(10)<< intermediate_perplexity <<endl;
         total_time += (stop - start);
     }
-    std::cout << "time in milliseconds = "
-              << std::chrono::duration_cast<std::chrono::microseconds>(total_time).count() / 1000.0f
-              << " ms" << endl;
+    LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
     perplexity = perplexity / M;
-    cout << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity) << endl;
+    LOG(INFO) << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity);
 }
 
 int main(int argc, const char* argv[])
@@ -116,10 +114,10 @@ int main(int argc, const char* argv[])
 
     auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
-        std::cout << "loading index from file '" << index_file << "'" << std::endl;
+        LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
     } else {
-        std::cerr << "index does not exist. build it first" << std::endl;
+        LOG(FATAL) << "index does not exist. build it first";
         return EXIT_FAILURE;
     }
 
@@ -131,7 +129,7 @@ int main(int argc, const char* argv[])
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
-        std::cout << "reading input file '" << args.pattern_file << "'" << std::endl;
+        LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
             std::vector<uint64_t> tokens;
@@ -144,12 +142,9 @@ int main(int argc, const char* argv[])
             patterns.push_back(tokens);
         }
     } else {
-        std::cerr << "cannot read pattern file '" << args.pattern_file << "'" << std::endl;
-        return EXIT_FAILURE;
+        LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
-    {
-        run_queries(idx, patterns,args.ngramsize);
-    }
-    return 0;
+    run_queries(idx, patterns,args.ngramsize);
+    return EXIT_SUCCESS;
 }

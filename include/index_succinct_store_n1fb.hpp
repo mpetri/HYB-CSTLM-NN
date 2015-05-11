@@ -9,6 +9,7 @@
 
 #include <sdsl/suffix_arrays.hpp>
 
+using namespace std::chrono;
 
 template <class t_cst,
     class t_vocab = vocab_uncompressed,
@@ -29,13 +30,12 @@ public: // data
     vocab_type m_vocab;
 public:
     index_succinct_store_n1fb() = default;
-    index_succinct_store_n1fb(collection& col, bool output = true)
+    index_succinct_store_n1fb(collection& col)
     {
         using clock = std::chrono::high_resolution_clock;
 
         auto start = clock::now();
-        if (output)
-            std::cout << "CONSTRUCT CST" << std::endl;
+        LOG(INFO) << "CONSTRUCT CST";
         {
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -46,13 +46,9 @@ public:
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
         }
         auto stop = clock::now();
-        if (output)
-            std::cout << "DONE ("
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
-                      << ")" << std::endl;
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        if (output)
-            std::cout << "CONSTRUCT CST REV" << std::endl;
+        LOG(INFO) << "CONSTRUCT CST REV";
         start = clock::now();
         {
             sdsl::cache_config cfg;
@@ -64,46 +60,25 @@ public:
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
         stop = clock::now();
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        if (output)
-            std::cout << "DONE ("
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
-                      << ")" << std::endl;
-
-        if (output)
-            std::cout << "PRECOMPUTE N1PLUSFRONTBACK" << std::endl;
-
+        LOG(INFO) << "PRECOMPUTE N1PLUSFRONTBACK";
         start = clock::now();
         m_n1plusfrontback = compressed_counts(m_cst,t_max_ngram_count);
         stop = clock::now();
-        if (output)
-            std::cout << "DONE ("
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
-                      << ")" << std::endl;
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        if (output)
-            std::cout << "COMPUTE DISCOUNTS" << std::endl;
-        
+        LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now(); 
         m_precomputed = precompute_statistics(col,m_cst,m_cst_rev,t_max_ngram_count);
         stop = clock::now();
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        if (output)
-            std::cout << "DONE ("
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
-                      << ")" << std::endl;
-
-        if (output)
-            std::cout << "CREATE VOCAB" << std::endl;
-
+        LOG(INFO) << "CREATE VOCAB";
         start = clock::now(); 
         m_vocab = vocab_type(col);
         stop = clock::now();
-
-        if (output)
-            std::cout << "DONE ("
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f
-                      << ")" << std::endl;
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const

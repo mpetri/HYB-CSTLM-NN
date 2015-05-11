@@ -4,6 +4,8 @@
 
 #include "knm.hpp"
 
+#include "logging.hpp"
+
 using csa_type = sdsl::csa_wt_int<>;
 using cst_type = sdsl::cst_sct3<csa_type>;
 using index_type = index_succinct<cst_type>;
@@ -33,8 +35,8 @@ protected:
     virtual void SetUp()
     {
         {
-            col = collection(col_path, false);
-            idx = index_type(col, false);
+            col = collection(col_path);
+            idx = index_type(col);
         }
 
         {
@@ -73,8 +75,9 @@ TEST_F(LMTest, Perplexity)
     }
 }
 
-int main(int argc, char* argv[])
+int main(int argc,char* argv[])
 {
+    log::start_log(argc,(const char**)argv);
 
     ::testing::InitGoogleTest(&argc, argv);
 

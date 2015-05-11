@@ -4,6 +4,8 @@
 #include "utils.hpp"
 #include "index_types.hpp"
 
+#include "logging.hpp"
+
 typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
@@ -30,7 +32,7 @@ parse_args(int argc, const char* argv[])
         }
     }
     if (args.collection_dir == "") {
-        std::cerr << "Missing command line parameters.\n";
+        LOG(FATAL) << "Missing command line parameters.";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -44,24 +46,26 @@ void create_and_store(collection& col)
     auto start = clock::now();
     t_idx idx(col);
     auto stop = clock::now();
-    std::cout << "index construction in (s): "
+    LOG(INFO) << "index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {
-        std::cout << "writing index to file : " << output_file << std::endl;
+        LOG(INFO) << "writing index to file : " << output_file;
         auto bytes = sdsl::serialize(idx, ofs);
-        std::cout << "index size : " << bytes / (1024 * 1024) << " MB" << std::endl;
-        std::cout << "writing space usage visualization to file : " << output_file + ".html" << std::endl;
+        LOG(INFO) << "index size : " << bytes / (1024 * 1024) << " MB";
+        LOG(INFO) << "writing space usage visualization to file : " << output_file + ".html";
         std::ofstream vofs(output_file + ".html");
         sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
     } else {
-        std::cerr << "cannot write index to file : " << output_file << std::endl;
+        LOG(FATAL) << "cannot write index to file : " << output_file;
     }
 }
 
 int main(int argc, const char* argv[])
 {
+    log::start_log(argc,argv);
+
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
