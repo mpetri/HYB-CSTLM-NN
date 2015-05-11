@@ -1,0 +1,6 @@
+UN doc from I think http://www.statmt.org/wmt13/translation-task.html under UN parallel corpus. Just using the EN side.
+
+  607  head -n 2000 ../../undoc.2000.fr-en.en > undoc_2000_fr_en_sample.txt
+  611  python char_numberise.py undoc_2000_fr_en_sample.txt undoc.lex > undoc_2000_fr_en_sample.nums
+  618  head -n 1000 undoc_2000_fr_en_sample.nums > undoc_2000_fr_en_sample.train
+  619  tail -n 1000 undoc_2000_fr_en_sample.nums > undoc_2000_fr_en_sample.test
