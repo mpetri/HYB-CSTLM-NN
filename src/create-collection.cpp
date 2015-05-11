@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "utils.hpp"
+#include "constants.hpp"
 #include "collection.hpp"
 
 typedef struct cmdargs {
@@ -70,15 +71,15 @@ int main(int argc, const char* argv[])
         while (std::getline(ifile, line)) {
             std::istringstream iss(line);
             std::string word;
-            sdsl_input.push_back(3ULL); //TODO added
+            sdsl_input.push_back(PAT_START_SYM); //TODO added
             while (std::getline(iss, word, ' ')) {
                 uint64_t num = std::stoull(word);
                 sdsl_input.push_back(num);
             }
-            sdsl_input.push_back(4ULL); //TODO added
-            sdsl_input.push_back(1ULL);
+            sdsl_input.push_back(PAT_END_SYM); //TODO added
+            sdsl_input.push_back(EOS_SYM);
         }
-        sdsl_input.push_back(0ULL);
+        sdsl_input.push_back(EOF_SYM);
         sdsl::util::bit_compress(sdsl_input);
     } else {
         std::cerr << "input file does not exist." << std::endl;

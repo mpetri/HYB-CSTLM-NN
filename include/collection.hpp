@@ -75,10 +75,10 @@ struct collection {
             }
             sdsl::int_vector_mapper<0, std::ios_base::out | std::ios_base::in> sdsl_revinput(textrev_path);
             sdsl_revinput.resize(sdsl_input.size());
-            // don't copy the last 0 and 1
+            // don't copy the last two values, sentinels (EOS, EOF)
             std::reverse_copy(std::begin(sdsl_input), std::end(sdsl_input) - 2, std::begin(sdsl_revinput));
-            sdsl_revinput[sdsl_input.size() - 2] = 1ULL;
-            sdsl_revinput[sdsl_input.size() - 1] = 0ULL;
+            sdsl_revinput[sdsl_input.size() - 2] = EOS_SYM;
+            sdsl_revinput[sdsl_input.size() - 1] = EOF_SYM;
             sdsl::util::bit_compress(sdsl_revinput);
             file_map[KEY_TEXTREV] = textrev_path;
             auto stop = clock::now();

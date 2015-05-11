@@ -27,7 +27,7 @@ public:
 	    static std::vector<typename t_cst::csa_type::size_type> right(12312312);
 	    auto lb = cst.lb(node);
 	    auto rb = cst.rb(node);
-	    size_t num_syms = 0;
+	    typename t_cst::csa_type::size_type num_syms = 0;
 	    sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
 	    if (num_syms == 1)
 	        return cst.degree(node);

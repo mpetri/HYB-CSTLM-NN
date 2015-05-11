@@ -6,6 +6,7 @@
 #include "precomputed_stats.hpp"
 #include "constants.hpp"
 #include "compressed_counts.hpp"
+#include "sentinel_flag.hpp"
 
 #include <sdsl/suffix_arrays.hpp>
 
@@ -28,6 +29,7 @@ public: // data
     precomputed_stats m_precomputed;
     compressed_counts m_n1plusfrontback;
     vocab_type m_vocab;
+    compressed_sentinel_flag m_csf, m_csf_rev; // trevor: temporary?
 public:
     index_succinct_store_n1fb() = default;
     index_succinct_store_n1fb(collection& col)
@@ -77,6 +79,19 @@ public:
         LOG(INFO) << "CREATE VOCAB";
         start = clock::now(); 
         m_vocab = vocab_type(col);
+        stop = clock::now();
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+
+        // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
+        LOG(INFO) << "CREATE EDGE FLAG";
+        start = clock::now(); 
+        csf = compressed_sentinel_flag(m_cst);
+        stop = clock::now();
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+
+        LOG(INFO) << "CREATE EDGE FLAG REV";
+        start = clock::now(); 
+        csf_rev = compressed_sentinel_flag(m_cst_rev);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
     }
