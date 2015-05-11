@@ -85,13 +85,13 @@ public:
         // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
         LOG(INFO) << "CREATE EDGE FLAG";
         start = clock::now(); 
-        csf = compressed_sentinel_flag(m_cst);
+        m_csf = compressed_sentinel_flag(m_cst);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         LOG(INFO) << "CREATE EDGE FLAG REV";
         start = clock::now(); 
-        csf_rev = compressed_sentinel_flag(m_cst_rev);
+        m_csf_rev = compressed_sentinel_flag(m_cst_rev);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
     }

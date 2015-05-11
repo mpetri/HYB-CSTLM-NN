@@ -8,6 +8,7 @@
 
 #include "utils.hpp"
 #include "logging.hpp"
+#include "constants.hpp"
 
 using namespace std::chrono;
 

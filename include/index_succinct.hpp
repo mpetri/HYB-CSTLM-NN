@@ -2,6 +2,7 @@
 
 #include "utils.hpp"
 #include "collection.hpp"
+#include "constants.hpp"
 #include "vocab_uncompressed.hpp"
 #include "precomputed_stats.hpp"
 #include "constants.hpp"
