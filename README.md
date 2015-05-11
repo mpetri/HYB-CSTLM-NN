@@ -28,6 +28,16 @@ Query index
 ./query-index-stupid.x -c ../collections/toy/ -p toyquery.txt
 ```
 
+## Running `unit' tests ##
+
+To run the unit-test.x binary first you need to do the following
+```sh
+rm -r ../collections/unittest/
+./create-collection.x -i ../UnitTestData/data/training.data -c ../collections/unittest
+touch ../collections/unittest/text.VOCAB
+```
+Then you should be able to run the test script and the output should be interpretable.
+
 ## Running integration tests ##
 
 I've put some fairly simple test data under *UnitTestData/data/undoc_2000*. See the file there *README.undoc* to see how it was constructed. It's a character level representation of the first 1000 sentences of a corpus. This should be sufficient to test out the various counting methods without getting hit too heavily by the slow runtime of the *ncompute* method etc. 
@@ -36,7 +46,12 @@ To run this, first compile then from the build directory run:
 ```
 ./create-collection.x -i ../UnitTestData/data/undoc_2000_fr_en_sample.train -c ../collections/undoc
 ```
-which will create the *undoc* folder and put a single file in there. Next run
+which will create the *undoc* folder and put a single file in there. 
+Quick work-around for the missing *vocab* file
+```
+touch ../collections/undoc/text.VOCAB
+```
+Next run
 ``` 
 ./build-index.x -c ../collections/undoc
 ```
