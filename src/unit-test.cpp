@@ -77,7 +77,7 @@ TEST_F(LMTest, Perplexity)
 
 int main(int argc,char* argv[])
 {
-    log::start_log(argc,(const char**)argv);
+    log::start_log(argc,(const char**)argv,false);
 
     ::testing::InitGoogleTest(&argc, argv);
 
