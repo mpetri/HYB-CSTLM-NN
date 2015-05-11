@@ -36,7 +36,12 @@ To run this, first compile then from the build directory run:
 ```
 ./create-collection.x -i ../UnitTestData/data/undoc_2000_fr_en_sample.train -c ../collections/undoc
 ```
-which will create the *undoc* folder and put a single file in there. Next run
+which will create the *undoc* folder and put a single file in there. 
+Quick work-around for the missing *vocab* file
+```
+touch ../collections/undoc/text.VOCAB
+````
+Next run
 ``` 
 ./build-index.x -c ../collections/undoc
 ```
