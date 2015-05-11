@@ -104,6 +104,8 @@ public:
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
+        written_bytes += m_csf.serialize(out, child, "sentinel");
+        written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
 
         sdsl::structure_tree::add_size(child, written_bytes);

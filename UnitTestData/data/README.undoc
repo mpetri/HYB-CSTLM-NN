@@ -4,3 +4,10 @@ UN doc from I think http://www.statmt.org/wmt13/translation-task.html under UN p
   611  python char_numberise.py undoc_2000_fr_en_sample.txt undoc.lex > undoc_2000_fr_en_sample.nums
   618  head -n 1000 undoc_2000_fr_en_sample.nums > undoc_2000_fr_en_sample.train
   619  tail -n 1000 undoc_2000_fr_en_sample.nums > undoc_2000_fr_en_sample.test
+
+Larger version
+
+  780  head -n 100000 ../../undoc.2000.fr-en.en > undoc_2000_fr_en.100k
+  782  python char_numberise.py undoc_2000_fr_en.100k undoc_100k.lex > undoc_2000_fr_en_100k.nums
+  789  head -n 99000 undoc_2000_fr_en_100k.nums > undoc_2000_fr_en_100k.train
+  790  tail -n 1000 undoc_2000_fr_en_100k.nums > undoc_2000_fr_en_100k.test

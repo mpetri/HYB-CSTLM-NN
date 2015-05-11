@@ -41,10 +41,19 @@ public:
                 // check if edge contains sentinel
                 auto depth = cst.depth(node); // can be expensive for leaves
                 bool seen = false;
-                for (auto d = parent_depth+1; !seen && d <= depth; ++d) 
+
+                if (depth == parent_depth + 1 && it != cst.begin(parent)) 
                 {
-                    auto l = cst.edge(node, d);
-                    if (l == EOS_SYM) seen = true;
+                    // pass: the EOS is lexicographical first, so it must be 
+                    // left-most child when the edge label has only one atom
+                }
+                else
+                {
+                    for (auto d = parent_depth+1; !seen && d <= depth; ++d) 
+                    {
+                        auto l = cst.edge(node, d);
+                        if (l == EOS_SYM) seen = true;
+                    }
                 }
                 has_sentinel[node_id] = seen;
                 // FIXME: could also compute n1..4, N1..4 in this pass
