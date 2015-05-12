@@ -10,6 +10,10 @@ using csa_type = sdsl::csa_wt_int<>;
 using cst_type = sdsl::cst_sct3<csa_type>;
 using index_type = index_succinct<cst_type>;
 
+typedef testing::Types<
+       index_succinct<cst_type>
+       > Implementations;
+
 struct triplet {
     std::vector<uint64_t> pattern;
     int order;
@@ -27,6 +31,7 @@ std::vector<std::string> split(const std::string& s, char delim)
     return elems;
 }
 
+template<class t_idx>
 class LMTest : public testing::Test {
 protected:
     const std::string srilm_path = "../UnitTestData/srilm_output/output";
@@ -36,7 +41,7 @@ protected:
     {
         {
             col = collection(col_path);
-            idx = index_type(col);
+            idx = t_idx(col);
         }
 
         {
@@ -58,21 +63,42 @@ protected:
             }
         }
     }
-    index_type idx;
+    t_idx idx;
     collection col;
     const std::string col_path = "../collections/unittest/";
 };
 
+TYPED_TEST_CASE(LMTest, Implementations);
+
 // checks whether perplexities match
 // precision of comparison is set to 1e-4
-TEST_F(LMTest, Perplexity)
+TYPED_TEST(LMTest, Perplexity)
 {
-    for (unsigned int i = 0; i < srilm_triplets.size(); i++) {
-        triplet srilm = srilm_triplets[i];
-        double perplexity = gate(idx, srilm.pattern, srilm.order);
-        //	cout<<"order "<<srilm.order<<" perplexity-srilm "<<srilm.perplexity<<" perplexity-sdsl "<<perplexity<<endl;
+    for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
+        auto srilm = this->srilm_triplets[i];
+        double perplexity = gate(this->idx, srilm.pattern, srilm.order);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
+}
+
+TYPED_TEST(LMTest, N1PlusBack)
+{
+}
+
+TYPED_TEST(LMTest, discount)
+{
+}
+
+TYPED_TEST(LMTest, N1PlusFrontBack)
+{
+}
+
+TYPED_TEST(LMTest, N1PlusFront)
+{
+}
+
+TYPED_TEST(LMTest, vocab_size)
+{
 }
 
 int main(int argc,char* argv[])
