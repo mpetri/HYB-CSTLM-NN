@@ -71,6 +71,7 @@ public:
     }
 
     m_bv = bv_type(has_sentinel);
+    m_bv_rank.set_vector(&m_bv);
     m_offsets = vector_type(offsets);
   }
 
