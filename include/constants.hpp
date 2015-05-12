@@ -7,5 +7,3 @@ const uint64_t PAT_START_SYM = 3;
 const uint64_t PAT_END_SYM = 4;
 
 const uint64_t SKIP_SYMS = 5;
-
-

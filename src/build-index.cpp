@@ -64,7 +64,7 @@ void create_and_store(collection& col)
 
 int main(int argc, const char* argv[])
 {
-    log::start_log(argc,argv);
+    log::start_log(argc, argv);
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);

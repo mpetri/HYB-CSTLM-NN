@@ -13,9 +13,8 @@
 using namespace std::chrono;
 
 template <class t_cst,
-    class t_vocab = vocab_uncompressed,
-    uint32_t t_max_ngram_count = 10
-    >
+          class t_vocab = vocab_uncompressed,
+          uint32_t t_max_ngram_count = 10>
 class index_succinct_store_n1fb {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -23,6 +22,7 @@ public:
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::string_type string_type;
+
 public: // data
     t_cst m_cst;
     t_cst m_cst_rev;
@@ -66,31 +66,31 @@ public:
 
         LOG(INFO) << "PRECOMPUTE N1PLUSFRONTBACK";
         start = clock::now();
-        m_n1plusfrontback = compressed_counts(m_cst,t_max_ngram_count);
+        m_n1plusfrontback = compressed_counts(m_cst, t_max_ngram_count);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
-        start = clock::now(); 
-        m_precomputed = precompute_statistics(col,m_cst,m_cst_rev,t_max_ngram_count);
+        start = clock::now();
+        m_precomputed = precompute_statistics(col, m_cst, m_cst_rev, t_max_ngram_count);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         LOG(INFO) << "CREATE VOCAB";
-        start = clock::now(); 
+        start = clock::now();
         m_vocab = vocab_type(col);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
         //LOG(INFO) << "CREATE EDGE FLAG";
-        //start = clock::now(); 
+        //start = clock::now();
         //m_csf = compressed_sentinel_flag(m_cst);
         //stop = clock::now();
         //LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         //LOG(INFO) << "CREATE EDGE FLAG REV";
-        //start = clock::now(); 
+        //start = clock::now();
         //m_csf_rev = compressed_sentinel_flag(m_cst_rev);
         //stop = clock::now();
         //LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
@@ -127,8 +127,8 @@ public:
         if (this != &a) {
             m_cst.swap(a.m_cst);
             m_cst_rev.swap(a.m_cst_rev);
-            std::swap(m_precomputed,a.m_precomputed);
-            std::swap(m_n1plusfrontback,a.m_n1plusfrontback);
+            std::swap(m_precomputed, a.m_precomputed);
+            std::swap(m_n1plusfrontback, a.m_n1plusfrontback);
             m_vocab.swap(a.m_vocab);
         }
     }
@@ -170,8 +170,9 @@ public:
             return m_precomputed.Y[level];
     }
 
-    void print_params(bool ismkn,uint32_t ngramsize) const {
-        m_precomputed.print(ismkn,ngramsize);
+    void print_params(bool ismkn, uint32_t ngramsize) const
+    {
+        m_precomputed.print(ismkn, ngramsize);
     }
 
     //  Computes N_1+( * ab * )
@@ -186,7 +187,7 @@ public:
     {
 
         auto node = m_cst.node(lb, rb);
-        return m_n1plusfrontback.lookup(m_cst,node);
+        return m_n1plusfrontback.lookup(m_cst, node);
     }
 
     // Computes N_1+( abc * )
@@ -219,5 +220,4 @@ public:
             return N1plus_front;
         }
     }
-
 };

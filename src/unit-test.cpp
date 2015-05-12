@@ -10,9 +10,7 @@ using csa_type = sdsl::csa_wt_int<>;
 using cst_type = sdsl::cst_sct3<csa_type>;
 using index_type = index_succinct<cst_type>;
 
-typedef testing::Types<
-       index_succinct<cst_type>
-       > Implementations;
+typedef testing::Types<index_succinct<cst_type> > Implementations;
 
 struct triplet {
     std::vector<uint64_t> pattern;
@@ -31,7 +29,7 @@ std::vector<std::string> split(const std::string& s, char delim)
     return elems;
 }
 
-template<class t_idx>
+template <class t_idx>
 class LMTest : public testing::Test {
 protected:
     const std::string srilm_path = "../UnitTestData/srilm_output/output";
@@ -101,9 +99,9 @@ TYPED_TEST(LMTest, vocab_size)
 {
 }
 
-int main(int argc,char* argv[])
+int main(int argc, char* argv[])
 {
-    log::start_log(argc,(const char**)argv,false);
+    log::start_log(argc, (const char**)argv, false);
 
     ::testing::InitGoogleTest(&argc, argv);
 

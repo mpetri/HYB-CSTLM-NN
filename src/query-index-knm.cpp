@@ -71,9 +71,8 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-
 template <class t_idx>
-void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,uint64_t ngramsize)
+void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns, uint64_t ngramsize)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -89,7 +88,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = run_query_knm(idx, pattern, M,ngramsize);
+        double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
         auto stop = clock::now();
         perplexity += sentenceprob;
         total_time += (stop - start);
@@ -122,8 +121,7 @@ int main(int argc, const char* argv[])
     }
 
     /* print precomputed parameters */
-    idx.print_params(args.ismkn,args.ngramsize);
-
+    idx.print_params(args.ismkn, args.ngramsize);
 
     /* parse pattern file */
     std::vector<std::vector<uint64_t> > patterns;
@@ -145,6 +143,6 @@ int main(int argc, const char* argv[])
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
-    run_queries(idx, patterns,args.ngramsize);
+    run_queries(idx, patterns, args.ngramsize);
     return EXIT_SUCCESS;
 }
