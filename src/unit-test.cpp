@@ -231,6 +231,27 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus )
     EXPECT_EQ( this->idx.m_precomputed.N1plus_dotdot, act_N1plus_dotdot ) << "N1plus_dotdot count incorrect!";
 }
 
+TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot )
+{
+    std::vector<uint64_t> text;
+    std::copy(this->idx.m_cst.csa.text.begin(),this->idx.m_cst.csa.text.end(),std::back_inserter(text));
+    std::unordered_map<uint64_t,uint64_t> unigram_freqs;
+    /* compute c-gram stats */
+    for(size_t i=0;i<text.size();i++) {
+        auto sym = text[i];
+        if(sym != EOS_SYM && sym != EOF_SYM)
+            unigram_freqs[sym]++;
+    }
+    size_t act_N3plus_dot = 0;
+    for(const auto& uc : unigram_freqs) {
+        if(uc.second >= 3)
+            act_N3plus_dot++;
+    }
+    /* compare counts */
+    EXPECT_EQ( this->idx.m_precomputed.N3plus_dot, act_N3plus_dot ) << "N3plus_dot count incorrect!";
+}
+
+
 TYPED_TEST(LMTest, N1PlusBack)
 {
 }
