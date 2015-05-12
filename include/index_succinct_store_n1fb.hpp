@@ -186,10 +186,10 @@ public:
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
     uint64_t N1PlusFrontBack(const uint64_t& lb, const uint64_t& rb,
-                             const uint64_t n1plus_back,
-                             const std::vector<uint64_t>::iterator& pattern_begin,
-                             const std::vector<uint64_t>::iterator& pattern_end,
-                             bool check_for_EOS = true) const
+                             const uint64_t ,
+                             const std::vector<uint64_t>::iterator& ,
+                             const std::vector<uint64_t>::iterator& ,
+                             bool ) const
     {
 
         auto node = m_cst.node(lb, rb);
@@ -200,11 +200,11 @@ public:
     uint64_t N1PlusFront(const uint64_t& lb, const uint64_t& rb,
                          std::vector<uint64_t>::iterator pattern_begin,
                          std::vector<uint64_t>::iterator pattern_end,
-                         bool check_for_EOS = true) const
+                         bool check_for_EOS) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         auto node = m_cst.node(lb, rb);
-        auto pattern_size = std::distance(pattern_begin, pattern_end);
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front = 0;
         if (pattern_size == m_cst.depth(node)) {
             auto w = m_cst.select_child(node, 1);

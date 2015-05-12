@@ -57,7 +57,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
         denominator = rb - lb + 1;
-        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1,true);
     } else {
         return backoff_prob;
     }
@@ -97,8 +97,8 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     uint64_t back_N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
-        back_N1plus_front = idx.N1PlusFrontBack(lb, rb, c, pattern_begin, pattern_end - 1);
-        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
+        back_N1plus_front = idx.N1PlusFrontBack(lb, rb, c, pattern_begin, pattern_end - 1,true);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1,true);
 
         if (back_N1plus_front == 0) //TODO check
             // if back_N1plus_front fails to find a full extention to
@@ -127,7 +127,7 @@ double lowestorder(const t_idx& idx,
     denominator = idx.m_precomputed.N1plus_dotdot;
     lb_rev = idx.m_cst_rev.lb(node);
     rb_rev = idx.m_cst_rev.rb(node);
-    int numerator = idx.N1PlusBack(lb_rev, rb_rev, 1); //TODO precompute this
+    int numerator = idx.N1PlusBack(lb_rev, rb_rev, 1,true); //TODO precompute this
     double probability = (double)numerator / denominator;
     return probability;
 }

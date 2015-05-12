@@ -9,21 +9,35 @@ struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
     typedef sdsl::rrr_vector<63> bv_type;
     typedef sdsl::vlc_vector<> vector_type;
-
 private:
     bv_type m_bv;
     bv_type::rank_1_type m_bv_rank;
     vector_type m_counts;
-
 public:
     compressed_counts() = default;
+    compressed_counts(const compressed_counts& cc) {
+        m_bv = cc.m_bv;
+        m_bv_rank.set_vector(&m_bv);
+        m_counts = cc.m_counts;
+    }
+    compressed_counts(compressed_counts&& cc) {
+        m_bv = std::move(cc.m_bv);
+        m_bv_rank.set_vector(&m_bv);
+        m_counts = std::move(cc.m_counts);
+    }
+    compressed_counts& operator=(compressed_counts&& cc) {
+        m_bv = std::move(cc.m_bv);
+        m_bv_rank.set_vector(&m_bv);
+        m_counts = std::move(cc.m_counts);
+        return *this;
+    }
 
     template <class t_cst, class t_node_type>
     uint32_t compute_contexts(t_cst& cst, t_node_type node)
     {
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(12312312);
-        static std::vector<typename t_cst::csa_type::size_type> left(12312312);
-        static std::vector<typename t_cst::csa_type::size_type> right(12312312);
+        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
         typename t_cst::csa_type::size_type num_syms = 0;
@@ -51,7 +65,7 @@ public:
     compressed_counts(t_cst& cst, uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
-        std::vector<uint32_t> counts;
+        std::map<uint64_t,uint32_t> counts;
 
         auto root = cst.root();
         int skip = SKIP_SYMS; // skip 0 and 1, 2, 3, 4 subtrees
@@ -75,7 +89,7 @@ public:
                             itr.skip_subtree();
                         } else {
                             auto c = compute_contexts(cst, node);
-                            counts.push_back(c);
+                            counts[node_id] = c;
                             tmp_bv[node_id] = 1;
                         }
                     }
@@ -84,8 +98,18 @@ public:
             }
         }
 
-        m_counts = vector_type(counts);
+        std::vector<uint32_t> cnts(counts.size());
+        auto itr = counts.begin();
+        auto end = counts.end();
+        auto citr = cnts.begin();
+        while(itr != end) {
+            *citr = itr->second;
+            ++citr;
+            ++itr;
+        }
+        m_counts = vector_type(cnts);
         m_bv = bv_type(tmp_bv);
+        m_bv_rank.set_vector(&m_bv);
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const

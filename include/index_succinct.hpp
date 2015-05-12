@@ -21,13 +21,11 @@ public:
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::string_type string_type;
-//    typedef 
 public: // data
     t_cst m_cst;
     t_cst m_cst_rev;
     precomputed_stats m_precomputed;
     vocab_type m_vocab;
-
 public:
     index_succinct() = default;
     index_succinct(collection& col)
