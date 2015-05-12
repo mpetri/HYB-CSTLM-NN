@@ -209,6 +209,28 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt )
     }
 }
 
+TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus )
+{
+    std::vector<uint64_t> text;
+    std::copy(this->idx.m_cst.csa.text.begin(),this->idx.m_cst.csa.text.end(),std::back_inserter(text));
+    std::unordered_set< std::vector<uint64_t>,uint64_vector_hasher> uniq_bigrams;
+    /* compute c-gram stats */
+    for(size_t i=0;i<text.size()-1;i++) {
+        std::vector<uint64_t> cur_gram(2);
+        auto beg = text.begin()+i;
+        std::copy(beg,beg+2,cur_gram.begin());
+        if (std::none_of(cur_gram.cbegin(),cur_gram.cend(),[](uint64_t i){ return i == EOS_SYM; }) && 
+            std::none_of(cur_gram.cbegin(),cur_gram.cend(),[](uint64_t i){ return i == EOF_SYM; })
+           ) 
+        {
+            uniq_bigrams.insert(cur_gram);
+        }
+    }
+    size_t act_N1plus_dotdot = uniq_bigrams.size();
+    /* compare counts */
+    EXPECT_EQ( this->idx.m_precomputed.N1plus_dotdot, act_N1plus_dotdot ) << "N1plus_dotdot count incorrect!";
+}
+
 TYPED_TEST(LMTest, N1PlusBack)
 {
 }
