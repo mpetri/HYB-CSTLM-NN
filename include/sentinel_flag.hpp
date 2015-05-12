@@ -28,7 +28,7 @@ public:
 
   template <class t_cst> compressed_sentinel_flag(t_cst &cst) {
     sdsl::bit_vector has_sentinel(cst.nodes());
-    std::vector<uint32_t> offsets;
+    std::map<uint64_t,uint32_t> offsets;
 
     // use the DFS iterator to traverse `cst`
     for (auto it = cst.begin(); it != cst.end(); ++it) {
@@ -42,7 +42,7 @@ public:
         if (has_sentinel[parent_id]) {
           // if a parent contains a sentinel then we just flag this and move on
           has_sentinel[node_id] = 1;
-          offsets.push_back(0);
+          offsets[node_id] = 0;
         } else {
           // check if edge contains sentinel and where
           auto parent_depth = cst.depth(node);
@@ -59,7 +59,7 @@ public:
             auto l = cst.edge(node, parent_depth + d);
             if (l == EOS_SYM) {
               has_sentinel[node_id] = 1;
-              offsets.push_back(d);
+              offsets[node_id] = d;
               found = true;
             }
           }
@@ -72,7 +72,10 @@ public:
 
     m_bv = bv_type(has_sentinel);
     m_bv_rank.set_vector(&m_bv);
-    m_offsets = vector_type(offsets);
+    std::vector<uint32_t> offset_values;
+    for (auto& node2offset: offsets) 
+        offset_values.push_back(node2offset.second);
+    m_offsets = vector_type(offset_values);
   }
 
   // returns true/false for whether edge has EOS label
