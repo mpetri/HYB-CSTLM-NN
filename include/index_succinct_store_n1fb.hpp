@@ -76,6 +76,8 @@ public:
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
+        m_precomputed.print(false, 10);
+
         LOG(INFO) << "CREATE VOCAB";
         start = clock::now();
         m_vocab = vocab_type(col);
