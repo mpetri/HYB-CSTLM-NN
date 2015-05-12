@@ -32,7 +32,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     double backoff_prob = pkn(idx, level, unk,
                               pattern_begin + 1, pattern_end,
                               lb, rb,
-                              lb_rev, rb_rev, char_pos, d,ngramsize);
+                              lb_rev, rb_rev, char_pos, d, ngramsize);
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     uint64_t denominator = 0;
     uint64_t c = 0;
@@ -71,13 +71,13 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
                   const std::vector<uint64_t>::iterator& pattern_begin,
                   const std::vector<uint64_t>::iterator& pattern_end,
                   uint64_t& lb, uint64_t& rb,
-                  uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d,uint64_t ngramsize)
+                  uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
     level = level - 1;
     double backoff_prob = pkn(idx, level, unk,
                               pattern_begin + 1, pattern_end,
                               lb, rb,
-                              lb_rev, rb_rev, char_pos, d,ngramsize);
+                              lb_rev, rb_rev, char_pos, d, ngramsize);
 
     uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
@@ -146,7 +146,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
            const std::vector<uint64_t>::iterator& pattern_begin,
            const std::vector<uint64_t>::iterator& pattern_end,
            uint64_t& lb, uint64_t& rb,
-           uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d,uint64_t ngramsize)
+           uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
     uint64_t size = std::distance(pattern_begin, pattern_end);
     double probability = 0;
@@ -154,7 +154,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
         probability = highestorder(idx, level, unk,
                                    pattern_begin, pattern_end,
                                    lb, rb,
-                                   lb_rev, rb_rev, char_pos, d,ngramsize);
+                                   lb_rev, rb_rev, char_pos, d, ngramsize);
     } else if (size < ngramsize && size != 1) {
         if (size == 0)
             exit(1);
@@ -162,7 +162,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
         probability = lowerorder(idx, level, unk,
                                  pattern_begin, pattern_end,
                                  lb, rb,
-                                 lb_rev, rb_rev, char_pos, d,ngramsize);
+                                 lb_rev, rb_rev, char_pos, d, ngramsize);
 
     } else if (size == 1 || ngramsize == 1) {
         if (!unk) {
@@ -176,7 +176,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
 }
 
 template <class t_idx>
-double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, uint64_t& M,uint64_t ngramsize)
+double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, uint64_t& M, uint64_t ngramsize)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
@@ -199,7 +199,7 @@ double run_query_knm(const t_idx& idx, const std::vector<uint64_t>& word_vec, ui
         double score = pkn(idx, size, unk,
                            pattern.begin(), pattern.end(),
                            lb, rb,
-                           lb_rev, rb_rev, char_pos, d,ngramsize);
+                           lb_rev, rb_rev, char_pos, d, ngramsize);
         final_score += log10(score);
     }
     return final_score;
@@ -214,7 +214,7 @@ double gate(const t_idx& idx, std::vector<uint64_t> pattern, uint32_t ngramsize)
     pattern.insert(pattern.begin(), PAT_START_SYM);
     // run the query
     uint64_t M = pattern_size + 1;
-    double sentenceprob = run_query_knm(idx, pattern, M,ngramsize);
+    double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
     double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
     return perplexity;
 }

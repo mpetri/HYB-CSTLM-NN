@@ -26,9 +26,10 @@ struct precomputed_stats {
     std::vector<double> D3_cnt;
 
     precomputed_stats() = default;
-    precomputed_stats(size_t max_ngram) {
+    precomputed_stats(size_t max_ngram)
+    {
         max_ngram_count = max_ngram;
-        auto size = max_ngram_count+1;
+        auto size = max_ngram_count + 1;
         n1.resize(size);
         n2.resize(size);
         n3.resize(size);
@@ -52,26 +53,26 @@ struct precomputed_stats {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
 
-        sdsl::write_member(max_ngram_count,out,child,"max_ngram_count");
-        sdsl::write_member(N1plus_dotdot,out,child,"N1PlusPlus");
-        sdsl::write_member(N3plus_dot,out,child,"N3PlusPlus");
-        sdsl::serialize(n1,out,child,"n1");
-        sdsl::serialize(n2,out,child,"n2");
-        sdsl::serialize(n3,out,child,"n3");
-        sdsl::serialize(n4,out,child,"n4");
-        sdsl::serialize(Y,out,child,"Y");
-        sdsl::serialize(Y_cnt,out,child,"Y_cnt");
-        sdsl::serialize(D1,out,child,"D1");
-        sdsl::serialize(D2,out,child,"D2");
-        sdsl::serialize(D3,out,child,"D3");
-        sdsl::serialize(n1_cnt,out,child,"n1_cnt");
-        sdsl::serialize(n2_cnt,out,child,"n2_cnt");
-        sdsl::serialize(n3_cnt,out,child,"n3_cnt");
-        sdsl::serialize(n4_cnt,out,child,"n4_cnt");
+        sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
+        sdsl::write_member(N1plus_dotdot, out, child, "N1PlusPlus");
+        sdsl::write_member(N3plus_dot, out, child, "N3PlusPlus");
+        sdsl::serialize(n1, out, child, "n1");
+        sdsl::serialize(n2, out, child, "n2");
+        sdsl::serialize(n3, out, child, "n3");
+        sdsl::serialize(n4, out, child, "n4");
+        sdsl::serialize(Y, out, child, "Y");
+        sdsl::serialize(Y_cnt, out, child, "Y_cnt");
+        sdsl::serialize(D1, out, child, "D1");
+        sdsl::serialize(D2, out, child, "D2");
+        sdsl::serialize(D3, out, child, "D3");
+        sdsl::serialize(n1_cnt, out, child, "n1_cnt");
+        sdsl::serialize(n2_cnt, out, child, "n2_cnt");
+        sdsl::serialize(n3_cnt, out, child, "n3_cnt");
+        sdsl::serialize(n4_cnt, out, child, "n4_cnt");
 
-        sdsl::serialize(D1_cnt,out,child,"D1_cnt");
-        sdsl::serialize(D2_cnt,out,child,"D2_cnt");
-        sdsl::serialize(D3_cnt,out,child,"D3_cnt");
+        sdsl::serialize(D1_cnt, out, child, "D1_cnt");
+        sdsl::serialize(D2_cnt, out, child, "D2_cnt");
+        sdsl::serialize(D3_cnt, out, child, "D3_cnt");
 
         sdsl::structure_tree::add_size(child, written_bytes);
 
@@ -105,7 +106,8 @@ struct precomputed_stats {
         sdsl::load(D3_cnt, in);
     }
 
-    void print(bool ismkn,uint32_t ngramsize) const {
+    void print(bool ismkn, uint32_t ngramsize) const
+    {
         std::cout << "------------------------------------------------" << std::endl;
         std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
         std::cout << "-------------Based on actual counts-------------" << std::endl;
@@ -215,7 +217,7 @@ struct precomputed_stats {
 //     // use the DFS iterator to traverse `cst`
 //     for (auto it=cst.begin(); it!=cst.end(); ++it) {
 //         if (it.visit() == 1) {  // node visited the first time
-//             auto v = *it;       // get the node by dereferencing the iterator           
+//             auto v = *it;       // get the node by dereferencing the iterator
 //         	auto parent = cst.parent(v);
 //         	auto parent_depth = cst.depth(v);
 //             auto num_occ = cst.size(v);
@@ -252,8 +254,8 @@ struct precomputed_stats {
 // 	return ps;
 // }
 
-    template<class t_cst>
-int N1PlusBack(const t_cst& cst,std::vector<uint64_t> pat, bool check_for_EOS = true)
+template <class t_cst>
+int N1PlusBack(const t_cst& cst, std::vector<uint64_t> pat, bool check_for_EOS = true)
 {
     auto pat_size = pat.size();
     uint64_t n1plus_back = 0;
@@ -281,21 +283,20 @@ int N1PlusBack(const t_cst& cst,std::vector<uint64_t> pat, bool check_for_EOS = 
     return n1plus_back;
 }
 
-template<class t_cst>
+template <class t_cst>
 int
-ActualCount(const t_cst& cst,std::vector<uint64_t>pat)
+ActualCount(const t_cst& cst, std::vector<uint64_t> pat)
 {
-    uint64_t lb = 0 , rb = cst.size()-1;
-    if (backward_search(cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0) 
-        return rb-lb+1;
+    uint64_t lb = 0, rb = cst.size() - 1;
+    if (backward_search(cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0)
+        return rb - lb + 1;
     else
         return 0;
 }
 
-
-template<class t_cst>
-void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
-        uint64_t symbol, std::vector<uint64_t> pat, uint64_t size, uint64_t lb, uint64_t rb,uint32_t max_ngram_count)
+template <class t_cst>
+void ncomputer(precomputed_stats& ps, const t_cst& cst, const t_cst& cst_rev,
+               uint64_t symbol, std::vector<uint64_t> pat, uint64_t size, uint64_t lb, uint64_t rb, uint32_t max_ngram_count)
 {
     auto freq = 0u;
     if (lb == rb)
@@ -303,19 +304,19 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
     if (size != 0 && lb != rb) {
         freq = rb - lb + 1;
         if (freq == 1 && lb != rb) {
-            // FIXME: how can this happen? from the above assignment, this is impossible 
+            // FIXME: how can this happen? from the above assignment, this is impossible
             // (integer overflow, maybe? seems very odd...)
             freq = 0;
         }
     }
     if (size != 0) {
         pat.push_back(symbol);
-        {	
-            uint64_t n1plus_back=0;
+        {
+            uint64_t n1plus_back = 0;
 
-            if(pat[0]!=PAT_START_SYM)
+            if (pat[0] != PAT_START_SYM)
                 // is there a good reason we're not using the cst_rev?
-                n1plus_back = N1PlusBack(cst_rev,pat);
+                n1plus_back = N1PlusBack(cst_rev, pat);
             else {
                 //special case where the pattern starts with <s>: acutal count is used
                 //n1plus_back = ActualCount(cst,pat);
@@ -342,7 +343,7 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
         } else if (freq >= 3) {
             if (freq == 3) {
                 ps.n3[size] += 1;
-            } else if (freq == 4) { 
+            } else if (freq == 4) {
                 ps.n4[size] += 1;
             }
             if (size == 1)
@@ -355,9 +356,8 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
         while (cst.id(w) != root_id) {
             symbol = cst.edge(w, 1);
             if (symbol != EOS_SYM && symbol != EOF_SYM) {
-                ncomputer(ps,cst,cst_rev,symbol,pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
-            }
-            else {
+                ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(w), cst.rb(w), max_ngram_count);
+            } else {
                 // this is called twice, for the top level sub-trees rooted with 0, 1
                 //std::cout << "S1: node " << root_id << " child " << 1 << " symbol " << symbol << "\n";
             }
@@ -378,9 +378,9 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
                         symbol = cst.edge(w, depth + 1);
                         if (symbol == EOS_SYM) // FIXME: but this line is never run on "undoc" example; why?
                             std::cout << "S2: node " << cst.id(node) << " child " << i
-                                << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
+                                      << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
                         if (symbol != EOS_SYM) {
-                            ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(w), cst.rb(w),max_ngram_count);
+                            ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(w), cst.rb(w), max_ngram_count);
                         }
                         w = cst.sibling(w);
                         i += 1;
@@ -389,7 +389,7 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
                     // is the next symbol on the edge a sentinel; if so, stop
                     symbol = cst.edge(node, size + 1);
                     if (symbol != EOS_SYM) {
-                        ncomputer(ps,cst,cst_rev,symbol, pat, size + 1, cst.lb(node), cst.rb(node),max_ngram_count);
+                        ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(node), cst.rb(node), max_ngram_count);
                     } else {
                         // this is called many times, in many cases with size << depth
                         //std::cout << "S3: node " << cst.id(node) << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
@@ -402,15 +402,16 @@ void ncomputer(precomputed_stats& ps,const t_cst& cst,const t_cst& cst_rev,
     }
 }
 
-template<class t_cst>
+template <class t_cst>
 precomputed_stats
-precompute_statistics(collection& ,const t_cst& cst,const t_cst& cst_rev,uint64_t max_ngram_len) {
+precompute_statistics(collection&, const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
+{
     precomputed_stats ps(max_ngram_len);
 
     uint64_t lb = 0, rb = cst.size() - 1;
-    uint64_t symbol=0;
+    uint64_t symbol = 0;
     std::vector<uint64_t> pat;
-    ncomputer(ps,cst,cst_rev,symbol, pat, 0, lb, rb,max_ngram_len);
+    ncomputer(ps, cst, cst_rev, symbol, pat, 0, lb, rb, max_ngram_len);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         ps.Y[size] = ps.n1[size] / (ps.n1[size] + 2 * ps.n2[size]);
@@ -434,4 +435,3 @@ precompute_statistics(collection& ,const t_cst& cst,const t_cst& cst_rev,uint64_
 
     return ps;
 }
-

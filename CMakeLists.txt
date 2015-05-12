@@ -63,6 +63,5 @@ target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
-target_compile_options(unit-test.x PUBLIC -DLMSDSL_NO_LOGGING)
 enable_testing()
 add_test(TestsPass unit-test.x)
