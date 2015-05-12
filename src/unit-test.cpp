@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "index_succinct.hpp"
+#include "index_types.hpp"
 #include "sdsl/suffix_trees.hpp"
 
 #include "knm.hpp"
@@ -8,9 +8,11 @@
 
 using csa_type = sdsl::csa_wt_int<>;
 using cst_type = sdsl::cst_sct3<csa_type>;
-using index_type = index_succinct<cst_type>;
 
-typedef testing::Types<index_succinct<cst_type> > Implementations;
+typedef testing::Types<
+index_succinct<cst_type>,
+index_succinct_store_n1fb<cst_type>
+> Implementations;
 
 struct triplet {
     std::vector<uint64_t> pattern;
@@ -68,17 +70,6 @@ protected:
 
 TYPED_TEST_CASE(LMTest, Implementations);
 
-// checks whether perplexities match
-// precision of comparison is set to 1e-4
-TYPED_TEST(LMTest, Perplexity)
-{
-    for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
-        auto srilm = this->srilm_triplets[i];
-        double perplexity = gate(this->idx, srilm.pattern, srilm.order);
-        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
-    }
-}
-
 TYPED_TEST(LMTest, N1PlusBack)
 {
 }
@@ -98,6 +89,18 @@ TYPED_TEST(LMTest, N1PlusFront)
 TYPED_TEST(LMTest, vocab_size)
 {
 }
+
+// checks whether perplexities match
+// precision of comparison is set to 1e-4
+TYPED_TEST(LMTest, Perplexity)
+{
+    for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
+        auto srilm = this->srilm_triplets[i];
+        double perplexity = gate(this->idx, srilm.pattern, srilm.order);
+        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
+    }
+}
+
 
 int main(int argc, char* argv[])
 {
