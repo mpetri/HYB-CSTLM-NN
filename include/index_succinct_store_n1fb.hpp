@@ -186,10 +186,31 @@ public:
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
     uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
-                         uint64_t, uint64_t, pattern_iterator, pattern_iterator) const
+                         uint64_t lb_rev, uint64_t rb_rev, 
+                         pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto node = m_cst.node(lb, rb);
-        return m_n1plusfrontback.lookup(m_cst, node);
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        if (pattern_size == m_cst.depth(node)) {
+            if (*pattern_begin == PAT_START_SYM ) {
+                return m_cst.degree(node);
+            } else {
+                return m_n1plusfrontback.lookup(m_cst, node);
+            }
+        } else {
+            // special case, only one way of extending this pattern to the right
+            if (*pattern_begin == PAT_START_SYM
+                    && *(pattern_end-1) == PAT_END_SYM) {
+                /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
+                return 0;
+            } else if (*pattern_begin == PAT_START_SYM) {
+                /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
+                return 1;
+            } else {
+                /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
+                return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
+            }
+        }
     }
 
     // Computes N_1+( abc * )
@@ -211,7 +232,7 @@ public:
 
         // adjust for end of sentence 
         uint64_t symbol = *(pattern_end-1);
-        if (symbol != PAT_END_SYM) {
+        if (symbol == PAT_END_SYM) {
             N1plus_front -= 1;
         }
         return N1plus_front;
