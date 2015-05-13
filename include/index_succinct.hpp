@@ -199,10 +199,13 @@ public:
             // special case, only one way of extending this pattern to the right
             if (*pattern_begin == PAT_START_SYM
                     && *(pattern_end-1) == PAT_END_SYM) {
+                /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
-                return N1PlusFront(lb, rb, pattern_begin, pattern_end);
+                /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
+                return 1;
             } else {
+                /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
                 return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
             }
         }
