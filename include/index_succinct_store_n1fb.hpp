@@ -74,11 +74,11 @@ public:
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precompute_statistics(col, m_cst, m_cst_rev, t_max_ngram_count);
+        m_precomputed = precomputed_stats(col, m_cst, m_cst_rev, t_max_ngram_count);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
-        m_precomputed.print(false, 10);
+        //m_precomputed.print(false, 10);
 
         LOG(INFO) << "CREATE VOCAB";
         start = clock::now();

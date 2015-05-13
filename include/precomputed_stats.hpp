@@ -26,27 +26,9 @@ struct precomputed_stats {
     std::vector<double> D3_cnt;
 
     precomputed_stats() = default;
-    precomputed_stats(size_t max_ngram)
-    {
-        max_ngram_count = max_ngram;
-        auto size = max_ngram_count + 1;
-        n1.resize(size);
-        n2.resize(size);
-        n3.resize(size);
-        n4.resize(size);
-        Y.resize(size);
-        Y_cnt.resize(size);
-        D1.resize(size);
-        D2.resize(size);
-        D3.resize(size);
-        n1_cnt.resize(size);
-        n2_cnt.resize(size);
-        n3_cnt.resize(size);
-        n4_cnt.resize(size);
-        D1_cnt.resize(size);
-        D2_cnt.resize(size);
-        D3_cnt.resize(size);
-    }
+
+    template <typename t_cst>
+    precomputed_stats(collection&, const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
     {
@@ -207,6 +189,12 @@ struct precomputed_stats {
         std::cout << "------------------------------------------------" << std::endl;
         std::cout << "------------------------------------------------" << std::endl;
     }
+
+private:
+    template <typename t_cst>
+    void ncomputer(const t_cst& cst, const t_cst& cst_rev,
+                   uint64_t symbol, std::vector<uint64_t> pat,
+                   uint64_t lb, uint64_t rb, uint32_t max_ngram_count);
 };
 
 // template<class t_cst>
@@ -254,7 +242,7 @@ struct precomputed_stats {
 // 	return ps;
 // }
 
-template <class t_cst>
+template <typename t_cst>
 int N1PlusBack(const t_cst& cst, std::vector<uint64_t> pat, bool check_for_EOS = true)
 {
     auto pat_size = pat.size();
@@ -283,155 +271,113 @@ int N1PlusBack(const t_cst& cst, std::vector<uint64_t> pat, bool check_for_EOS =
     return n1plus_back;
 }
 
-template <class t_cst>
-int
-ActualCount(const t_cst& cst, std::vector<uint64_t> pat)
+template <typename t_cst>
+precomputed_stats::precomputed_stats(collection&, 
+        const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
 {
-    uint64_t lb = 0, rb = cst.size() - 1;
-    if (backward_search(cst.csa, lb, rb, pat.begin(), pat.end(), lb, rb) > 0)
-        return rb - lb + 1;
-    else
-        return 0;
-}
+    max_ngram_count = max_ngram_len;
+    auto size = max_ngram_count + 1;
+    n1.resize(size); n2.resize(size); n3.resize(size); n4.resize(size);
+    Y.resize(size); Y_cnt.resize(size);
+    D1.resize(size); D2.resize(size); D3.resize(size);
+    n1_cnt.resize(size); n2_cnt.resize(size); n3_cnt.resize(size); n4_cnt.resize(size);
+    D1_cnt.resize(size); D2_cnt.resize(size); D3_cnt.resize(size);
 
-template <class t_cst>
-void ncomputer(precomputed_stats& ps, const t_cst& cst, const t_cst& cst_rev,
-               uint64_t symbol, std::vector<uint64_t> pat, uint64_t size, uint64_t lb, uint64_t rb, uint32_t max_ngram_count)
-{
-    auto freq = 0u;
-    if (lb == rb)
-        freq = 1;
-    if (size != 0 && lb != rb) {
-        freq = rb - lb + 1;
-        if (freq == 1 && lb != rb) {
-            // FIXME: how can this happen? from the above assignment, this is impossible
-            // (integer overflow, maybe? seems very odd...)
-            freq = 0;
-        }
-    }
-    if (size != 0) {
-        pat.push_back(symbol);
-        {
-            uint64_t n1plus_back = 0;
-
-            if (pat[0] != PAT_START_SYM)
-                // is there a good reason we're not using the cst_rev?
-                n1plus_back = N1PlusBack(cst_rev, pat);
-            else {
-                //special case where the pattern starts with <s>: acutal count is used
-                //n1plus_back = ActualCount(cst,pat);
-                n1plus_back = freq; // FIXME: Ehsan to verify this is valid
-            }
-
-            if (n1plus_back == 1) {
-                ps.n1_cnt[size] += 1;
-            } else if (n1plus_back == 2) {
-                ps.n2_cnt[size] += 1;
-            } else if (n1plus_back == 3) {
-                ps.n3_cnt[size] += 1;
-            } else if (n1plus_back == 4) {
-                ps.n4_cnt[size] += 1;
-            }
-        }
-        if (size == 2 && freq >= 1) {
-            ps.N1plus_dotdot++;
-        }
-        if (freq == 1) {
-            ps.n1[size] += 1;
-        } else if (freq == 2) {
-            ps.n2[size] += 1;
-        } else if (freq >= 3) {
-            if (freq == 3) {
-                ps.n3[size] += 1;
-            } else if (freq == 4) {
-                ps.n4[size] += 1;
-            }
-            if (size == 1)
-                ps.N3plus_dot++;
-        }
-    }
-    if (size == 0) {
-        auto w = cst.select_child(cst.root(), 1);
-        auto root_id = cst.id(cst.root());
-        while (cst.id(w) != root_id) {
-            symbol = cst.edge(w, 1);
-            if (symbol != EOS_SYM && symbol != EOF_SYM) {
-                ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(w), cst.rb(w), max_ngram_count);
-            } else {
-                // this is called twice, for the top level sub-trees rooted with 0, 1
-                //std::cout << "S1: node " << root_id << " child " << 1 << " symbol " << symbol << "\n";
-            }
-            w = cst.sibling(w);
-        }
-    } else {
-        if (size + 1 <= max_ngram_count) {
-            if (freq > 0) {
-                auto node = cst.node(lb, rb);
-                auto depth = cst.depth(node);
-                if (size == depth) {
-                    auto w = cst.select_child(node, 1);
-                    auto root_id = cst.id(cst.root());
-                    auto i = 1;
-
-                    while (cst.id(w) != root_id) {
-                        // FIXME: this can only happen in first call (due to sort order)
-                        symbol = cst.edge(w, depth + 1);
-                        if (symbol == EOS_SYM) // FIXME: but this line is never run on "undoc" example; why?
-                            std::cout << "S2: node " << cst.id(node) << " child " << i
-                                      << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
-                        if (symbol != EOS_SYM) {
-                            ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(w), cst.rb(w), max_ngram_count);
-                        }
-                        w = cst.sibling(w);
-                        i += 1;
-                    }
-                } else {
-                    // is the next symbol on the edge a sentinel; if so, stop
-                    symbol = cst.edge(node, size + 1);
-                    if (symbol != EOS_SYM) {
-                        ncomputer(ps, cst, cst_rev, symbol, pat, size + 1, cst.lb(node), cst.rb(node), max_ngram_count);
-                    } else {
-                        // this is called many times, in many cases with size << depth
-                        //std::cout << "S3: node " << cst.id(node) << " size " << size << " depth " << depth << " symbol " << symbol << "\n";
-                    }
-                }
-            } else {
-                // else what? freq == 0, not sure what this means.
-            }
-        }
-    }
-}
-
-template <class t_cst>
-precomputed_stats
-precompute_statistics(collection&, const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
-{
-    precomputed_stats ps(max_ngram_len);
-
-    uint64_t lb = 0, rb = cst.size() - 1;
-    uint64_t symbol = 0;
+    // invoke ncomputer for each subtree
+    auto w = cst.select_child(cst.root(), 1);
+    auto root_id = cst.id(cst.root());
     std::vector<uint64_t> pat;
-    ncomputer(ps, cst, cst_rev, symbol, pat, 0, lb, rb, max_ngram_len);
-
-    for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        ps.Y[size] = ps.n1[size] / (ps.n1[size] + 2 * ps.n2[size]);
-        if (ps.n1[size] != 0)
-            ps.D1[size] = 1 - 2 * ps.Y[size] * (double)ps.n2[size] / ps.n1[size];
-        if (ps.n2[size] != 0)
-            ps.D2[size] = 2 - 3 * ps.Y[size] * (double)ps.n3[size] / ps.n2[size];
-        if (ps.n3[size] != 0)
-            ps.D3[size] = 3 - 4 * ps.Y[size] * (double)ps.n4[size] / ps.n3[size];
+    while (cst.id(w) != root_id) {
+        auto symbol = cst.edge(w, 1);
+        if (symbol != EOS_SYM && symbol != EOF_SYM) {
+            ncomputer(cst, cst_rev, symbol, pat,
+                    cst.lb(w), cst.rb(w), max_ngram_len);
+        }
+        w = cst.sibling(w);
     }
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        ps.Y_cnt[size] = (double)ps.n1_cnt[size] / (ps.n1_cnt[size] + 2 * ps.n2_cnt[size]);
-        if (ps.n1_cnt[size] != 0)
-            ps.D1_cnt[size] = 1 - 2 * ps.Y_cnt[size] * (double)ps.n2_cnt[size] / ps.n1_cnt[size];
-        if (ps.n2_cnt[size] != 0)
-            ps.D2_cnt[size] = 2 - 3 * ps.Y_cnt[size] * (double)ps.n3_cnt[size] / ps.n2_cnt[size];
-        if (ps.n3_cnt[size] != 0)
-            ps.D3_cnt[size] = 3 - 4 * ps.Y_cnt[size] * (double)ps.n4_cnt[size] / ps.n3_cnt[size];
+        Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
+        if (n1[size] != 0)
+            D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
+        if (n2[size] != 0)
+            D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
+        if (n3[size] != 0)
+            D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
     }
 
-    return ps;
+    for (auto size = 1ULL; size <= max_ngram_len; size++) {
+        Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
+        if (n1_cnt[size] != 0)
+            D1_cnt[size] = 1 - 2 * Y_cnt[size] * (double)n2_cnt[size] / n1_cnt[size];
+        if (n2_cnt[size] != 0)
+            D2_cnt[size] = 2 - 3 * Y_cnt[size] * (double)n3_cnt[size] / n2_cnt[size];
+        if (n3_cnt[size] != 0)
+            D3_cnt[size] = 3 - 4 * Y_cnt[size] * (double)n4_cnt[size] / n3_cnt[size];
+    }
+}
+
+template <class t_cst>
+void
+precomputed_stats::ncomputer(const t_cst& cst, const t_cst& cst_rev,
+               uint64_t symbol, std::vector<uint64_t> pat,
+               uint64_t lb, uint64_t rb, uint32_t max_ngram_count)
+{
+    auto freq = rb - lb + 1;
+    assert(freq >= 1);
+    auto size = pat.size() + 1;
+
+    pat.push_back(symbol);
+    uint64_t n1plus_back = 0;
+
+    if (pat[0] != PAT_START_SYM)
+        // FIXME: slowwww, better to use (lb, rb) from cst_rev
+        n1plus_back = N1PlusBack(cst_rev, pat);
+    else 
+        // special case where the pattern starts with <s>: actual count is used
+        n1plus_back = freq;
+
+    switch (n1plus_back) {
+        case 1: n1_cnt[size] += 1; break;
+        case 2: n2_cnt[size] += 1; break;
+        case 3: n3_cnt[size] += 1; break;
+        case 4: n4_cnt[size] += 1; break;
+    }
+
+    switch (freq) {
+        case 1: n1[size] += 1; break;
+        case 2: n2[size] += 1; break;
+        case 3: n3[size] += 1; break;
+        case 4: n4[size] += 1; break;
+    }
+
+    if (size == 2 && freq >= 1) 
+        N1plus_dotdot++;
+
+    if (freq >= 3 && size == 1) 
+        N3plus_dot++;
+
+    if (size + 1 <= max_ngram_count) {
+        auto node = cst.node(lb, rb);
+        auto depth = cst.depth(node);
+        if (size == depth) {
+            // completes an edge
+            auto w = cst.select_child(node, 1);
+            auto root_id = cst.id(cst.root());
+
+            while (cst.id(w) != root_id) {
+                symbol = cst.edge(w, depth + 1);
+                if (symbol != EOS_SYM)
+                    ncomputer(cst, cst_rev, symbol, pat, cst.lb(w), cst.rb(w), max_ngram_count);
+                else
+                    assert(false && "this can never happen, EOS is always followed by <S> or EOF");
+                w = cst.sibling(w);
+            }
+        } else {
+            // internal to an edge
+            symbol = cst.edge(node, size + 1);
+            if (symbol != EOS_SYM) 
+                ncomputer(cst, cst_rev, symbol, pat, cst.lb(node), cst.rb(node), max_ngram_count);
+        }
+    }
 }
