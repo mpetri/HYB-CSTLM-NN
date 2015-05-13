@@ -243,8 +243,8 @@ private:
 template <typename t_cst>
 precomputed_stats::precomputed_stats(collection&, 
         const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
+: max_ngram_count(max_ngram_len), N1plus_dotdot(0), N3plus_dot(0)
 {
-    max_ngram_count = max_ngram_len;
     auto size = max_ngram_count + 1;
     n1.resize(size); n2.resize(size); n3.resize(size); n4.resize(size);
     Y.resize(size); Y_cnt.resize(size);

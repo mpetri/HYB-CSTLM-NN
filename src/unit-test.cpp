@@ -53,10 +53,11 @@ protected:
     std::vector<triplet> srilm_triplets;
     virtual void SetUp()
     {
+        //std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
         {
             col = collection(col_path);
             idx = t_idx(col);
-        }
+        }   
 
         {
             std::ifstream file(srilm_path);
