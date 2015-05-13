@@ -13,14 +13,18 @@
 // this allows later calls to avoid this expensive step
 // complexity is FIXME
 
+template<
+class t_bv = sdsl::rrr_vector<15>,
+class t_vec = sdsl::int_vector<32>
+>
 struct compressed_sentinel_flag {
   typedef sdsl::int_vector<>::size_type size_type;
-  typedef sdsl::rrr_vector<63> bv_type;
-  typedef sdsl::vlc_vector<> vector_type;
+  typedef t_bv bv_type;
+  typedef t_vec vector_type;
 
 private:
   bv_type m_bv;
-  bv_type::rank_1_type m_bv_rank;
+  typename bv_type::rank_1_type m_bv_rank;
   vector_type m_offsets;
 
 public:
@@ -72,9 +76,11 @@ public:
 
     m_bv = bv_type(has_sentinel);
     m_bv_rank.set_vector(&m_bv);
-    std::vector<uint32_t> offset_values;
-    for (auto& node2offset: offsets) 
-        offset_values.push_back(node2offset.second);
+    sdsl::int_vector<32> offset_values(offsets.size());
+    size_t i=0;
+    for (auto& node2offset: offsets) {
+        offset_values[i] = node2offset.second;
+      }
     m_offsets = vector_type(offset_values);
   }
 
