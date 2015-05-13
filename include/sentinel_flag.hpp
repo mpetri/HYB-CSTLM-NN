@@ -55,7 +55,7 @@ public:
           // left-most child when the edge label has only one atom
           // if (depth == parent_depth + 1 && it != cst.begin(parent)) // pass
 
-          for (auto d = 1; !found && d <= delta; ++d) {
+          for (auto d = 1ULL; !found && d <= delta; ++d) {
             auto l = cst.edge(node, parent_depth + d);
             if (l == EOS_SYM) {
               has_sentinel[node_id] = 1;
