@@ -23,8 +23,8 @@
 //      lb, rb -- left and right bounds on the forward CST (spanning the full index for this method???)
 template <class t_idx>
 double highestorder(const t_idx& idx, uint64_t level, const bool unk,
-                    const std::vector<uint64_t>::iterator& pattern_begin,
-                    const std::vector<uint64_t>::iterator& pattern_end,
+                    std::vector<uint64_t>::const_iterator pattern_begin,
+                    std::vector<uint64_t>::const_iterator pattern_end,
                     uint64_t& lb, uint64_t& rb,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d,
                     uint64_t ngramsize)
@@ -57,7 +57,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
         denominator = rb - lb + 1;
-        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1,true);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end-1);
     } else {
         return backoff_prob;
     }
@@ -68,8 +68,8 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
 
 template <class t_idx>
 double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
-                  const std::vector<uint64_t>::iterator& pattern_begin,
-                  const std::vector<uint64_t>::iterator& pattern_end,
+                  std::vector<uint64_t>::const_iterator pattern_begin,
+                  std::vector<uint64_t>::const_iterator pattern_end,
                   uint64_t& lb, uint64_t& rb,
                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
@@ -81,11 +81,10 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 
     uint64_t c = 0;
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
-    uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
     if (forward_search(idx.m_cst_rev, node, d, *(pattern_begin), char_pos) > 0) {
         lb_rev = idx.m_cst_rev.lb(node);
         rb_rev = idx.m_cst_rev.rb(node);
-        c = idx.N1PlusBack(lb_rev, rb_rev, pattern_size);
+        c = idx.N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
     }
 
     double D = idx.discount(level, true);
@@ -94,40 +93,35 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         numerator = c - D;
     }
 
-    uint64_t N1plus_front = 0;
-    uint64_t back_N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
-        back_N1plus_front = idx.N1PlusFrontBack(lb, rb, c, pattern_begin, pattern_end - 1,true);
-        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1,true);
-
-        if (back_N1plus_front == 0) //TODO check
-            // if back_N1plus_front fails to find a full extention to
-            // both left and right, it replaces 0 with extention to right
-            // computed by N1plus_front instead.
-            back_N1plus_front = N1plus_front;
+        auto N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
+        auto back_N1plus_front = idx.N1PlusFrontBack(lb, rb, pattern_begin, pattern_end - 1);
+        // FIXME: for the index_succinct version of N1PlusFrontBack this call above can be
+        // avoided for patterns that begin with <s> and/or end with </s> using 'N1PlusFront' and 'c'
+        // But might not be worth bothering, as these counts are stored explictly for the 
+        // faster version of the code so there would be no win here.
+        d++;
+        return (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
     } else {
         return backoff_prob;
     }
-
-    d++;
-    double output = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
-    return output;
 }
 
 template <class t_idx>
 double lowestorder(const t_idx& idx,
-                   const uint64_t& pattern,
+                   std::vector<uint64_t>::const_iterator pattern_begin,
+                   std::vector<uint64_t>::const_iterator pattern_end,
                    uint64_t& lb_rev, uint64_t& rb_rev,
                    uint64_t& char_pos, uint64_t& d)
 {
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     double denominator = 0;
-    forward_search(idx.m_cst_rev, node, d, pattern, char_pos);
+    forward_search(idx.m_cst_rev, node, d, *pattern_begin, char_pos);
     d++;
     denominator = idx.m_precomputed.N1plus_dotdot;
     lb_rev = idx.m_cst_rev.lb(node);
     rb_rev = idx.m_cst_rev.rb(node);
-    int numerator = idx.N1PlusBack(lb_rev, rb_rev, 1,true); //TODO precompute this
+    int numerator = idx.N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end); //TODO precompute this
     double probability = (double)numerator / denominator;
     return probability;
 }
@@ -143,8 +137,8 @@ double lowestorder_unk(const t_idx& idx)
 
 template <class t_idx>
 double pkn(const t_idx& idx, uint64_t level, const bool unk,
-           const std::vector<uint64_t>::iterator& pattern_begin,
-           const std::vector<uint64_t>::iterator& pattern_end,
+           std::vector<uint64_t>::const_iterator pattern_begin,
+           std::vector<uint64_t>::const_iterator pattern_end,
            uint64_t& lb, uint64_t& rb,
            uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
@@ -166,7 +160,7 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
 
     } else if (size == 1 || ngramsize == 1) {
         if (!unk) {
-            probability = lowestorder(idx, *(pattern_end - 1),
+            probability = lowestorder(idx, pattern_end - 1, pattern_end,
                                       lb_rev, rb_rev, char_pos, d);
         } else {
             probability = lowestorder_unk(idx);

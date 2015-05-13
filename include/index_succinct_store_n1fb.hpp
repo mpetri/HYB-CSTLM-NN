@@ -22,6 +22,8 @@ public:
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::string_type string_type;
+    typedef std::vector<uint64_t> pattern_type;
+    typedef typename pattern_type::const_iterator pattern_iterator;
 
 public: // data
     t_cst m_cst;

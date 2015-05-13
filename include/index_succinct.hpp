@@ -21,6 +21,8 @@ public:
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::string_type string_type;
+    typedef std::vector<uint64_t> pattern_type;
+    typedef typename pattern_type::const_iterator pattern_iterator;
 public: // data
     t_cst m_cst;
     t_cst m_cst_rev;
@@ -110,28 +112,26 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(const uint64_t& lb_rev, const uint64_t& rb_rev, uint64_t patrev_size, bool check_for_EOS = true) const
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, 
+                         pattern_iterator pattern_begin,
+                         pattern_iterator pattern_end) const
     {
-        uint64_t c = 0;
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst_rev.node(lb_rev, rb_rev);
-        if (patrev_size == m_cst_rev.depth(node)) {
-            c = m_cst_rev.degree(node);
-            if (check_for_EOS) {
-                auto w = m_cst_rev.select_child(node, 1);
-                uint64_t symbol = m_cst_rev.edge(w, patrev_size + 1);
-                if (symbol == EOS_SYM)
-                    c = c - 1;
-            }
+
+        uint64_t n1plus_back;
+        if (pattern_size == m_cst_rev.depth(node)) {
+            n1plus_back = m_cst_rev.degree(node);
         } else {
-            if (check_for_EOS) {
-                uint64_t symbol = m_cst_rev.edge(node, patrev_size + 1);
-                if (symbol != EOS_SYM)
-                    c = 1;
-            } else {
-                c = 1;
-            }
+            n1plus_back = 1;
         }
-        return c;
+
+        // adjust for sentinel start of sentence
+        auto symbol = *pattern_begin;
+        if (symbol == PAT_START_SYM)
+            n1plus_back -= 1;
+
+        return n1plus_back;
     }
 
     double discount(uint64_t level, bool cnt = false) const
@@ -148,14 +148,9 @@ public:
     }
 
     //  Computes N_1+( * ab * )
-    //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
-    //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
-    //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(const uint64_t& lb, const uint64_t& rb,
-                             const uint64_t n1plus_back,
-                             const std::vector<uint64_t>::iterator& pattern_begin,
-                             const std::vector<uint64_t>::iterator& pattern_end,
-                             bool check_for_EOS = true) const
+    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
+                         pattern_iterator pattern_begin,
+                         pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
@@ -165,68 +160,73 @@ public:
         uint64_t lb_rev_prime = 0, rb_rev_prime = m_cst_rev.size() - 1;
         uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
         // this is a full search for the pattern in reverse order in the reverse tree!
-        for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime;) {
+        for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime; ++it) {
             backward_search(m_cst_rev.csa,
                             lb_rev_prime, rb_rev_prime,
                             *it,
                             lb_rev_prime, rb_rev_prime);
-            it++;
         }
         // this is when the pattern matches a full edge in the CST
         if (pattern_size == m_cst.depth(node)) {
             auto w = m_cst.select_child(node, 1);
             auto root_id = m_cst.id(m_cst.root());
+            std::vector<uint64_t> new_pattern(pattern_begin, pattern_end);
+            new_pattern.push_back(EOS_SYM);
             while (m_cst.id(w) != root_id) {
                 lb_rev_stored = lb_rev_prime;
                 rb_rev_stored = rb_rev_prime;
                 uint64_t symbol = m_cst.edge(w, pattern_size + 1);
-                if (symbol != EOS_SYM || !check_for_EOS) {
-                    // find the symbol to the right
-                    // (which is first in the reverse order)
-                    backward_search(m_cst_rev.csa,
-                                    lb_rev_stored, rb_rev_stored,
-                                    symbol,
-                                    lb_rev_stored, rb_rev_stored);
+                assert(symbol != EOS_SYM);
+                new_pattern.back() = symbol;
+                // find the symbol to the right
+                // (which is first in the reverse order)
+                backward_search(m_cst_rev.csa,
+                                lb_rev_stored, rb_rev_stored,
+                                symbol,
+                                lb_rev_stored, rb_rev_stored);
 
-                    back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, pattern_size + 1, check_for_EOS);
-                }
+                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, 
+                        new_pattern.begin(), new_pattern.end());
                 w = m_cst.sibling(w);
             }
             return back_N1plus_front;
         } else {
             // special case, only one way of extending this pattern to the right
-            return n1plus_back;
+            if (*pattern_begin == PAT_START_SYM
+                    && *(pattern_end-1) == PAT_END_SYM) {
+                return 0;
+            } else if (*pattern_begin == PAT_START_SYM) {
+                return N1PlusFront(lb, rb, pattern_begin, pattern_end);
+            } else if (*(pattern_end-1) == PAT_END_SYM) {
+                return N1PlusBack(lb, rb, pattern_begin, pattern_end);
+            }
+            assert(false && "you can't reach this line, surely!");
+            return 0;
         }
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(const uint64_t& lb, const uint64_t& rb,
-                         std::vector<uint64_t>::iterator pattern_begin,
-                         std::vector<uint64_t>::iterator pattern_end,
-                         bool check_for_EOS = true) const
+    uint64_t N1PlusFront(uint64_t lb, uint64_t rb,
+                         pattern_iterator pattern_begin,
+                         pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        uint64_t N1plus_front = 0;
+        uint64_t N1plus_front;
         if (pattern_size == m_cst.depth(node)) {
+            // pattern matches the edge label
             N1plus_front = m_cst.degree(node);
-            if (check_for_EOS) {
-                auto w = m_cst.select_child(node, 1);
-                uint64_t symbol = m_cst.edge(w, pattern_size + 1);
-                if (symbol == EOS_SYM) {
-                    N1plus_front = N1plus_front - 1;
-                }
-            }
-            return N1plus_front;
         } else {
-            if (check_for_EOS) {
-                uint64_t symbol = m_cst.edge(node, pattern_size + 1);
-                if (symbol != EOS_SYM) {
-                    N1plus_front = 1;
-                }
-            }
-            return N1plus_front;
+            // pattern is part of the edge label
+            N1plus_front = 1;
         }
+
+        // adjust for end of sentence 
+        uint64_t symbol = *(pattern_end-1);
+        if (symbol != PAT_END_SYM) {
+            N1plus_front -= 1;
+        }
+        return N1plus_front;
     }
 };
