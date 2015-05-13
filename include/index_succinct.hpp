@@ -159,15 +159,7 @@ public:
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst.node(lb, rb);
         uint64_t back_N1plus_front = 0;
-        uint64_t lb_rev_prime = 0, rb_rev_prime = m_cst_rev.size() - 1;
         uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
-        // this is a full search for the pattern in reverse order in the reverse tree!
-        for (auto it = pattern_begin; it != pattern_end and lb_rev_prime <= rb_rev_prime; ++it) {
-            backward_search(m_cst_rev.csa,
-                            lb_rev_prime, rb_rev_prime,
-                            *it,
-                            lb_rev_prime, rb_rev_prime);
-        }
         // this is when the pattern matches a full edge in the CST
         if (pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM ) {
@@ -178,8 +170,8 @@ public:
             std::vector<uint64_t> new_pattern(pattern_begin, pattern_end);
             new_pattern.push_back(EOS_SYM);
             while (m_cst.id(w) != root_id) {
-                lb_rev_stored = lb_rev_prime;
-                rb_rev_stored = rb_rev_prime;
+                lb_rev_stored = lb_rev;
+                rb_rev_stored = rb_rev;
                 uint64_t symbol = m_cst.edge(w, pattern_size + 1);
                 assert(symbol != EOS_SYM);
                 new_pattern.back() = symbol;
