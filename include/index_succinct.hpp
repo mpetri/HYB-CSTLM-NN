@@ -65,7 +65,7 @@ public:
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst, m_cst_rev, t_max_ngram_count);
+        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 

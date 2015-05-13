@@ -28,7 +28,7 @@ struct precomputed_stats {
     precomputed_stats() = default;
 
     template <typename t_cst>
-    precomputed_stats(collection&, const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len);
+    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
     {
@@ -192,7 +192,8 @@ struct precomputed_stats {
 
 private:
     template <typename t_cst>
-    void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
+    void ncomputer(const t_cst& cst_rev);
+    //void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
 };
 
 // template<class t_cst>
@@ -217,16 +218,16 @@ private:
 //             	uint64_t node_depth = cst.depth(v);
 //             	if(parent_depth < max_ngram_count) {
 //             		auto stop = std::min(node_depth,max_ngram_count);
-
-// 	            	switch num_occ {
+//                        for ... {
+// 	            	    switch num_occ {
 // 	            		case 2:
 // 	            			d.n2[node_depth]++;
 // 	            		case 3:
 // 	            			d.n3[node_depth]++;
 // 	            		case 4:
 // 	            			d.n4[node_depth]++;
-// 	            	}
-
+// 	            	    }
+//                        }
 // 	            	if(node_depth == 2) {
 // 	            		d.N1PlusPlus++;
 // 	            	}
@@ -241,8 +242,7 @@ private:
 // }
 
 template <typename t_cst>
-precomputed_stats::precomputed_stats(collection&, 
-        const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
+precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len)
 : max_ngram_count(max_ngram_len), N1plus_dotdot(0), N3plus_dot(0)
 {
     auto size = max_ngram_count + 1;
@@ -252,15 +252,8 @@ precomputed_stats::precomputed_stats(collection&,
     n1_cnt.resize(size); n2_cnt.resize(size); n3_cnt.resize(size); n4_cnt.resize(size);
     D1_cnt.resize(size); D2_cnt.resize(size); D3_cnt.resize(size);
 
-    // invoke ncomputer for each subtree
-    auto w = cst_rev.select_child(cst_rev.root(), 1);
-    auto root_id = cst_rev.id(cst_rev.root());
-    while (cst_rev.id(w) != root_id) {
-        auto symbol = cst_rev.edge(w, 1);
-        if (symbol != EOS_SYM && symbol != EOF_SYM) 
-            ncomputer(cst_rev, symbol, 1, cst_rev.lb(w), cst_rev.rb(w));
-        w = cst_rev.sibling(w);
-    }
+    // compute the counts & continuation counts from the CST (reversed)
+    ncomputer(cst_rev);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
@@ -285,66 +278,68 @@ precomputed_stats::precomputed_stats(collection&,
 
 template <class t_cst>
 void
-precomputed_stats::ncomputer(const t_cst& cst_rev,
-               uint64_t symbol, int size, uint64_t lb, uint64_t rb)
+precomputed_stats::ncomputer(const t_cst& cst_rev)
 {
-    auto freq = rb - lb + 1;
-    assert(freq >= 1);
-    assert(size >= 1);
+    for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
+        if (it.visit() == 1) {
+            auto node = *it;
+            auto parent = cst_rev.parent(node);
+            auto parent_depth = cst_rev.depth(parent);
+            // this next call is expensive for leaves, but we don't care in this case
+            // as the for loop below will terminate on the <S> symbol
+            auto depth = (!cst_rev.is_leaf(node)) ? cst_rev.depth(node) : (max_ngram_count + 12345);
 
-    uint64_t n1plus_back = 0;
-    if (symbol != PAT_START_SYM) {
-        auto node = cst_rev.node(lb, rb);
-        if (size == cst_rev.depth(node)) 
-            n1plus_back = cst_rev.degree(node);
-        else
-            n1plus_back = 1;
-        // no need to adjust for EOS symbol, as this only happens when symbol = <S>
-    } else 
-        // special case where the pattern starts with <s>: actual count is used
-        n1plus_back = freq;
+            auto freq = cst_rev.size(node);
+            assert(parent_depth < max_ngram_count);
 
-    switch (n1plus_back) {
-        case 1: n1_cnt[size] += 1; break;
-        case 2: n2_cnt[size] += 1; break;
-        case 3: n3_cnt[size] += 1; break;
-        case 4: n4_cnt[size] += 1; break;
-    }
+            for (auto n = parent_depth+1; n <= std::min(max_ngram_count, depth); ++n) {
+                // this call is slow
+                auto symbol = cst_rev.edge(node, n);
+                // don't count ngrams including these sentinels, including extensions
+                if (symbol == EOF_SYM || symbol == EOS_SYM) {
+                    it.skip_subtree();
+                    break;
+                }
 
-    switch (freq) {
-        case 1: n1[size] += 1; break;
-        case 2: n2[size] += 1; break;
-        case 3: n3[size] += 1; break;
-        case 4: n4[size] += 1; break;
-    }
+                // update frequency counts
+                switch (freq) {
+                    case 1: n1[n] += 1; break;
+                    case 2: n2[n] += 1; break;
+                    case 3: n3[n] += 1; break;
+                    case 4: n4[n] += 1; break;
+                }
 
-    if (size == 2 && freq >= 1) 
-        N1plus_dotdot++;
+                if (n == 2)                 N1plus_dotdot++;
+                if (freq >= 3 && n == 1)    N3plus_dot++;
 
-    if (freq >= 3 && size == 1) 
-        N3plus_dot++;
-
-    if (size + 1 <= max_ngram_count && symbol != PAT_START_SYM) {
-        auto node = cst_rev.node(lb, rb);
-        auto depth = cst_rev.depth(node);
-        if (size == depth) {
-            // completes an edge
-            auto w = cst_rev.select_child(node, 1);
-            auto root_id = cst_rev.id(cst_rev.root());
-
-            while (cst_rev.id(w) != root_id) {
-                symbol = cst_rev.edge(w, depth + 1);
-                if (symbol != EOS_SYM)
-                    ncomputer(cst_rev, symbol, size+1, cst_rev.lb(w), cst_rev.rb(w));
+                // update continuation counts 
+                uint64_t n1plus_back = 0ULL;
+                if (symbol == PAT_START_SYM) 
+                    // special case where the pattern starts with <s>: actual count is used
+                    n1plus_back = freq;
+                else if (n == depth)
+                    // no need to adjust for EOS symbol, as this only happens when symbol = <S>
+                    n1plus_back = cst_rev.degree(node);
                 else
-                    assert(false && "this can never happen, EOS is always followed by </S>");
-                w = cst_rev.sibling(w);
+                    n1plus_back = 1;
+
+                switch (n1plus_back) {
+                    case 1: n1_cnt[n] += 1; break;
+                    case 2: n2_cnt[n] += 1; break;
+                    case 3: n3_cnt[n] += 1; break;
+                    case 4: n4_cnt[n] += 1; break;
+                }
+
+                // can skip next evaluations if we know the EOS symbol is coming up next
+                if (symbol == PAT_START_SYM) {
+                    it.skip_subtree();
+                    break;
+                }
             }
-        } else {
-            // internal to an edge
-            symbol = cst_rev.edge(node, size + 1);
-            if (symbol != EOS_SYM) 
-                ncomputer(cst_rev, symbol, size+1, cst_rev.lb(node), cst_rev.rb(node));
+
+            if (depth >= max_ngram_count) {
+                it.skip_subtree();
+            }
         }
     }
 }
