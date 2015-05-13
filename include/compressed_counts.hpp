@@ -5,13 +5,17 @@
 #include "constants.hpp"
 #include "collection.hpp"
 
+template<
+class t_bv = sdsl::rrr_vector<15>,
+class t_vec = sdsl::int_vector<32>
+>
 struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
-    typedef sdsl::rrr_vector<63> bv_type;
-    typedef sdsl::vlc_vector<> vector_type;
+    typedef t_bv bv_type;
+    typedef t_vec vector_type;
 private:
     bv_type m_bv;
-    bv_type::rank_1_type m_bv_rank;
+    typename bv_type::rank_1_type m_bv_rank;
     vector_type m_counts;
 public:
     compressed_counts() = default;
@@ -95,7 +99,7 @@ public:
             }
         }
 
-        std::vector<uint32_t> cnts(counts.size());
+        sdsl::int_vector<32> cnts(counts.size());
         auto itr = counts.begin();
         auto end = counts.end();
         auto citr = cnts.begin();
