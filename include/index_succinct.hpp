@@ -170,6 +170,9 @@ public:
         }
         // this is when the pattern matches a full edge in the CST
         if (pattern_size == m_cst.depth(node)) {
+            if (*pattern_begin == PAT_START_SYM ) {
+                return m_cst.degree(node);
+            }
             auto w = m_cst.select_child(node, 1);
             auto root_id = m_cst.id(m_cst.root());
             std::vector<uint64_t> new_pattern(pattern_begin, pattern_end);
@@ -199,11 +202,9 @@ public:
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
                 return N1PlusFront(lb, rb, pattern_begin, pattern_end);
-            } else if (*(pattern_end-1) == PAT_END_SYM) {
+            } else {
                 return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
             }
-            assert(false && "you can't reach this line, surely!");
-            return 0;
         }
     }
 
@@ -226,7 +227,7 @@ public:
 
         // adjust for end of sentence 
         uint64_t symbol = *(pattern_end-1);
-        if (symbol != PAT_END_SYM) {
+        if (symbol == PAT_END_SYM) {
             N1plus_front -= 1;
         }
         return N1plus_front;
