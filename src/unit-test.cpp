@@ -291,7 +291,7 @@ TYPED_TEST(LMTest, N1PlusBack)
                ) 
             {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
-                size_t lb_rev,rb_rev;
+                uint64_t lb_rev,rb_rev;
                 auto rev_cnt = backward_search(this->idx.m_cst_rev.csa,
                                     0,this->idx.m_cst_rev.csa.size()-1, 
                                     cng.rbegin(),cng.rend(), 
@@ -344,13 +344,13 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                ) 
             {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
-                size_t lb,rb;
+                uint64_t lb,rb;
                 auto cnt = backward_search(this->idx.m_cst.csa,
                                     0,this->idx.m_cst.csa.size()-1, 
                                     cng.begin(),cng.end(), 
                                     lb, rb);
                 EXPECT_TRUE(cnt > 0);
-                size_t lb_rev,rb_rev;
+                uint64_t lb_rev,rb_rev;
                 auto rev_cnt = backward_search(this->idx.m_cst_rev.csa,
                                     0,this->idx.m_cst_rev.csa.size()-1, 
                                     cng.rbegin(),cng.rend(), 
@@ -401,7 +401,7 @@ TYPED_TEST(LMTest, N1PlusFront)
                ) 
             {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
-                size_t lb,rb;
+                uint64_t lb,rb;
                 auto cnt = backward_search(this->idx.m_cst.csa,
                                     0,this->idx.m_cst.csa.size()-1, 
                                     cng.begin(),cng.end(), 
