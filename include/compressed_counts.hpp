@@ -42,23 +42,25 @@ public:
         auto rb = cst.rb(node);
         typename t_cst::csa_type::size_type num_syms = 0;
         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-        if (num_syms == 1)
-            return cst.degree(node);
-        else {
-            auto total_contexts = 0;
-            for (size_t i = 0; i < num_syms; i++) {
-                auto new_lb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + left[i];
-                auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
-                if (new_lb == new_rb)
+        auto total_contexts = 0;
+        auto node_depth = cst.depth(node);
+        for (size_t i = 0; i < num_syms; i++) {
+            auto new_lb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + left[i];
+            auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
+            if (new_lb == new_rb) {
+                total_contexts++;
+            } else {
+                auto new_node = cst.node(new_lb, new_rb);
+                auto new_node_depth = cst.depth(new_node);
+                if(new_node_depth != node_depth+1) {
                     total_contexts++;
-                else {
-                    auto new_node = cst.node(new_lb, new_rb);
+                } else {
                     auto deg = cst.degree(new_node);
                     total_contexts += deg;
                 }
             }
-            return total_contexts;
         }
+        return total_contexts;
     }
 
     template <class t_cst>
@@ -68,12 +70,7 @@ public:
         std::map<uint64_t,uint32_t> counts;
 
         auto root = cst.root();
-        int skip = SKIP_SYMS; // skip 0 and 1, 2, 3, 4 subtrees
         for (const auto& child : cst.children(root)) {
-            if (skip) { // skip
-                skip--;
-                continue;
-            }
             auto itr = cst.begin(child);
             auto end = cst.end(child);
             while (itr != end) {
