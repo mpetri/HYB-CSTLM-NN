@@ -95,7 +95,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
 
     if (backward_search(idx.m_cst.csa, lb, rb, *(pattern_begin), lb, rb) > 0) { //TODO CHECK: what happens to the bounds when this is false?
         auto N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
-        auto back_N1plus_front = idx.N1PlusFrontBack(lb, rb, pattern_begin, pattern_end - 1);
+        auto back_N1plus_front = idx.N1PlusFrontBack(lb, rb, lb_rev, rb_rev, pattern_begin, pattern_end - 1);
         // FIXME: for the index_succinct version of N1PlusFrontBack this call above can be
         // avoided for patterns that begin with <s> and/or end with </s> using 'N1PlusFront' and 'c'
         // But might not be worth bothering, as these counts are stored explictly for the 

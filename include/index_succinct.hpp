@@ -23,6 +23,7 @@ public:
     typedef typename t_cst::string_type string_type;
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
+
 public: // data
     t_cst m_cst;
     t_cst m_cst_rev;
@@ -149,6 +150,7 @@ public:
 
     //  Computes N_1+( * ab * )
     uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
+                         uint64_t lb_rev, uint64_t rb_rev,
                          pattern_iterator pattern_begin,
                          pattern_iterator pattern_end) const
     {
@@ -198,7 +200,7 @@ public:
             } else if (*pattern_begin == PAT_START_SYM) {
                 return N1PlusFront(lb, rb, pattern_begin, pattern_end);
             } else if (*(pattern_end-1) == PAT_END_SYM) {
-                return N1PlusBack(lb, rb, pattern_begin, pattern_end);
+                return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
             }
             assert(false && "you can't reach this line, surely!");
             return 0;

@@ -146,28 +146,26 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(const uint64_t& lb_rev, const uint64_t& rb_rev, uint64_t patrev_size, bool check_for_EOS = true) const
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, 
+                         pattern_iterator pattern_begin,
+                         pattern_iterator pattern_end) const
     {
-        uint64_t c = 0;
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst_rev.node(lb_rev, rb_rev);
-        if (patrev_size == m_cst_rev.depth(node)) {
-            c = m_cst_rev.degree(node);
-            if (check_for_EOS) {
-                auto w = m_cst_rev.select_child(node, 1);
-                uint64_t symbol = m_cst_rev.edge(w, patrev_size + 1);
-                if (symbol == EOS_SYM)
-                    c = c - 1;
-            }
+
+        uint64_t n1plus_back;
+        if (pattern_size == m_cst_rev.depth(node)) {
+            n1plus_back = m_cst_rev.degree(node);
         } else {
-            if (check_for_EOS) {
-                uint64_t symbol = m_cst_rev.edge(node, patrev_size + 1);
-                if (symbol != EOS_SYM)
-                    c = 1;
-            } else {
-                c = 1;
-            }
+            n1plus_back = 1;
         }
-        return c;
+
+        // adjust for sentinel start of sentence
+        auto symbol = *pattern_begin;
+        if (symbol == PAT_START_SYM)
+            n1plus_back -= 1;
+
+        return n1plus_back;
     }
 
     double discount(uint64_t level, bool cnt = false) const
@@ -187,45 +185,35 @@ public:
     //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(const uint64_t& lb, const uint64_t& rb,
-                             const uint64_t ,
-                             const std::vector<uint64_t>::iterator& ,
-                             const std::vector<uint64_t>::iterator& ,
-                             bool ) const
+    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
+                         uint64_t, uint64_t, pattern_iterator, pattern_iterator) const
     {
-
         auto node = m_cst.node(lb, rb);
         return m_n1plusfrontback.lookup(m_cst, node);
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(const uint64_t& lb, const uint64_t& rb,
-                         std::vector<uint64_t>::iterator pattern_begin,
-                         std::vector<uint64_t>::iterator pattern_end,
-                         bool check_for_EOS) const
+    uint64_t N1PlusFront(uint64_t lb, uint64_t rb,
+                         pattern_iterator pattern_begin,
+                         pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        uint64_t N1plus_front = 0;
+        uint64_t N1plus_front;
         if (pattern_size == m_cst.depth(node)) {
-            auto w = m_cst.select_child(node, 1);
+            // pattern matches the edge label
             N1plus_front = m_cst.degree(node);
-            if (check_for_EOS) {
-                uint64_t symbol = m_cst.edge(w, pattern_size + 1);
-                if (symbol == EOS_SYM) {
-                    N1plus_front = N1plus_front - 1;
-                }
-            }
-            return N1plus_front;
         } else {
-            if (check_for_EOS) {
-                uint64_t symbol = m_cst.edge(node, pattern_size + 1);
-                if (symbol != EOS_SYM) {
-                    N1plus_front = 1;
-                }
-            }
-            return N1plus_front;
+            // pattern is part of the edge label
+            N1plus_front = 1;
         }
+
+        // adjust for end of sentence 
+        uint64_t symbol = *(pattern_end-1);
+        if (symbol != PAT_END_SYM) {
+            N1plus_front -= 1;
+        }
+        return N1plus_front;
     }
 };
