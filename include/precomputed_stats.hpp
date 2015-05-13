@@ -192,14 +192,7 @@ struct precomputed_stats {
 
 private:
     template <typename t_cst>
-    void ncomputer(const t_cst& cst, const t_cst& cst_rev,
-                   uint64_t symbol, std::vector<uint64_t> pat,
-                   uint64_t lb, uint64_t rb);
-
-    template <typename t_cst>
-    void backward_ncomputer(const t_cst& cst_rev,
-               uint64_t symbol, std::vector<uint64_t> pat,
-               uint64_t lb, uint64_t rb);
+    void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
 };
 
 // template<class t_cst>
@@ -248,35 +241,6 @@ private:
 // }
 
 template <typename t_cst>
-int N1PlusBack(const t_cst& cst, std::vector<uint64_t> pat, bool check_for_EOS = true)
-{
-    auto pat_size = pat.size();
-    uint64_t n1plus_back = 0;
-    uint64_t lb_rev = 0, rb_rev = cst.size() - 1;
-    if (backward_search(cst.csa, lb_rev, rb_rev, pat.rbegin(), pat.rend(), lb_rev, rb_rev) > 0) {
-        auto node = cst.node(lb_rev, rb_rev);
-        if (pat_size == cst.depth(node)) {
-            n1plus_back = cst.degree(node);
-            if (check_for_EOS) {
-                auto w = cst.select_child(node, 1);
-                uint64_t symbol = cst.edge(w, pat_size + 1);
-                if (symbol == EOS_SYM)
-                    n1plus_back = n1plus_back - 1;
-            }
-        } else {
-            if (check_for_EOS) {
-                uint64_t symbol = cst.edge(node, pat_size + 1);
-                if (symbol != EOS_SYM)
-                    n1plus_back = 1;
-            } else {
-                n1plus_back = 1;
-            }
-        }
-    }
-    return n1plus_back;
-}
-
-template <typename t_cst>
 precomputed_stats::precomputed_stats(collection&, 
         const t_cst& cst, const t_cst& cst_rev, uint64_t max_ngram_len)
 {
@@ -289,25 +253,12 @@ precomputed_stats::precomputed_stats(collection&,
     D1_cnt.resize(size); D2_cnt.resize(size); D3_cnt.resize(size);
 
     // invoke ncomputer for each subtree
-//    auto w = cst.select_child(cst.root(), 1);
-//    auto root_id = cst.id(cst.root());
-//    std::vector<uint64_t> pat;
-//    while (cst.id(w) != root_id) {
-//        auto symbol = cst.edge(w, 1);
-//        if (symbol != EOS_SYM && symbol != EOF_SYM) {
-//            ncomputer(cst, cst_rev, symbol, pat, cst.lb(w), cst.rb(w));
-//        }
-//        w = cst.sibling(w);
-//    }
-
     auto w = cst_rev.select_child(cst_rev.root(), 1);
     auto root_id = cst_rev.id(cst_rev.root());
-    std::vector<uint64_t> pat;
     while (cst_rev.id(w) != root_id) {
         auto symbol = cst_rev.edge(w, 1);
-        if (symbol != EOS_SYM && symbol != EOF_SYM) {
-            backward_ncomputer(cst_rev, symbol, pat, cst_rev.lb(w), cst_rev.rb(w));
-        }
+        if (symbol != EOS_SYM && symbol != EOF_SYM) 
+            ncomputer(cst_rev, symbol, 1, cst_rev.lb(w), cst_rev.rb(w));
         w = cst_rev.sibling(w);
     }
 
@@ -334,85 +285,21 @@ precomputed_stats::precomputed_stats(collection&,
 
 template <class t_cst>
 void
-precomputed_stats::ncomputer(const t_cst& cst, const t_cst& cst_rev,
-               uint64_t symbol, std::vector<uint64_t> pat,
-               uint64_t lb, uint64_t rb)
+precomputed_stats::ncomputer(const t_cst& cst_rev,
+               uint64_t symbol, int size, uint64_t lb, uint64_t rb)
 {
     auto freq = rb - lb + 1;
     assert(freq >= 1);
-    auto size = pat.size() + 1;
+    assert(size >= 1);
 
-    pat.push_back(symbol);
     uint64_t n1plus_back = 0;
-
-    if (pat[0] != PAT_START_SYM)
-        // FIXME: slowwww, better to use (lb, rb) from cst_rev
-        n1plus_back = N1PlusBack(cst_rev, pat);
-    else 
-        // special case where the pattern starts with <s>: actual count is used
-        n1plus_back = freq;
-
-    switch (n1plus_back) {
-        case 1: n1_cnt[size] += 1; break;
-        case 2: n2_cnt[size] += 1; break;
-        case 3: n3_cnt[size] += 1; break;
-        case 4: n4_cnt[size] += 1; break;
-    }
-
-    switch (freq) {
-        case 1: n1[size] += 1; break;
-        case 2: n2[size] += 1; break;
-        case 3: n3[size] += 1; break;
-        case 4: n4[size] += 1; break;
-    }
-
-    if (size == 2 && freq >= 1) 
-        N1plus_dotdot++;
-
-    if (freq >= 3 && size == 1) 
-        N3plus_dot++;
-
-    if (size + 1 <= max_ngram_count) {
-        auto node = cst.node(lb, rb);
-        auto depth = cst.depth(node);
-        if (size == depth) {
-            // completes an edge
-            auto w = cst.select_child(node, 1);
-            auto root_id = cst.id(cst.root());
-
-            while (cst.id(w) != root_id) {
-                symbol = cst.edge(w, depth + 1);
-                if (symbol != EOS_SYM)
-                    ncomputer(cst, cst_rev, symbol, pat, cst.lb(w), cst.rb(w));
-                else
-                    assert(false && "this can never happen, EOS is always followed by <S> or EOF");
-                w = cst.sibling(w);
-            }
-        } else {
-            // internal to an edge
-            symbol = cst.edge(node, size + 1);
-            if (symbol != EOS_SYM) 
-                ncomputer(cst, cst_rev, symbol, pat, cst.lb(node), cst.rb(node)); 
-        }
-    }
-}
-
-template <class t_cst>
-void
-precomputed_stats::backward_ncomputer(const t_cst& cst_rev,
-               uint64_t symbol, std::vector<uint64_t> pat,
-               uint64_t lb, uint64_t rb)
-{
-    auto freq = rb - lb + 1;
-    assert(freq >= 1);
-    auto size = pat.size() + 1;
-
-    pat.push_back(symbol);
-    uint64_t n1plus_back = 0;
-
     if (symbol != PAT_START_SYM) {
-        std::vector<uint64_t> rev_pat(pat.rbegin(), pat.rend());
-        n1plus_back = N1PlusBack(cst_rev, rev_pat); // FIXME, come back to this
+        auto node = cst_rev.node(lb, rb);
+        if (size == cst_rev.depth(node)) 
+            n1plus_back = cst_rev.degree(node);
+        else
+            n1plus_back = 1;
+        // no need to adjust for EOS symbol, as this only happens when symbol = <S>
     } else 
         // special case where the pattern starts with <s>: actual count is used
         n1plus_back = freq;
@@ -437,7 +324,7 @@ precomputed_stats::backward_ncomputer(const t_cst& cst_rev,
     if (freq >= 3 && size == 1) 
         N3plus_dot++;
 
-    if (size + 1 <= max_ngram_count) {
+    if (size + 1 <= max_ngram_count && symbol != PAT_START_SYM) {
         auto node = cst_rev.node(lb, rb);
         auto depth = cst_rev.depth(node);
         if (size == depth) {
@@ -448,7 +335,7 @@ precomputed_stats::backward_ncomputer(const t_cst& cst_rev,
             while (cst_rev.id(w) != root_id) {
                 symbol = cst_rev.edge(w, depth + 1);
                 if (symbol != EOS_SYM)
-                    backward_ncomputer(cst_rev, symbol, pat, cst_rev.lb(w), cst_rev.rb(w));
+                    ncomputer(cst_rev, symbol, size+1, cst_rev.lb(w), cst_rev.rb(w));
                 else
                     assert(false && "this can never happen, EOS is always followed by </S>");
                 w = cst_rev.sibling(w);
@@ -457,7 +344,7 @@ precomputed_stats::backward_ncomputer(const t_cst& cst_rev,
             // internal to an edge
             symbol = cst_rev.edge(node, size + 1);
             if (symbol != EOS_SYM) 
-                backward_ncomputer(cst_rev, symbol, pat, cst_rev.lb(node), cst_rev.rb(node));
+                ncomputer(cst_rev, symbol, size+1, cst_rev.lb(node), cst_rev.rb(node));
         }
     }
 }
