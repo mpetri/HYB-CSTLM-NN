@@ -26,14 +26,14 @@
 template <class t_idx, class t_pat_iter, class t_node>
 double highestorder(const t_idx& idx, uint64_t level, const bool unk,
                     t_pat_iter pattern_begin, t_pat_iter pattern_end,
-                    t_node &node, t_node &node_rev,
+                    t_node &node, t_node &node_rev, t_node &node_rev_ctx,
                     uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
     //std::cout << "highestorder level=" << level << " pattern=";
     //std::copy(pattern_begin, pattern_end, std::ostream_iterator<int>(std::cout, " "));
     //std::cout << std::endl;
-    double backoff_prob = pkn(idx, level, unk, pattern_begin + 1, pattern_end, node, node_rev,
-                              char_pos, d, ngramsize);
+    double backoff_prob = pkn(idx, level, unk, pattern_begin + 1, pattern_end, 
+            node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
     uint64_t denominator = 0;
     uint64_t c = 0;
 
@@ -68,7 +68,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
 template <class t_idx, class t_pat_iter, class t_node>
 double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
                     t_pat_iter pattern_begin, t_pat_iter pattern_end,
-                    t_node &node, t_node &node_rev,
+                    t_node &node, t_node &node_rev, t_node &node_rev_ctx,
                    uint64_t& char_pos, uint64_t& d,
                   uint64_t ngramsize)
 {
@@ -77,12 +77,25 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     //std::cout << std::endl;
 
     level = level - 1;
-    double backoff_prob = pkn(idx, level, unk, pattern_begin + 1, pattern_end, node, node_rev, char_pos, d, ngramsize);
+    double backoff_prob = pkn(idx, level, unk, pattern_begin + 1, pattern_end, node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
 
     uint64_t c = 0;
     if (forward_search(idx.m_cst_rev, node_rev, d, *pattern_begin, char_pos) > 0) {
         c = idx.N1PlusBack(node_rev, pattern_begin, pattern_end);
     }
+
+    // also update the context-only node in the reverse tree
+    uint64_t char_pos_ctx = d-1;
+    forward_search(idx.m_cst_rev, node_rev_ctx, d-1, *pattern_begin, char_pos_ctx);
+//  Sanity check -- and yes, this arrives at the same solution
+//    {
+//        uint64_t lb = 0, rb = idx.m_cst_rev.size() - 1;
+//        for (auto it = pattern_begin; it != pattern_end-1; ++it) 
+//            backward_search(idx.m_cst_rev.csa, lb, rb, *it, lb, rb);
+//        auto node_rev_ctx2 = idx.m_cst_rev.node(lb, rb);
+//        std::cout << "d: " << d << " char_pos_ctx: " << char_pos_ctx 
+//            << " node_rev_ctx: " << node_rev_ctx << " node_rev_ctx2: " << node_rev_ctx2 << "\n";
+//    }
 
     double D = idx.discount(level, true);
     double numerator = 0;
@@ -94,7 +107,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) { 
         node = idx.m_cst.node(lb, rb);
         auto N1plus_front = idx.N1PlusFront(node, pattern_begin, pattern_end - 1);
-        auto back_N1plus_front = idx.N1PlusFrontBack(node, pattern_begin, pattern_end - 1);
+        auto back_N1plus_front = idx.N1PlusFrontBack(node, node_rev_ctx, pattern_begin, pattern_end - 1);
         // FIXME: for the index_succinct version of N1PlusFrontBack this call above can be
         // avoided for patterns that begin with <s> and/or end with </s> using 'N1PlusFront' and 'c'
         // But might not be worth bothering, as these counts are stored explictly for the
@@ -140,16 +153,16 @@ double lowestorder_unk(const t_idx& idx)
 template <class t_idx, class t_pat_iter, class t_node>
 double pkn(const t_idx& idx, uint64_t level, const bool unk,
            t_pat_iter pattern_begin, t_pat_iter pattern_end,
-           t_node &node, t_node &node_rev,
+           t_node &node, t_node &node_rev, t_node &node_rev_ctx,
            uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
     uint64_t size = std::distance(pattern_begin, pattern_end);
     double probability = 0;
     if ((size == ngramsize && ngramsize != 1) || (*pattern_begin == PAT_START_SYM)) {
-        probability = highestorder(idx, level, unk, pattern_begin, pattern_end, node, node_rev, char_pos, d, ngramsize);
+        probability = highestorder(idx, level, unk, pattern_begin, pattern_end, node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
     } else if (size < ngramsize && size != 1) {
         assert(size > 0);
-        probability = lowerorder(idx, level, unk, pattern_begin, pattern_end, node, node_rev, char_pos, d, ngramsize);
+        probability = lowerorder(idx, level, unk, pattern_begin, pattern_end, node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
     } else if (size == 1 || ngramsize == 1) {
         if (!unk) {
             probability = lowestorder(idx, pattern_end - 1, pattern_end, node_rev, char_pos, d);
@@ -176,6 +189,7 @@ double run_query_knm(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, u
         typedef typename t_idx::cst_type::node_type t_node;
         t_node node = idx.m_cst.root();
         t_node node_rev = idx.m_cst_rev.root();
+        t_node node_rev_ctx = idx.m_cst_rev.root();
         uint64_t char_pos = 0, d = 0;
         int size = std::distance(pattern.begin(), pattern.end());
         bool unk = false;
@@ -184,7 +198,7 @@ double run_query_knm(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, u
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
         double score = pkn(idx, size, unk, pattern.begin(), pattern.end(), 
-                node, node_rev, char_pos, d, ngramsize);
+                node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
         final_score += log10(score);
     }
     return final_score;
@@ -216,19 +230,21 @@ double conditional_probability(const t_idx& idx,
     t_node node_fwd = idx.m_cst.root();
     t_node node_rev = idx.m_cst_rev.root();
     size_t size = std::distance(pattern_begin, pattern_end);
-    uint64_t d = 0; // ???
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter pat_start = pattern_end - i;
 
         if (i == 1) {
+            // lowest level
             double denominator = 0;
-            forward_search(idx.m_cst_rev, node_rev, d, *start, 0);
-            d++;
-            denominator = idx.m_precomputed.N1plus_dotdot;
-            int numerator = idx.N1PlusBack(node_rev, pat_start, pattern_end); 
-            probability = (double)numerator / denominator;
+            forward_search(idx.m_cst_rev, node_rev, i-1, *start, 0);
+            double numerator = idx.N1PlusBack(node_rev, pat_start, pattern_end); 
+            double denominator = idx.m_precomputed.N1plus_dotdot;
+            probability = numerator / denominator;
         } else if (i < size) {
+            // mid-level
+        } else if (i == size) {
+            // top-level
         }
     }
 }

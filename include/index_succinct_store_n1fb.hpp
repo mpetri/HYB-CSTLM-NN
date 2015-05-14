@@ -192,7 +192,7 @@ public:
     //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(const node_type &node,
+    uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -212,11 +212,7 @@ public:
                 return 1;
             } else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
-                uint64_t lb_rev = 0, rb_rev = m_cst_rev.size() - 1;
-                // FIXME: this is a full search for the pattern in reverse order in the reverse tree!
-                for (auto it = pattern_begin; it != pattern_end and lb_rev <= rb_rev; ++it) 
-                    backward_search(m_cst_rev.csa, lb_rev, rb_rev, *it, lb_rev, rb_rev);
-                return N1PlusBack(m_cst_rev.node(lb_rev, rb_rev), pattern_begin, pattern_end);
+                return N1PlusBack(node_rev, pattern_begin, pattern_end);
             }
         }
     }

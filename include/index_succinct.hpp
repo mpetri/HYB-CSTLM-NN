@@ -153,7 +153,7 @@ public:
     }
 
     //  Computes N_1+( * ab * )
-    uint64_t N1PlusFrontBack(const node_type &node,
+    uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
@@ -162,10 +162,6 @@ public:
         // we want N1+ dot pattern dot)
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t back_N1plus_front = 0;
-        uint64_t lb_rev = 0, rb_rev = m_cst_rev.size() - 1;
-        // FIXME: this is a full search for the pattern in reverse order in the reverse tree!
-        for (auto it = pattern_begin; it != pattern_end and lb_rev <= rb_rev; ++it) 
-            backward_search(m_cst_rev.csa, lb_rev, rb_rev, *it, lb_rev, rb_rev);
 
         // this is when the pattern matches a full edge in the CST
         if (pattern_size == m_cst.depth(node)) {
@@ -177,8 +173,8 @@ public:
             std::vector<uint64_t> new_pattern(pattern_begin, pattern_end);
             new_pattern.push_back(EOS_SYM);
             while (m_cst.id(w) != root_id) {
-                auto lb_rev_stored = lb_rev;
-                auto rb_rev_stored = rb_rev;
+                auto lb_rev_stored = m_cst_rev.lb(node_rev);
+                auto rb_rev_stored = m_cst_rev.rb(node_rev);
                 uint64_t symbol = m_cst.edge(w, pattern_size + 1);
                 assert(symbol != EOS_SYM);
                 new_pattern.back() = symbol;
@@ -202,7 +198,7 @@ public:
                 return 1;
             } else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
-                return N1PlusBack(m_cst_rev.node(lb_rev, rb_rev), pattern_begin, pattern_end);
+                return N1PlusBack(node_rev, pattern_begin, pattern_end);
             }
         }
     }
