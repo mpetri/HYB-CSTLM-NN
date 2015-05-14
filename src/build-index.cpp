@@ -47,7 +47,7 @@ void create_and_store(collection& col)
     t_idx idx(col);
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {
