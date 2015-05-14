@@ -77,6 +77,10 @@ int main(int argc, const char* argv[])
         using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col);
     }
+    {
+        using index_type = index_succinct_store_n1fb<default_cst_type>;
+        create_and_store<index_type>(col);
+    }
 
     return 0;
 }

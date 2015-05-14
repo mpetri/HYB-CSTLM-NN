@@ -90,9 +90,9 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
         auto stop = clock::now();
 
-        std::ostringstream sp("", std::ios_base::ate);
-        std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
-        LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<< duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+        // std::ostringstream sp("", std::ios_base::ate);
+        // std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<< duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
 
         perplexity += sentenceprob;
         total_time += (stop - start);
@@ -105,29 +105,14 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
-    
+
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
 
-    /* load index */
-    index_succinct<default_cst_type> idx;
-
-    auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-    if (utils::file_exists(index_file)) {
-        LOG(INFO) << "loading index from file '" << index_file << "'";
-        sdsl::load_from_file(idx, index_file);
-    } else {
-        LOG(FATAL) << "index does not exist. build it first";
-        return EXIT_FAILURE;
-    }
-
-    /* print precomputed parameters */
-    idx.print_params(args.ismkn, args.ngramsize);
-
-    /* parse pattern file */
+    /* load patterns */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
@@ -147,6 +132,37 @@ int main(int argc, const char* argv[])
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
-    run_queries(idx, patterns, args.ngramsize);
+    /* load index */
+    {
+        index_succinct<default_cst_type> idx;
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize);
+    }
+    {
+        index_succinct_store_n1fb<default_cst_type> idx;
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize);
+    }
+
     return EXIT_SUCCESS;
 }
