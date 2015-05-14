@@ -66,6 +66,7 @@ int main(int argc, const char* argv[])
         std::cout << "reading input file '" << args.input_file << "'" << std::endl;
         std::string line;
 
+        sdsl_input.push_back(EOS_SYM); // TODO added
         while (std::getline(ifile, line)) {
             std::istringstream iss(line);
             std::string word;

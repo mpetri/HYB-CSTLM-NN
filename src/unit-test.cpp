@@ -274,7 +274,7 @@ TYPED_TEST(LMTest, N1PlusBack)
 
     // (2) for all n-gram sizes
 
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusBack counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
@@ -328,7 +328,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         std::unordered_map<std::vector<uint64_t>,
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
@@ -362,6 +362,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                 uint64_t lb, rb;
                 auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
                                            cng.begin(), cng.end(), lb, rb);
+
                 EXPECT_TRUE(cnt > 0);
                 uint64_t lb_rev, rb_rev;
                 auto rev_cnt = backward_search(this->idx.m_cst_rev.csa, 0,
@@ -386,7 +387,7 @@ TYPED_TEST(LMTest, N1PlusFront)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
