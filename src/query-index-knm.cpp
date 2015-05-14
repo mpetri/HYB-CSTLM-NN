@@ -80,7 +80,6 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     std::chrono::nanoseconds total_time(0);
     uint64_t ind = 1;
     for (std::vector<uint64_t> pattern : patterns) {
-        LOG(INFO) << "Run pattern" << ind++;
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
@@ -90,6 +89,11 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         auto start = clock::now();
         double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
         auto stop = clock::now();
+
+        std::ostringstream sp("", std::ios_base::ate);
+        std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<< duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+
         perplexity += sentenceprob;
         total_time += (stop - start);
     }
@@ -100,6 +104,8 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 
 int main(int argc, const char* argv[])
 {
+    log::start_log(argc, argv);
+    
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 

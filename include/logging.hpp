@@ -18,17 +18,17 @@ struct log {
         el::Loggers::addFlag(el::LoggingFlag::DisableApplicationAbortOnFatalLog);
         el::Loggers::addFlag(el::LoggingFlag::ColoredTerminalOutput);
         el::Loggers::addFlag(el::LoggingFlag::MultiLoggerSupport);
-        el::Loggers::addFlag(el::LoggingFlag::CreateLoggerAutomatically);
         el::Loggers::addFlag(el::LoggingFlag::HierarchicalLogging);
-        el::Configurations defaultConf;
-        defaultConf.setToDefault();
-        defaultConf.setGlobally(el::ConfigurationType::Format, "%datetime %level:  %msg");
-        defaultConf.setGlobally(el::ConfigurationType::ToFile, "false");
+
+        el::Configurations c;
+        c.setGlobally(el::ConfigurationType::Enabled, "true");
+        c.setGlobally(el::ConfigurationType::Format, "%datetime{%H:%m:%s} %level: %msg");
+        c.setGlobally(el::ConfigurationType::ToFile, "false");
         if (print_to_stdout)
-            defaultConf.setGlobally(el::ConfigurationType::ToStandardOutput, "true");
+            c.setGlobally(el::ConfigurationType::ToStandardOutput, "true");
         else
-            defaultConf.setGlobally(el::ConfigurationType::ToStandardOutput, "false");
-        el::Loggers::reconfigureAllLoggers(defaultConf);
+            c.setGlobally(el::ConfigurationType::ToStandardOutput, "false");
+        el::Loggers::reconfigureAllLoggers(c);
     }
 
     inline static void start_log(int argc, const char** argv, bool print_to_stdout = true)
