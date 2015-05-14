@@ -1,19 +1,14 @@
 #include "gtest/gtest.h"
-#include "index_types.hpp"
-#include "sdsl/suffix_trees.hpp"
 
 #include "knm.hpp"
-
 #include "logging.hpp"
+#include "index_types.hpp"
 
 #include <unordered_set>
 
-using csa_type = sdsl::csa_wt_int<>;
-using cst_type = sdsl::cst_sct3<csa_type>;
-
 typedef testing::Types<
-index_succinct<cst_type>,
-index_succinct_store_n1fb<cst_type>
+index_succinct<default_cst_type>,
+index_succinct_store_n1fb<default_cst_type>
 > Implementations;
 
 struct triplet {
@@ -48,7 +43,7 @@ std::vector<std::string> split(const std::string& s, char delim)
 template <class t_idx>
 class LMTest : public testing::Test {
 protected:
-    const std::string srilm_path = "../UnitTestData/srilm_output/output";
+    const char* srilm_path = "../UnitTestData/srilm_output/output";
     std::vector<triplet> sdsl_triplets;
     std::vector<triplet> srilm_triplets;
     virtual void SetUp()
@@ -80,7 +75,7 @@ protected:
     }
     t_idx idx;
     collection col;
-    const std::string col_path = "../collections/unittest/";
+    const char* col_path = "../collections/unittest/";
 };
 
 TYPED_TEST_CASE(LMTest, Implementations);

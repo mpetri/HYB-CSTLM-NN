@@ -74,11 +74,7 @@ int main(int argc, const char* argv[])
 
     /* create indexes */
     {
-        // define the index type with csa_wt (wt_int)
-        using csa_type = sdsl::csa_wt_int<>;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        using index_type = index_succinct_store_n1fb<cst_type>;
-
+        using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col);
     }
 

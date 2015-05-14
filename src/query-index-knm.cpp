@@ -11,7 +11,7 @@
 
 #include "utils.hpp"
 #include "collection.hpp"
-#include "index_succinct.hpp"
+#include "index_types.hpp"
 
 #include "knm.hpp"
 
@@ -107,9 +107,7 @@ int main(int argc, const char* argv[])
     utils::create_directory(args.collection_dir);
 
     /* load index */
-    using csa_type = sdsl::csa_sada_int<>;
-    using cst_type = sdsl::cst_sct3<csa_type>;
-    index_succinct<cst_type> idx;
+    index_succinct<default_cst_type> idx;
 
     auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
