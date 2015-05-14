@@ -29,6 +29,10 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
                     uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d,
                     uint64_t ngramsize)
 {
+    //std::cout << "highestorder level=" << level << " pattern=";
+    //std::copy(pattern_begin, pattern_end, std::ostream_iterator<int>(std::cout, " "));
+    //std::cout << std::endl;
+
     double backoff_prob = pkn(idx, level, unk,
                               pattern_begin + 1, pattern_end,
                               lb, rb,
@@ -73,6 +77,10 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
                   uint64_t& lb, uint64_t& rb,
                   uint64_t& lb_rev, uint64_t& rb_rev, uint64_t& char_pos, uint64_t& d, uint64_t ngramsize)
 {
+    std::cout << "lowerorder level=" << level << " pattern=";
+    std::copy(pattern_begin, pattern_end, std::ostream_iterator<int>(std::cout, " "));
+    std::cout << std::endl;
+
     level = level - 1;
     double backoff_prob = pkn(idx, level, unk,
                               pattern_begin + 1, pattern_end,
@@ -101,6 +109,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         // But might not be worth bothering, as these counts are stored explictly for the
         // faster version of the code so there would be no win here.
         d++;
+        std::cout << "N1PLUSFRONTBACK = " << back_N1plus_front << "\n";
         return (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;
     } else {
         return backoff_prob;
@@ -114,6 +123,10 @@ double lowestorder(const t_idx& idx,
                    uint64_t& lb_rev, uint64_t& rb_rev,
                    uint64_t& char_pos, uint64_t& d)
 {
+    //std::cout << "lowestorder pattern=";
+    //std::copy(pattern_begin, pattern_end, std::ostream_iterator<int>(std::cout, " "));
+    //std::cout << std::endl;
+
     auto node = idx.m_cst_rev.node(lb_rev, rb_rev);
     double denominator = 0;
     forward_search(idx.m_cst_rev, node, d, *pattern_begin, char_pos);
