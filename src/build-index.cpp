@@ -10,16 +10,14 @@ typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
     fprintf(stdout, "%s -c <collection dir>\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -39,15 +37,15 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_idx>
-void create_and_store(collection& col)
+template <class t_idx> void create_and_store(collection& col)
 {
     using clock = std::chrono::high_resolution_clock;
     auto start = clock::now();
     t_idx idx(col);
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f;
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
+                 / 1000.0f;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {

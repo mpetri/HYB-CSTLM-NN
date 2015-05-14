@@ -11,9 +11,7 @@
 
 using namespace std::chrono;
 
-template <class t_cst,
-          class t_vocab = vocab_uncompressed,
-          uint32_t t_max_ngram_count = 10>
+template <class t_cst, class t_vocab = vocab_uncompressed, uint32_t t_max_ngram_count = 10>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -48,7 +46,8 @@ public:
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
         }
         auto stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "CONSTRUCT CST REV";
         start = clock::now();
@@ -62,24 +61,29 @@ public:
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
         m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count);
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "CREATE VOCAB";
         start = clock::now();
         m_vocab = vocab_type(col);
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
     }
 
-    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
+                        std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
@@ -114,8 +118,7 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev,
-                        pattern_iterator pattern_begin,
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, pattern_iterator pattern_begin,
                         pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -150,13 +153,13 @@ public:
     }
 
     //  Computes N_1+( * ab * )
-    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
-                             uint64_t lb_rev, uint64_t rb_rev,
-                             pattern_iterator pattern_begin,
-                             pattern_iterator pattern_end) const
+    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb, uint64_t lb_rev, uint64_t rb_rev,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
-        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
-        // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
+        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
+        // the forward tree
+        // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e.,
+        // we want N1+ dot pattern dot)
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst.node(lb, rb);
         uint64_t back_N1plus_front = 0;
@@ -178,20 +181,17 @@ public:
                 new_pattern.back() = symbol;
                 // find the symbol to the right
                 // (which is first in the reverse order)
-                backward_search(m_cst_rev.csa,
-                                lb_rev_stored, rb_rev_stored,
-                                symbol,
-                                lb_rev_stored, rb_rev_stored);
+                backward_search(m_cst_rev.csa, lb_rev_stored, rb_rev_stored, symbol, lb_rev_stored,
+                                rb_rev_stored);
 
-                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored,
-                                                new_pattern.begin(), new_pattern.end());
+                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, new_pattern.begin(),
+                                                new_pattern.end());
                 w = m_cst.sibling(w);
             }
             return back_N1plus_front;
         } else {
             // special case, only one way of extending this pattern to the right
-            if (*pattern_begin == PAT_START_SYM
-                && *(pattern_end - 1) == PAT_END_SYM) {
+            if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
                 /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
@@ -205,11 +205,11 @@ public:
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(uint64_t lb, uint64_t rb,
-                         pattern_iterator pattern_begin,
+    uint64_t N1PlusFront(uint64_t lb, uint64_t rb, pattern_iterator pattern_begin,
                          pattern_iterator pattern_end) const
     {
-        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
+        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
+        // the forward tree
         auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;

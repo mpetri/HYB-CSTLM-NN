@@ -12,9 +12,7 @@
 
 using namespace std::chrono;
 
-template <class t_cst,
-          class t_vocab = vocab_uncompressed,
-          uint32_t t_max_ngram_count = 10>
+template <class t_cst, class t_vocab = vocab_uncompressed, uint32_t t_max_ngram_count = 10>
 class index_succinct_store_n1fb {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -31,7 +29,7 @@ public: // data
     precomputed_stats m_precomputed;
     compressed_counts<> m_n1plusfrontback;
     vocab_type m_vocab;
-    //compressed_sentinel_flag<> m_csf, m_csf_rev; // trevor: temporary?
+    // compressed_sentinel_flag<> m_csf, m_csf_rev; // trevor: temporary?
 public:
     index_succinct_store_n1fb() = default;
     index_succinct_store_n1fb(collection& col)
@@ -50,7 +48,8 @@ public:
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
         }
         auto stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "CONSTRUCT CST REV";
         start = clock::now();
@@ -64,52 +63,61 @@ public:
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "PRECOMPUTE N1PLUSFRONTBACK";
         start = clock::now();
         m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count);
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
         m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count);
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
-        //m_precomputed.print(false, 10);
+        // m_precomputed.print(false, 10);
 
         LOG(INFO) << "CREATE VOCAB";
         start = clock::now();
         m_vocab = vocab_type(col);
         stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec)";
 
-        // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
+        // perhaps temporary: this and the next block; interested in the relative timing cf
+        // 'precompute_statistics'
         //        LOG(INFO) << "CREATE EDGE FLAG";
         //        start = clock::now();
         //        m_csf = compressed_sentinel_flag<>(m_cst);
         //        stop = clock::now();
-        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() /
+        //        1000.0f << " sec)";
         //
         //        LOG(INFO) << "CREATE EDGE FLAG REV";
         //        start = clock::now();
         //        m_csf_rev = compressed_sentinel_flag<>(m_cst_rev);
         //        stop = clock::now();
-        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() /
+        //        1000.0f << " sec)";
     }
 
-    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
+                        std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
         written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
-        //written_bytes += m_csf.serialize(out, child, "sentinel");
-        //written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
+        // written_bytes += m_csf.serialize(out, child, "sentinel");
+        // written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
 
         sdsl::structure_tree::add_size(child, written_bytes);
@@ -123,8 +131,8 @@ public:
         m_cst_rev.load(in);
         sdsl::load(m_precomputed, in);
         sdsl::load(m_n1plusfrontback, in);
-        //sdsl::load(m_csf, in);
-        //sdsl::load(m_csf_rev, in);
+        // sdsl::load(m_csf, in);
+        // sdsl::load(m_csf_rev, in);
         sdsl::load(m_vocab, in);
     }
 
@@ -135,8 +143,8 @@ public:
             m_cst_rev.swap(a.m_cst_rev);
             std::swap(m_precomputed, a.m_precomputed);
             std::swap(m_n1plusfrontback, a.m_n1plusfrontback);
-            //std::swap(m_csf, a.m_csf);
-            //std::swap(m_csf_rev, a.m_csf_rev);
+            // std::swap(m_csf, a.m_csf);
+            // std::swap(m_csf_rev, a.m_csf_rev);
             m_vocab.swap(a.m_vocab);
         }
     }
@@ -146,8 +154,7 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev,
-                        pattern_iterator pattern_begin,
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, pattern_iterator pattern_begin,
                         pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -185,8 +192,7 @@ public:
     //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
-                             uint64_t lb_rev, uint64_t rb_rev,
+    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb, uint64_t lb_rev, uint64_t rb_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto node = m_cst.node(lb, rb);
@@ -199,8 +205,7 @@ public:
             }
         } else {
             // special case, only one way of extending this pattern to the right
-            if (*pattern_begin == PAT_START_SYM
-                && *(pattern_end - 1) == PAT_END_SYM) {
+            if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
                 /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
@@ -214,11 +219,11 @@ public:
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(uint64_t lb, uint64_t rb,
-                         pattern_iterator pattern_begin,
+    uint64_t N1PlusFront(uint64_t lb, uint64_t rb, pattern_iterator pattern_begin,
                          pattern_iterator pattern_end) const
     {
-        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
+        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
+        // the forward tree
         auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;

@@ -28,9 +28,11 @@ public:
         }
     }
 
-    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
+                        std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         std::vector<uint8_t> token_data;
         sdsl::int_vector<> ids(m_i2t.size());
@@ -92,8 +94,5 @@ public:
         }
     }
 
-    size_type size() const
-    {
-        return m_i2t.size();
-    }
+    size_type size() const { return m_i2t.size(); }
 };

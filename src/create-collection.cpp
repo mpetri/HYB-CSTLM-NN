@@ -11,8 +11,7 @@ typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
     fprintf(stdout, "%s -i <input file>\n", program);
     fprintf(stdout, "where\n");
@@ -20,8 +19,7 @@ print_usage(const char* program)
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -68,15 +66,16 @@ int main(int argc, const char* argv[])
         std::cout << "reading input file '" << args.input_file << "'" << std::endl;
         std::string line;
 
+        sdsl_input.push_back(EOS_SYM); // TODO added
         while (std::getline(ifile, line)) {
             std::istringstream iss(line);
             std::string word;
-            sdsl_input.push_back(PAT_START_SYM); //TODO added
+            sdsl_input.push_back(PAT_START_SYM); // TODO added
             while (std::getline(iss, word, ' ')) {
                 uint64_t num = std::stoull(word);
                 sdsl_input.push_back(num);
             }
-            sdsl_input.push_back(PAT_END_SYM); //TODO added
+            sdsl_input.push_back(PAT_END_SYM); // TODO added
             sdsl_input.push_back(EOS_SYM);
         }
         sdsl_input.push_back(EOF_SYM);

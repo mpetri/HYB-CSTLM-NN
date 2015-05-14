@@ -5,8 +5,7 @@
 #include "constants.hpp"
 #include "collection.hpp"
 
-template <class t_bv = sdsl::rrr_vector<15>,
-          class t_vec = sdsl::int_vector<32> >
+template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::int_vector<32> >
 struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_bv bv_type;
@@ -48,7 +47,8 @@ public:
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
         typename t_cst::csa_type::size_type num_syms = 0;
-        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left,
+                               right);
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
         for (size_t i = 0; i < num_syms; i++) {
@@ -70,8 +70,7 @@ public:
         return total_contexts;
     }
 
-    template <class t_cst>
-    compressed_counts(t_cst& cst, uint64_t max_node_depth)
+    template <class t_cst> compressed_counts(t_cst& cst, uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         std::map<uint64_t, uint32_t> counts;
@@ -116,9 +115,11 @@ public:
         m_bv_rank.set_vector(&m_bv);
     }
 
-    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
+                        std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_counts, out, child, "counts");
@@ -126,8 +127,7 @@ public:
         return written_bytes;
     }
 
-    template <class t_cst, class t_node_type>
-    uint64_t lookup(t_cst& cst, t_node_type node) const
+    template <class t_cst, class t_node_type> uint64_t lookup(t_cst& cst, t_node_type node) const
     {
         auto id = cst.id(node);
         if (m_bv[id] == 0)

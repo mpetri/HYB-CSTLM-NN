@@ -13,16 +13,14 @@ typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
     fprintf(stdout, "%s -c <collection dir>\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -43,8 +41,8 @@ parse_args(int argc, const char* argv[])
 }
 
 template <class t_idx, class t_node_type>
-typename t_idx::string_type
-extract_edge_label(const t_idx& idx, const t_node_type node, size_t max_depth)
+typename t_idx::string_type extract_edge_label(const t_idx& idx, const t_node_type node,
+                                               size_t max_depth)
 {
     typename t_idx::string_type edge;
     // auto node_depth = idx.m_cst.depth(node);
@@ -64,14 +62,16 @@ uint64_t compute_contexts(const t_idx& idx, const t_node_type node)
     auto lb = idx.m_cst.lb(node);
     auto rb = idx.m_cst.rb(node);
     size_t num_syms = 0;
-    sdsl::interval_symbols(idx.m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+    sdsl::interval_symbols(idx.m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left,
+                           right);
     if (num_syms == 1)
         return idx.m_cst.degree(node);
     else {
         auto total_contexts = 0;
         for (size_t i = 0; i < num_syms; i++) {
             auto new_lb = idx.m_cst.csa.C[idx.m_cst.csa.char2comp[preceding_syms[i]]] + left[i];
-            auto new_rb = idx.m_cst.csa.C[idx.m_cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
+            auto new_rb = idx.m_cst.csa.C[idx.m_cst.csa.char2comp[preceding_syms[i]]] + right[i]
+                          - 1;
             if (new_lb == new_rb)
                 total_contexts++;
             else {
@@ -107,8 +107,7 @@ void compute_stats_subtree(const t_idx& idx, const t_node_type node)
     }
 }
 
-template <class t_idx>
-void compute_stats(t_idx& idx, const std::string& col_dir)
+template <class t_idx> void compute_stats(t_idx& idx, const std::string& col_dir)
 {
     using clock = std::chrono::high_resolution_clock;
     auto index_file = col_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
@@ -131,14 +130,15 @@ void compute_stats(t_idx& idx, const std::string& col_dir)
             auto stop = clock::now();
             std::cerr << ".";
             // std::cout << "time in milliseconds = "
-            //       << std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count() / 1000.0f
+            //       << std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()
+            //       / 1000.0f
             //       << " ms" << endl;
             total_time += (stop - start);
         }
 
         std::cerr << "\ntime in seconds = "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count() / 1000.0f
-                  << " s" << endl;
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count()
+                     / 1000.0f << " s" << endl;
     } else {
         std::cerr << "index does not exist. build it first" << std::endl;
     }

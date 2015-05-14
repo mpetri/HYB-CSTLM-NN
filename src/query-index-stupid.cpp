@@ -18,8 +18,7 @@ typedef struct cmdargs {
     std::string collection_dir;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
     fprintf(stdout, "%s -c <collection dir> -p <pattern file>\n", program);
     fprintf(stdout, "where\n");
@@ -27,8 +26,7 @@ print_usage(const char* program)
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -52,10 +50,9 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_csa>
-double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
+template <class t_csa> double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
 {
-    const auto N = csa_rev.size() - 1; //size of the suffix array
+    const auto N = csa_rev.size() - 1; // size of the suffix array
     const auto M = PRev.size();
 
     double score = 0;
@@ -70,8 +67,7 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
         double numer = 0, denom = 0;
         lb_num_prev = lb_num;
         rb_num_prev = rb_num;
-        sdsl::backward_search(csa_rev, lb_num, rb_num,
-                              full_pattern.begin(), full_pattern.end(),
+        sdsl::backward_search(csa_rev, lb_num, rb_num, full_pattern.begin(), full_pattern.end(),
                               lb_num, rb_num);
         numer = rb_num - lb_num + 1;
         // missing patterns || unknown words
@@ -83,19 +79,18 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
         rb_denom_prev = rb_denom;
         lb_denom_prev = lb_denom;
         if (m >= 2) {
-            sdsl::backward_search(csa_rev, lb_denom, rb_denom,
-                                  context_pattern.begin(), context_pattern.end(),
-                                  lb_denom, rb_denom);
+            sdsl::backward_search(csa_rev, lb_denom, rb_denom, context_pattern.begin(),
+                                  context_pattern.end(), lb_denom, rb_denom);
         }
         denom = rb_denom - lb_denom + 1;
         score = numer / denom;
         if (lb_num != rb_num) {
             full_pattern[0] = PRev[m];
         } else {
-            //re-use the previous search interval
+            // re-use the previous search interval
             lb_num = lb_num_prev;
             rb_num = rb_num_prev;
-            //grow the pattern
+            // grow the pattern
             full_pattern.push_back(PRev[m]);
         }
         if (lb_denom != rb_denom) {
@@ -104,10 +99,10 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
             else
                 context_pattern.push_back(PRev[m]);
         } else {
-            //re-use the previous search interval
+            // re-use the previous search interval
             lb_denom = lb_denom_prev;
             rb_denom = rb_denom_prev;
-            //grow the pattern
+            // grow the pattern
             context_pattern.push_back(PRev[m]);
         }
     }
@@ -129,7 +124,8 @@ double run_query_stupid(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 }
 
 template <class t_idx>
-void run_queries(t_idx& idx, const std::string& col_dir, const std::vector<std::vector<uint64_t> > patterns)
+void run_queries(t_idx& idx, const std::string& col_dir,
+                 const std::vector<std::vector<uint64_t> > patterns)
 {
     using clock = std::chrono::high_resolution_clock;
     auto index_file = col_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
@@ -144,11 +140,13 @@ void run_queries(t_idx& idx, const std::string& col_dir, const std::vector<std::
             double score = run_query_stupid(idx, pattern);
             auto stop = clock::now();
             // output score
-            std::copy(pattern.begin(), pattern.end(), std::ostream_iterator<uint64_t>(std::cout, " "));
+            std::copy(pattern.begin(), pattern.end(),
+                      std::ostream_iterator<uint64_t>(std::cout, " "));
             std::cout << " -> " << score;
             total_time += (stop - start);
         }
-        LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
+        LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f
+                  << " ms";
     } else {
         LOG(FATAL) << "index does not exist. build it first";
     }
