@@ -19,6 +19,7 @@ public:
     typedef t_cst cst_type;
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
+    typedef typename t_cst::node_type node_type;
     typedef typename t_cst::string_type string_type;
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
@@ -154,15 +155,14 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, pattern_iterator pattern_begin,
-                        pattern_iterator pattern_end) const
+    uint64_t N1PlusBack(const node_type &node_rev, 
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        auto node = m_cst_rev.node(lb_rev, rb_rev);
 
         uint64_t n1plus_back;
-        if (pattern_size == m_cst_rev.depth(node)) {
-            n1plus_back = m_cst_rev.degree(node);
+        if (pattern_size == m_cst_rev.depth(node_rev)) {
+            n1plus_back = m_cst_rev.degree(node_rev);
         } else {
             n1plus_back = 1;
         }
@@ -192,10 +192,9 @@ public:
     //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb, 
+    uint64_t N1PlusFrontBack(const node_type &node,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
-        auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         if (pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
@@ -217,18 +216,17 @@ public:
                 // FIXME: this is a full search for the pattern in reverse order in the reverse tree!
                 for (auto it = pattern_begin; it != pattern_end and lb_rev <= rb_rev; ++it) 
                     backward_search(m_cst_rev.csa, lb_rev, rb_rev, *it, lb_rev, rb_rev);
-                return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
+                return N1PlusBack(m_cst_rev.node(lb_rev, rb_rev), pattern_begin, pattern_end);
             }
         }
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(uint64_t lb, uint64_t rb, pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+    uint64_t N1PlusFront(const node_type &node, 
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
         // the forward tree
-        auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;
         if (pattern_size == m_cst.depth(node)) {

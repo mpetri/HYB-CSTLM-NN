@@ -312,7 +312,7 @@ TYPED_TEST(LMTest, N1PlusBack)
                 EXPECT_TRUE(rev_cnt > 0);
                 if (rev_cnt > 0) {
                     auto actual_count
-                        = this->idx.N1PlusBack(lb_rev, rb_rev, cng.begin(), cng.end());
+                        = this->idx.N1PlusBack(this->idx.m_cst_rev.node(lb_rev, rb_rev), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusBack_count);
                 }
             }
@@ -371,7 +371,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                 EXPECT_TRUE(rev_cnt > 0);
                 if (cnt > 0) {
                     auto actual_count
-                        = this->idx.N1PlusFrontBack(lb, rb, cng.begin(), cng.end());
+                        = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
                 }
             }
@@ -422,7 +422,7 @@ TYPED_TEST(LMTest, N1PlusFront)
                                            cng.begin(), cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
-                    auto actual_count = this->idx.N1PlusFront(lb, rb, cng.begin(), cng.end());
+                    auto actual_count = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFront_count);
                 }
             }

@@ -18,6 +18,7 @@ public:
     typedef t_cst cst_type;
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
+    typedef typename t_cst::node_type node_type;
     typedef typename t_cst::string_type string_type;
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
@@ -118,15 +119,14 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, pattern_iterator pattern_begin,
-                        pattern_iterator pattern_end) const
+    uint64_t N1PlusBack(const node_type &node_rev,
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        auto node = m_cst_rev.node(lb_rev, rb_rev);
 
         uint64_t n1plus_back;
-        if (pattern_size == m_cst_rev.depth(node)) {
-            n1plus_back = m_cst_rev.degree(node);
+        if (pattern_size == m_cst_rev.depth(node_rev)) {
+            n1plus_back = m_cst_rev.degree(node_rev);
         } else {
             n1plus_back = 1;
         }
@@ -153,7 +153,7 @@ public:
     }
 
     //  Computes N_1+( * ab * )
-    uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb, 
+    uint64_t N1PlusFrontBack(const node_type &node,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
@@ -161,7 +161,6 @@ public:
         // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e.,
         // we want N1+ dot pattern dot)
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        auto node = m_cst.node(lb, rb);
         uint64_t back_N1plus_front = 0;
         uint64_t lb_rev = 0, rb_rev = m_cst_rev.size() - 1;
         // FIXME: this is a full search for the pattern in reverse order in the reverse tree!
@@ -188,8 +187,8 @@ public:
                 backward_search(m_cst_rev.csa, lb_rev_stored, rb_rev_stored, symbol, lb_rev_stored,
                                 rb_rev_stored);
 
-                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, new_pattern.begin(),
-                                                new_pattern.end());
+                back_N1plus_front += N1PlusBack(m_cst_rev.node(lb_rev_stored, rb_rev_stored), 
+                        new_pattern.begin(), new_pattern.end());
                 w = m_cst.sibling(w);
             }
             return back_N1plus_front;
@@ -203,18 +202,17 @@ public:
                 return 1;
             } else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
-                return N1PlusBack(lb_rev, rb_rev, pattern_begin, pattern_end);
+                return N1PlusBack(m_cst_rev.node(lb_rev, rb_rev), pattern_begin, pattern_end);
             }
         }
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(uint64_t lb, uint64_t rb, pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+    uint64_t N1PlusFront(const node_type &node, 
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
         // the forward tree
-        auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;
         if (pattern_size == m_cst.depth(node)) {
