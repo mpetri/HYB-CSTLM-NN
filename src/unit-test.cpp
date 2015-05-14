@@ -371,7 +371,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                 EXPECT_TRUE(rev_cnt > 0);
                 if (cnt > 0) {
                     auto actual_count
-                        = this->idx.N1PlusFrontBack(lb, rb, lb_rev, rb_rev, cng.begin(), cng.end());
+                        = this->idx.N1PlusFrontBack(lb, rb, cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
                 }
             }
