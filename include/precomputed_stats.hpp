@@ -30,9 +30,11 @@ struct precomputed_stats {
     template <typename t_cst>
     precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len);
 
-    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
+    size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
+                        std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
 
         sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
@@ -191,9 +193,8 @@ struct precomputed_stats {
     }
 
 private:
-    template <typename t_cst>
-    void ncomputer(const t_cst& cst_rev);
-    //void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
+    template <typename t_cst> void ncomputer(const t_cst& cst_rev);
+    // void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
 };
 
 // template<class t_cst>
@@ -289,9 +290,7 @@ precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t
     }
 }
 
-template <class t_cst>
-void
-precomputed_stats::ncomputer(const t_cst& cst_rev)
+template <class t_cst> void precomputed_stats::ncomputer(const t_cst& cst_rev)
 {
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {

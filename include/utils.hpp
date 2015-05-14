@@ -14,8 +14,7 @@
 
 namespace utils {
 
-bool
-directory_exists(std::string dir)
+bool directory_exists(std::string dir)
 {
     struct stat sb;
     const char* pathname = dir.c_str();
@@ -25,8 +24,7 @@ directory_exists(std::string dir)
     return false;
 }
 
-bool
-file_exists(std::string file_name)
+bool file_exists(std::string file_name)
 {
     std::ifstream in(file_name);
     if (in) {
@@ -36,8 +34,7 @@ file_exists(std::string file_name)
     return false;
 }
 
-void
-create_directory(std::string dir)
+void create_directory(std::string dir)
 {
     if (!directory_exists(dir)) {
         if (mkdir(dir.c_str(), 0777) == -1) {

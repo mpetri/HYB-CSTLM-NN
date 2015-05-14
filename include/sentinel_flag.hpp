@@ -13,8 +13,7 @@
 // this allows later calls to avoid this expensive step
 // complexity is FIXME
 
-template <class t_bv = sdsl::rrr_vector<15>,
-          class t_vec = sdsl::int_vector<32> >
+template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::int_vector<32> >
 struct compressed_sentinel_flag {
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_bv bv_type;
@@ -28,8 +27,7 @@ private:
 public:
     compressed_sentinel_flag() = default;
 
-    template <class t_cst>
-    compressed_sentinel_flag(t_cst& cst)
+    template <class t_cst> compressed_sentinel_flag(t_cst& cst)
     {
         sdsl::bit_vector has_sentinel(cst.nodes());
         std::map<uint64_t, uint32_t> offsets;
@@ -102,7 +100,8 @@ public:
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
     {
-        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child
+            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_offsets, out, child, "offsets");

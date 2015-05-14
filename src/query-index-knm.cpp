@@ -26,10 +26,10 @@ typedef struct cmdargs {
     bool ismkn;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n", program);
+    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
+            program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
@@ -37,8 +37,7 @@ print_usage(const char* program)
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -72,7 +71,8 @@ parse_args(int argc, const char* argv[])
 }
 
 template <class t_idx>
-void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns, uint64_t ngramsize)
+void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
+                 uint64_t ngramsize)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -92,7 +92,8 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 
         // std::ostringstream sp("", std::ios_base::ate);
         // std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
-        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<< duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        // duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
 
         perplexity += sentenceprob;
         total_time += (stop - start);
@@ -135,7 +136,8 @@ int main(int argc, const char* argv[])
     /* load index */
     {
         index_succinct<default_cst_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
         if (utils::file_exists(index_file)) {
             LOG(INFO) << "loading index from file '" << index_file << "'";
             sdsl::load_from_file(idx, index_file);
@@ -150,7 +152,8 @@ int main(int argc, const char* argv[])
     }
     {
         index_succinct_store_n1fb<default_cst_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
         if (utils::file_exists(index_file)) {
             LOG(INFO) << "loading index from file '" << index_file << "'";
             sdsl::load_from_file(idx, index_file);
