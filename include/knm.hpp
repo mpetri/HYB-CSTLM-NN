@@ -57,7 +57,7 @@ double highestorder(const t_idx& idx, uint64_t level, const bool unk,
     uint64_t N1plus_front = 0;
     if (backward_search(idx.m_cst.csa, lb, rb, *pattern_begin, lb, rb) > 0) {
         denominator = rb - lb + 1;
-        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end-1);
+        N1plus_front = idx.N1PlusFront(lb, rb, pattern_begin, pattern_end - 1);
     } else {
         return backoff_prob;
     }
@@ -98,7 +98,7 @@ double lowerorder(const t_idx& idx, uint64_t level, const bool unk,
         auto back_N1plus_front = idx.N1PlusFrontBack(lb, rb, lb_rev, rb_rev, pattern_begin, pattern_end - 1);
         // FIXME: for the index_succinct version of N1PlusFrontBack this call above can be
         // avoided for patterns that begin with <s> and/or end with </s> using 'N1PlusFront' and 'c'
-        // But might not be worth bothering, as these counts are stored explictly for the 
+        // But might not be worth bothering, as these counts are stored explictly for the
         // faster version of the code so there would be no win here.
         d++;
         return (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * backoff_prob;

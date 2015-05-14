@@ -5,31 +5,34 @@
 #include "constants.hpp"
 #include "collection.hpp"
 
-template<
-class t_bv = sdsl::rrr_vector<15>,
-class t_vec = sdsl::int_vector<32>
->
+template <class t_bv = sdsl::rrr_vector<15>,
+          class t_vec = sdsl::int_vector<32> >
 struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_bv bv_type;
     typedef t_vec vector_type;
+
 private:
     bv_type m_bv;
     typename bv_type::rank_1_type m_bv_rank;
     vector_type m_counts;
+
 public:
     compressed_counts() = default;
-    compressed_counts(const compressed_counts& cc) {
+    compressed_counts(const compressed_counts& cc)
+    {
         m_bv = cc.m_bv;
         m_bv_rank.set_vector(&m_bv);
         m_counts = cc.m_counts;
     }
-    compressed_counts(compressed_counts&& cc) {
+    compressed_counts(compressed_counts&& cc)
+    {
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts = std::move(cc.m_counts);
     }
-    compressed_counts& operator=(compressed_counts&& cc) {
+    compressed_counts& operator=(compressed_counts&& cc)
+    {
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts = std::move(cc.m_counts);
@@ -56,7 +59,7 @@ public:
             } else {
                 auto new_node = cst.node(new_lb, new_rb);
                 auto new_node_depth = cst.depth(new_node);
-                if(new_node_depth != node_depth+1) {
+                if (new_node_depth != node_depth + 1) {
                     total_contexts++;
                 } else {
                     auto deg = cst.degree(new_node);
@@ -71,7 +74,7 @@ public:
     compressed_counts(t_cst& cst, uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
-        std::map<uint64_t,uint32_t> counts;
+        std::map<uint64_t, uint32_t> counts;
 
         auto root = cst.root();
         for (const auto& child : cst.children(root)) {
@@ -103,7 +106,7 @@ public:
         auto itr = counts.begin();
         auto end = counts.end();
         auto citr = cnts.begin();
-        while(itr != end) {
+        while (itr != end) {
             *citr = itr->second;
             ++citr;
             ++itr;

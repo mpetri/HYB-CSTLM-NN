@@ -29,6 +29,7 @@ public: // data
     t_cst m_cst_rev;
     precomputed_stats m_precomputed;
     vocab_type m_vocab;
+
 public:
     index_succinct() = default;
     index_succinct(collection& col)
@@ -113,9 +114,9 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, 
-                         pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev,
+                        pattern_iterator pattern_begin,
+                        pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst_rev.node(lb_rev, rb_rev);
@@ -150,9 +151,9 @@ public:
 
     //  Computes N_1+( * ab * )
     uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
-                         uint64_t lb_rev, uint64_t rb_rev,
-                         pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+                             uint64_t lb_rev, uint64_t rb_rev,
+                             pattern_iterator pattern_begin,
+                             pattern_iterator pattern_end) const
     {
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in the forward tree
         // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e., we want N1+ dot pattern dot)
@@ -162,7 +163,7 @@ public:
         uint64_t lb_rev_stored = 0, rb_rev_stored = 0;
         // this is when the pattern matches a full edge in the CST
         if (pattern_size == m_cst.depth(node)) {
-            if (*pattern_begin == PAT_START_SYM ) {
+            if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             }
             auto w = m_cst.select_child(node, 1);
@@ -182,15 +183,15 @@ public:
                                 symbol,
                                 lb_rev_stored, rb_rev_stored);
 
-                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored, 
-                        new_pattern.begin(), new_pattern.end());
+                back_N1plus_front += N1PlusBack(lb_rev_stored, rb_rev_stored,
+                                                new_pattern.begin(), new_pattern.end());
                 w = m_cst.sibling(w);
             }
             return back_N1plus_front;
         } else {
             // special case, only one way of extending this pattern to the right
             if (*pattern_begin == PAT_START_SYM
-                    && *(pattern_end-1) == PAT_END_SYM) {
+                && *(pattern_end - 1) == PAT_END_SYM) {
                 /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
@@ -220,8 +221,8 @@ public:
             N1plus_front = 1;
         }
 
-        // adjust for end of sentence 
-        uint64_t symbol = *(pattern_end-1);
+        // adjust for end of sentence
+        uint64_t symbol = *(pattern_end - 1);
         if (symbol == PAT_END_SYM) {
             N1plus_front -= 1;
         }

@@ -87,17 +87,17 @@ public:
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
 
         // perhaps temporary: this and the next block; interested in the relative timing cf 'precompute_statistics'
-//        LOG(INFO) << "CREATE EDGE FLAG";
-//        start = clock::now();
-//        m_csf = compressed_sentinel_flag<>(m_cst);
-//        stop = clock::now();
-//        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
-//
-//        LOG(INFO) << "CREATE EDGE FLAG REV";
-//        start = clock::now();
-//        m_csf_rev = compressed_sentinel_flag<>(m_cst_rev);
-//        stop = clock::now();
-//        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //        LOG(INFO) << "CREATE EDGE FLAG";
+        //        start = clock::now();
+        //        m_csf = compressed_sentinel_flag<>(m_cst);
+        //        stop = clock::now();
+        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
+        //
+        //        LOG(INFO) << "CREATE EDGE FLAG REV";
+        //        start = clock::now();
+        //        m_csf_rev = compressed_sentinel_flag<>(m_cst_rev);
+        //        stop = clock::now();
+        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec)";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL, std::string name = "") const
@@ -146,9 +146,9 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev, 
-                         pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+    uint64_t N1PlusBack(uint64_t lb_rev, uint64_t rb_rev,
+                        pattern_iterator pattern_begin,
+                        pattern_iterator pattern_end) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         auto node = m_cst_rev.node(lb_rev, rb_rev);
@@ -186,13 +186,13 @@ public:
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
     uint64_t N1PlusFrontBack(uint64_t lb, uint64_t rb,
-                         uint64_t lb_rev, uint64_t rb_rev, 
-                         pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+                             uint64_t lb_rev, uint64_t rb_rev,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto node = m_cst.node(lb, rb);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         if (pattern_size == m_cst.depth(node)) {
-            if (*pattern_begin == PAT_START_SYM ) {
+            if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             } else {
                 return m_n1plusfrontback.lookup(m_cst, node);
@@ -200,7 +200,7 @@ public:
         } else {
             // special case, only one way of extending this pattern to the right
             if (*pattern_begin == PAT_START_SYM
-                    && *(pattern_end-1) == PAT_END_SYM) {
+                && *(pattern_end - 1) == PAT_END_SYM) {
                 /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
             } else if (*pattern_begin == PAT_START_SYM) {
@@ -230,8 +230,8 @@ public:
             N1plus_front = 1;
         }
 
-        // adjust for end of sentence 
-        uint64_t symbol = *(pattern_end-1);
+        // adjust for end of sentence
+        uint64_t symbol = *(pattern_end - 1);
         if (symbol == PAT_END_SYM) {
             N1plus_front -= 1;
         }

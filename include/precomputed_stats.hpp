@@ -243,14 +243,27 @@ private:
 
 template <typename t_cst>
 precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len)
-: max_ngram_count(max_ngram_len), N1plus_dotdot(0), N3plus_dot(0)
+    : max_ngram_count(max_ngram_len)
+    , N1plus_dotdot(0)
+    , N3plus_dot(0)
 {
     auto size = max_ngram_count + 1;
-    n1.resize(size); n2.resize(size); n3.resize(size); n4.resize(size);
-    Y.resize(size); Y_cnt.resize(size);
-    D1.resize(size); D2.resize(size); D3.resize(size);
-    n1_cnt.resize(size); n2_cnt.resize(size); n3_cnt.resize(size); n4_cnt.resize(size);
-    D1_cnt.resize(size); D2_cnt.resize(size); D3_cnt.resize(size);
+    n1.resize(size);
+    n2.resize(size);
+    n3.resize(size);
+    n4.resize(size);
+    Y.resize(size);
+    Y_cnt.resize(size);
+    D1.resize(size);
+    D2.resize(size);
+    D3.resize(size);
+    n1_cnt.resize(size);
+    n2_cnt.resize(size);
+    n3_cnt.resize(size);
+    n4_cnt.resize(size);
+    D1_cnt.resize(size);
+    D2_cnt.resize(size);
+    D3_cnt.resize(size);
 
     // compute the counts & continuation counts from the CST (reversed)
     ncomputer(cst_rev);
@@ -292,7 +305,7 @@ precomputed_stats::ncomputer(const t_cst& cst_rev)
             auto freq = cst_rev.size(node);
             assert(parent_depth < max_ngram_count);
 
-            for (auto n = parent_depth+1; n <= std::min(max_ngram_count, depth); ++n) {
+            for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
                 // this call is slow
                 auto symbol = cst_rev.edge(node, n);
                 // don't count ngrams including these sentinels, including extensions
@@ -303,18 +316,28 @@ precomputed_stats::ncomputer(const t_cst& cst_rev)
 
                 // update frequency counts
                 switch (freq) {
-                    case 1: n1[n] += 1; break;
-                    case 2: n2[n] += 1; break;
-                    case 3: n3[n] += 1; break;
-                    case 4: n4[n] += 1; break;
+                case 1:
+                    n1[n] += 1;
+                    break;
+                case 2:
+                    n2[n] += 1;
+                    break;
+                case 3:
+                    n3[n] += 1;
+                    break;
+                case 4:
+                    n4[n] += 1;
+                    break;
                 }
 
-                if (n == 2)                 N1plus_dotdot++;
-                if (freq >= 3 && n == 1)    N3plus_dot++;
+                if (n == 2)
+                    N1plus_dotdot++;
+                if (freq >= 3 && n == 1)
+                    N3plus_dot++;
 
-                // update continuation counts 
+                // update continuation counts
                 uint64_t n1plus_back = 0ULL;
-                if (symbol == PAT_START_SYM) 
+                if (symbol == PAT_START_SYM)
                     // special case where the pattern starts with <s>: actual count is used
                     n1plus_back = freq;
                 else if (n == depth)
@@ -324,10 +347,18 @@ precomputed_stats::ncomputer(const t_cst& cst_rev)
                     n1plus_back = 1;
 
                 switch (n1plus_back) {
-                    case 1: n1_cnt[n] += 1; break;
-                    case 2: n2_cnt[n] += 1; break;
-                    case 3: n3_cnt[n] += 1; break;
-                    case 4: n4_cnt[n] += 1; break;
+                case 1:
+                    n1_cnt[n] += 1;
+                    break;
+                case 2:
+                    n2_cnt[n] += 1;
+                    break;
+                case 3:
+                    n3_cnt[n] += 1;
+                    break;
+                case 4:
+                    n4_cnt[n] += 1;
+                    break;
                 }
 
                 // can skip next evaluations if we know the EOS symbol is coming up next
