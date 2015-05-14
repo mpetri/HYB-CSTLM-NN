@@ -28,7 +28,7 @@ struct precomputed_stats {
     precomputed_stats() = default;
 
     template <typename t_cst>
-    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len);
+    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts=false);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -193,8 +193,7 @@ struct precomputed_stats {
     }
 
 private:
-    template <typename t_cst> void ncomputer(const t_cst& cst_rev);
-    // void ncomputer(const t_cst& cst_rev, uint64_t symbol, int size, uint64_t lb, uint64_t rb);
+    template <typename t_cst> void ncomputer(const t_cst& cst_rev, bool dodgy_discounts);
 };
 
 // template<class t_cst>
@@ -243,7 +242,7 @@ private:
 // }
 
 template <typename t_cst>
-precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len)
+precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts)
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
@@ -267,7 +266,7 @@ precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t
     D3_cnt.resize(size);
 
     // compute the counts & continuation counts from the CST (reversed)
-    ncomputer(cst_rev);
+    ncomputer(cst_rev, dodgy_discounts);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
@@ -290,7 +289,8 @@ precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t
     }
 }
 
-template <class t_cst> void precomputed_stats::ncomputer(const t_cst& cst_rev)
+template <class t_cst>
+void precomputed_stats::ncomputer(const t_cst& cst_rev, bool dodgy_discounts)
 {
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {
@@ -305,8 +305,8 @@ template <class t_cst> void precomputed_stats::ncomputer(const t_cst& cst_rev)
             assert(parent_depth < max_ngram_count);
 
             for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
-                // this call is slow
-                auto symbol = cst_rev.edge(node, n);
+                // edge call is slow: dodgy discounts skips this by faking the symbol with a regular token 
+                auto symbol = (dodgy_discounts) ? NUM_SPECIAL_SYMS+1 : cst_rev.edge(node, n);
                 // don't count ngrams including these sentinels, including extensions
                 if (symbol == EOF_SYM || symbol == EOS_SYM) {
                     it.skip_subtree();
