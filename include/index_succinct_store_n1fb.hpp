@@ -158,10 +158,11 @@ public:
     uint64_t N1PlusBack(const node_type &node_rev, 
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
 
         uint64_t n1plus_back;
-        if (pattern_size == m_cst_rev.depth(node_rev)) {
+        if (!m_cst_rev.is_leaf(node_rev) && pattern_size == m_cst_rev.depth(node_rev)) {
             n1plus_back = m_cst_rev.degree(node_rev);
         } else {
             n1plus_back = 1;
@@ -195,6 +196,8 @@ public:
     uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
+        // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         if (pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
@@ -221,11 +224,10 @@ public:
     uint64_t N1PlusFront(const node_type &node, 
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
-        // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
-        // the forward tree
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;
-        if (pattern_size == m_cst.depth(node)) {
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             // pattern matches the edge label
             N1plus_front = m_cst.degree(node);
         } else {

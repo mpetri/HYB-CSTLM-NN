@@ -125,7 +125,7 @@ public:
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
 
         uint64_t n1plus_back;
-        if (pattern_size == m_cst_rev.depth(node_rev)) {
+        if (!m_cst_rev.is_leaf(node_rev) && pattern_size == m_cst_rev.depth(node_rev)) {
             n1plus_back = m_cst_rev.degree(node_rev);
         } else {
             n1plus_back = 1;
@@ -211,7 +211,7 @@ public:
         // the forward tree
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;
-        if (pattern_size == m_cst.depth(node)) {
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             // pattern matches the edge label
             N1plus_front = m_cst.degree(node);
         } else {
