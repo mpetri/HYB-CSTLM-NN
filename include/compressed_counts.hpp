@@ -130,12 +130,14 @@ public:
     template <class t_cst, class t_node_type> uint64_t lookup(t_cst& cst, t_node_type node) const
     {
         auto id = cst.id(node);
-        if (m_bv[id] == 0)
-            return 1;
-        else {
+        // if (m_bv[id] == 0) {
+        //     std::cerr << "should never occur";
+        //     exit(EXIT_FAILURE);
+        //     return 1;
+        // } else {
             auto rank_in_vec = m_bv_rank(id);
             return m_counts[rank_in_vec];
-        }
+        // }
     }
 
     void load(std::istream& in)

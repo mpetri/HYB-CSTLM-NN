@@ -199,7 +199,7 @@ public:
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        if (pattern_size == m_cst.depth(node)) {
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             } else {
