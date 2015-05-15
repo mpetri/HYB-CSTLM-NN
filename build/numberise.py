@@ -4,12 +4,9 @@ import sys, nltk
 
 tokenizer = nltk.tokenize.treebank.TreebankWordTokenizer()
 
-
 lexicon = dict()
-lexicon['sentinel 0'] = 0
-lexicon['sentinel 1'] = 1
-lexicon['sentinel 2'] = 2
-lexicon['sentinel 3'] = 3
+for i, term in enumerate('EOF EOS UNK <s> </s>'.split()):
+    lexicon[term] = i
 
 def lookup(tok, lexicon=lexicon):
     i = lexicon.get(tok, None)
@@ -25,3 +22,8 @@ with open(sys.argv[1]) as fin:
         for tok in tids:
             print tok,
         print
+
+if len(sys.argv) >= 3:
+    with open(sys.argv[2], 'w') as lout:
+        for term, idx in sorted(lexicon.items()):
+            print >>lout, term, idx

@@ -11,7 +11,7 @@
 
 #include "utils.hpp"
 #include "collection.hpp"
-#include "index_succinct.hpp"
+#include "index_types.hpp"
 
 #include "knm.hpp"
 
@@ -26,10 +26,10 @@ typedef struct cmdargs {
     bool ismkn;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n", program);
+    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
+            program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
@@ -37,8 +37,7 @@ print_usage(const char* program)
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
@@ -71,9 +70,9 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-
 template <class t_idx>
-void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,uint64_t ngramsize)
+void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
+                 uint64_t ngramsize)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -81,7 +80,6 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     std::chrono::nanoseconds total_time(0);
     uint64_t ind = 1;
     for (std::vector<uint64_t> pattern : patterns) {
-        LOG(INFO) << "Run pattern" << ind++;
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
@@ -89,8 +87,14 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = run_query_knm(idx, pattern, M,ngramsize);
+        double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
         auto stop = clock::now();
+
+        // std::ostringstream sp("", std::ios_base::ate);
+        // std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        // duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+
         perplexity += sentenceprob;
         total_time += (stop - start);
     }
@@ -101,31 +105,15 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 
 int main(int argc, const char* argv[])
 {
+    log::start_log(argc, argv);
+
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
 
-    /* load index */
-    using csa_type = sdsl::csa_sada_int<>;
-    using cst_type = sdsl::cst_sct3<csa_type>;
-    index_succinct<cst_type> idx;
-
-    auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-    if (utils::file_exists(index_file)) {
-        LOG(INFO) << "loading index from file '" << index_file << "'";
-        sdsl::load_from_file(idx, index_file);
-    } else {
-        LOG(FATAL) << "index does not exist. build it first";
-        return EXIT_FAILURE;
-    }
-
-    /* print precomputed parameters */
-    idx.print_params(args.ismkn,args.ngramsize);
-
-
-    /* parse pattern file */
+    /* load patterns */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
@@ -145,6 +133,39 @@ int main(int argc, const char* argv[])
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
-    run_queries(idx, patterns,args.ngramsize);
+    /* load index */
+    {
+        index_succinct<default_cst_type> idx;
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize);
+    }
+    {
+        index_succinct_store_n1fb<default_cst_type> idx;
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize);
+    }
+
     return EXIT_SUCCESS;
 }

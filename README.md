@@ -60,7 +60,7 @@ which builds the index and various precomputed stuff. Finally query with
 ./query-index-knm.x -c ../collections/undoc -p ../UnitTestData/data/undoc_2000_fr_en_sample.test -n 5
 ```
 which queries using 5-grams for a test sample. There are a couple of issues here, namely it reports:
-```
+```sh
 ------------------------------------------------
 -------------PRECOMPUTED QUANTITIES-------------
 ------------------------------------------------

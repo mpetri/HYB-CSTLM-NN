@@ -8,26 +8,30 @@
 
 typedef struct cmdargs {
     std::string collection_dir;
+    bool dodgy_discounts;
 } cmdargs_t;
 
-void
-print_usage(const char* program)
+void print_usage(const char* program)
 {
     fprintf(stdout, "%s -c <collection dir>\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
+    fprintf(stdout, "  -d                   : use dodgy (fast) discount calculation (default = correct)\n");
 };
 
-cmdargs_t
-parse_args(int argc, const char* argv[])
+cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
     args.collection_dir = "";
-    while ((op = getopt(argc, (char* const*)argv, "c:")) != -1) {
+    args.dodgy_discounts = false;
+    while ((op = getopt(argc, (char* const*)argv, "c:d")) != -1) {
         switch (op) {
         case 'c':
             args.collection_dir = optarg;
+            break;
+        case 'd':
+            args.dodgy_discounts = true;
             break;
         }
     }
@@ -39,15 +43,15 @@ parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_idx>
-void create_and_store(collection& col)
+template <class t_idx> void create_and_store(collection& col, bool dodgy_discounts)
 {
     using clock = std::chrono::high_resolution_clock;
     auto start = clock::now();
-    t_idx idx(col);
+    t_idx idx(col, dodgy_discounts);
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f << endl;
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
+                 / 1000.0f;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {
@@ -64,7 +68,7 @@ void create_and_store(collection& col)
 
 int main(int argc, const char* argv[])
 {
-    log::start_log(argc,argv);
+    log::start_log(argc, argv);
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
@@ -74,13 +78,12 @@ int main(int argc, const char* argv[])
 
     /* create indexes */
     {
-        // define the index type with csa_wt (wt_int)
-        using csa_type = sdsl::csa_wt_int<>;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        //using index_type = index_succinct_store_n1fb<cst_type>;
-        using index_type = index_succinct<cst_type>;
-
-        create_and_store<index_type>(col);
+        using index_type = index_succinct<default_cst_type>;
+        create_and_store<index_type>(col, args.dodgy_discounts);
+    }
+    {
+        using index_type = index_succinct_store_n1fb<default_cst_type>;
+        create_and_store<index_type>(col, args.dodgy_discounts);
     }
 
     return 0;
