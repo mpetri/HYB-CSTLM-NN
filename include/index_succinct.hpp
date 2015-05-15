@@ -166,7 +166,7 @@ public:
         uint64_t back_N1plus_front = 0;
 
         // this is when the pattern matches a full edge in the CST
-        if (pattern_size == m_cst.depth(node)) {
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             }
