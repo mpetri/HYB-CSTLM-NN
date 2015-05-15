@@ -151,7 +151,7 @@ int main(int argc, const char* argv[])
         run_queries(idx, patterns, args.ngramsize);
     }
     {
-        index_succinct_store_n1fb<default_cst_type> idx;
+        index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> idx;
         auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
                           + ".sdsl";
         if (utils::file_exists(index_file)) {

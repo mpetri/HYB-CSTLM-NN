@@ -12,11 +12,12 @@
 
 using namespace std::chrono;
 
-template <class t_cst, class t_vocab = vocab_uncompressed, uint32_t t_max_ngram_count = 10>
+template <class t_cst, class t_cst_rev, class t_vocab = vocab_uncompressed, uint32_t t_max_ngram_count = 10>
 class index_succinct_store_n1fb {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
+    typedef t_cst_rev cst_rev_type;
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::node_type node_type;
@@ -26,7 +27,7 @@ public:
 
 public: // data
     t_cst m_cst;
-    t_cst m_cst_rev;
+    t_cst_rev m_cst_rev;
     precomputed_stats m_precomputed;
     compressed_counts<> m_n1plusfrontback;
     vocab_type m_vocab;

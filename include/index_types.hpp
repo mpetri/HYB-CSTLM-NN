@@ -7,3 +7,4 @@
 
 using default_csa_type = sdsl::csa_wt_int<>;
 using default_cst_type = sdsl::cst_sct3<default_csa_type>;
+using default_cst_rev_type = sdsl::cst_sct3<sdsl::csa_sada_int<>>;
