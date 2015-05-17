@@ -167,11 +167,15 @@ double pkn(const t_idx& idx, uint64_t level, const bool unk,
         if (!unk) {
             probability = lowestorder(idx, pattern_end - 1, pattern_end, node_rev, char_pos, d);
         } else {
+            // FIXME: in this case, we don't call forward_search so the later queries in lowerorder etc will be incorrect
             probability = lowestorder_unk(idx);
         }
     }
     return probability;
 }
+
+template <class t_idx, class t_pat_iter>
+double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin, t_pat_iter pattern_end);
 
 template <class t_idx, class t_pattern>
 double run_query_knm(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize)
@@ -186,6 +190,8 @@ double run_query_knm(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, u
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
+
+        /*
         typedef typename t_idx::cst_type::node_type t_node;
         t_node node = idx.m_cst.root();
         t_node node_rev = idx.m_cst_rev.root();
@@ -193,12 +199,14 @@ double run_query_knm(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, u
         uint64_t char_pos = 0, d = 0;
         int size = std::distance(pattern.begin(), pattern.end());
         bool unk = false;
+        */
         if (pattern.back() == 77777) { // what the heck, we have an UNK_SYM sentinel, why not use it?
-            unk = true;
+            //unk = true;
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
-        double score = pkn(idx, size, unk, pattern.begin(), pattern.end(), 
-                node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
+        //double score = pkn(idx, size, unk, pattern.begin(), pattern.end(), 
+                //node, node_rev, node_rev_ctx, char_pos, d, ngramsize);
+        double score = prob_kneser_ney(idx, pattern.begin(), pattern.end());
         final_score += log10(score);
     }
     return final_score;
@@ -217,35 +225,90 @@ double gate(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize)
     return perplexity;
 }
 
-
-#if 0
+// FIXME: in middle of hacking this -- trevor
 template <class t_idx, class t_pat_iter>
-double conditional_probability(const t_idx& idx, 
-        t_pat_iter pattern_begin,
-        t_pat_iter pattern_end)
+double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin, t_pat_iter pattern_end)
 {
     typedef typename t_idx::cst_type::node_type t_node;
-    int ngramsize = idx.m_precomputed.max_ngram_len;
+    //typedef typename t_idx::cst_rev_type::node_type t_node_rev;
+    int ngramsize = idx.m_precomputed.max_ngram_count;
     double probability = 1.0;
-    t_node node_fwd = idx.m_cst.root();
+    t_node node = idx.m_cst.root();
     t_node node_rev = idx.m_cst_rev.root();
+    t_node node_rev_ctx = idx.m_cst_rev.root();
     size_t size = std::distance(pattern_begin, pattern_end);
+    bool unk = (*(pattern_end-1) == 77777); // TODO: use UNK_SYM
+    int d = 0;
+    uint64_t char_pos = 0;
 
     for (unsigned i = 1; i <= size; ++i) {
-        t_pat_iter pat_start = pattern_end - i;
 
-        if (i == 1) {
+        if (i == 1 || ngramsize == 1) {
             // lowest level
-            double denominator = 0;
-            forward_search(idx.m_cst_rev, node_rev, i-1, *start, 0);
-            double numerator = idx.N1PlusBack(node_rev, pat_start, pattern_end); 
-            double denominator = idx.m_precomputed.N1plus_dotdot;
-            probability = numerator / denominator;
+            double numerator;
+            if (!unk) {
+                t_pat_iter start = pattern_end-1;
+                forward_search(idx.m_cst_rev, node_rev, i-1, *start, 0);
+                d++;
+                numerator = idx.N1PlusBack(node_rev, start, pattern_end); 
+            } else {
+                // TODO: will the node_rev be invalid? shouldn't we still do forward_search?
+                // seems values are ignored all the way up
+                numerator =  idx.discount(1, true);
+            }
+            probability = numerator / idx.m_precomputed.N1plus_dotdot;
+
         } else if (i < size) {
             // mid-level
+            uint64_t c = 0;
+            t_pat_iter start = pattern_end-i;
+            if (forward_search(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
+                c = idx.N1PlusBack(node_rev, pattern_begin, pattern_end);
+            
+            // update the context-only node in the reverse tree
+            forward_search(idx.m_cst_rev, node_rev_ctx, d-1, *start, char_pos);
+
+            // compute discount
+            double D = idx.discount(size, true); // TODO: size or i? surely it must be i.
+            double numerator = (!unk && c - D > 0) ? (c - D) : 0;
+
+            // compute N1+ components
+            uint64_t lb = idx.m_cst.lb(node), rb = idx.m_cst.rb(node);
+            if (backward_search(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) { 
+                node = idx.m_cst.node(lb, rb);
+                auto N1plus_front = idx.N1PlusFront(node, start, pattern_end - 1);
+                auto back_N1plus_front = idx.N1PlusFrontBack(node, node_rev_ctx, start, pattern_end - 1);
+                d++;
+                probability = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * probability;
+            } else {
+                // TODO CHECK: what happens to the bounds when this is false?
+                node = idx.m_cst.node(lb, rb);
+            }
+
         } else if (i == size) {
             // top-level
+            uint64_t c = 0;
+            t_pat_iter start = pattern_end-i;
+            if (forward_search(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
+                c = idx.m_cst_rev.size(node_rev);
+
+            // compute discount, numerator
+            double D = 0;
+            if (i == ngramsize)
+                D = idx.discount(ngramsize);
+            else // which is the special case of n<ngramsize that starts with <s>
+                D = idx.discount(i, true);
+            double numerator = (!unk && c - D > 0) ? (c - D) : 0;
+
+            uint64_t lb = idx.m_cst.lb(node), rb = idx.m_cst.rb(node);
+            if (backward_search(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) {
+                node = idx.m_cst.node(lb, rb);
+                auto denominator = idx.m_cst.size(node);
+                double N1plus_front = idx.N1PlusFront(node, start, pattern_end - 1);
+                probability = (numerator / denominator) + (D * N1plus_front / denominator) * probability;
+            } 
         }
     }
+
+    return probability;
 }
-#endif
