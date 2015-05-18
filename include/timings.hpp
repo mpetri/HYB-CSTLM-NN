@@ -12,9 +12,9 @@ using watch = std::chrono::high_resolution_clock;
 
 enum class timer_type {
 	N1PlusBack = 0,
-	N1PlusFront,
+	N1PlusFront ,
 	N1PlusFrontBack,
-	forward_search,
+	forward_search ,
 	backward_search,
 	highestorder,
 	lowerorder,
@@ -81,7 +81,7 @@ public:
 			LOG(INFO) 	  << std::setw(17) << timer_type_to_str(i) 
 		    << " Calls="  << std::setw(10) << d.num_calls[i] 
 			<< " Total="  << std::setw(10) << std::setprecision(6) << duration_cast<milliseconds>(d.total_time[i]).count() / 1000.0f << " sec"
-			<< " Avg=" 	  << std::setw(10) << d.total_time[i].count() / d.num_calls[i] << " ns";
+			<< " Avg=" 	  << std::setw(10) << d.total_time[i].count() / (d.num_calls[i]==0 ? 1 : d.num_calls[i]) << " ns";
 		}
 	}
 };
