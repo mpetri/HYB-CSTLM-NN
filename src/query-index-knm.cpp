@@ -87,7 +87,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = run_query_knm(idx, pattern, M, ngramsize);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize);
         auto stop = clock::now();
 
         // std::ostringstream sp("", std::ios_base::ate);

@@ -16,6 +16,7 @@ class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
+    typedef t_cst cst_rev_type;
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::node_type node_type;
