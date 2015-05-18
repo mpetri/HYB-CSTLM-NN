@@ -121,7 +121,7 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(const node_type &node_rev, 
+    uint64_t N1PlusBack(const node_type &node_rev,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
@@ -142,6 +142,25 @@ public:
             n1plus_back -= 1;
 
         return n1plus_back;
+    }
+
+    uint64_t N1PlusBack_wt(const node_type &node, 
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    {
+        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+
+        auto timer = lm_bench::bench(timer_type::N1PlusBack);
+        auto lb = m_cst.lb(node);
+        auto rb = m_cst.rb(node);
+        typename t_cst::csa_type::size_type num_syms = 0;
+        // FIXME: seems wasteful to query for preceding_syms, left, right and then ignore em
+        // might want to retain the (left, right) anyway for the next call to backwardsearch
+        sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, 
+                left, right);
+
+        return num_syms;
     }
 
     double discount(uint64_t level, bool cnt = false) const

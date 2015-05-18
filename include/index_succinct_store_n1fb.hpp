@@ -156,7 +156,7 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack(const node_type &node_rev, 
+    uint64_t N1PlusBack(const node_type &node_rev,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
