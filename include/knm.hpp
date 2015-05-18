@@ -85,11 +85,12 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         t_pat_iter start = pattern_end-i;
     
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
+            auto timer = lm_bench::bench(timer_type::highestorder);
             // Top-level which uses actual counts rather than continuation
             // counts as in the subsequent versions. Applied to ngrams of
             // maximum length, or to ngrams starting with <s>.
             uint64_t c = 0;
-            if (forward_search(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
+            if (forward_search_wrapper(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
                 c = idx.m_cst_rev.size(node_rev);
 
             // compute discount, numerator
@@ -101,7 +102,7 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
             double numerator = (!unk && c - D > 0) ? (c - D) : 0;
 
             uint64_t lb = idx.m_cst.lb(node), rb = idx.m_cst.rb(node);
-            if (backward_search(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) {
+            if (backward_search_wrapper(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) {
                 node = idx.m_cst.node(lb, rb);
                 auto denominator = idx.m_cst.size(node);
                 double N1plus_front = idx.N1PlusFront(node, start, pattern_end - 1);
@@ -110,14 +111,15 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
                 // TODO: check what happens here; just use backoff probability I guess
             }
         } else if (i < ngramsize && i != 1) {
+            auto timer = lm_bench::bench(timer_type::lowerorder);
             // Mid-level for 2 ... n-1 grams which uses continuation counts in 
             // the KN scoring formala.
             uint64_t c = 0;
-            if (forward_search(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
+            if (forward_search_wrapper(idx.m_cst_rev, node_rev, d, *start, char_pos) > 0) 
                 c = idx.N1PlusBack(node_rev, start, pattern_end);
             
             // update the context-only node in the reverse tree
-            forward_search(idx.m_cst_rev, node_rev_ctx, d-1, *start, char_pos_ctx);
+            forward_search_wrapper(idx.m_cst_rev, node_rev_ctx, d-1, *start, char_pos_ctx);
 
             // compute discount
             double D = idx.discount(i, true);
@@ -125,7 +127,7 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
 
             // compute N1+ components
             uint64_t lb = idx.m_cst.lb(node), rb = idx.m_cst.rb(node);
-            if (backward_search(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) { 
+            if (backward_search_wrapper(idx.m_cst.csa, lb, rb, *start, lb, rb) > 0) { 
                 node = idx.m_cst.node(lb, rb);
                 auto N1plus_front = idx.N1PlusFront(node, start, pattern_end - 1);
                 auto back_N1plus_front = idx.N1PlusFrontBack(node, node_rev_ctx, start, pattern_end - 1);
@@ -136,12 +138,13 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
                 node = idx.m_cst.node(lb, rb);
             }
         } else if (i == 1 || ngramsize == 1) {
+            auto timer = lm_bench::bench(timer_type::lowestorder);
             // Lowest-level for 1 grams which uses continuation counts, with some
             // precomputed values as special cases to stop the iteration.
             double numerator;
             if (!unk) {
                 t_pat_iter start = pattern_end-1;
-                forward_search(idx.m_cst_rev, node_rev, i-1, *start, char_pos);
+                forward_search_wrapper(idx.m_cst_rev, node_rev, i-1, *start, char_pos);
                 d++;
                 numerator = idx.N1PlusBack(node_rev, start, pattern_end); 
             } else {

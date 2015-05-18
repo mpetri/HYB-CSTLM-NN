@@ -125,6 +125,7 @@ public:
     uint64_t N1PlusBack(const node_type &node_rev,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusBack);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
 
         uint64_t n1plus_back;
@@ -159,6 +160,7 @@ public:
     uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
         // the forward tree
         // ASSUMPTION: pattern_begin, pattern_end cover just the pattern we're interested in (i.e.,
@@ -183,7 +185,7 @@ public:
                 new_pattern.back() = symbol;
                 // find the symbol to the right
                 // (which is first in the reverse order)
-                backward_search(m_cst_rev.csa, lb_rev_stored, rb_rev_stored, symbol, lb_rev_stored,
+                backward_search_wrapper(m_cst_rev.csa, lb_rev_stored, rb_rev_stored, symbol, lb_rev_stored,
                                 rb_rev_stored);
 
                 back_N1plus_front += N1PlusBack(m_cst_rev.node(lb_rev_stored, rb_rev_stored), 
@@ -210,6 +212,7 @@ public:
     uint64_t N1PlusFront(const node_type &node, 
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusFront);
         // ASSUMPTION: lb, rb already identify the suffix array range corresponding to 'pattern' in
         // the forward tree
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);

@@ -159,6 +159,8 @@ public:
     uint64_t N1PlusBack(const node_type &node_rev, 
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusBack);
+        
         // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
 
@@ -197,6 +199,8 @@ public:
     uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
+
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -225,6 +229,8 @@ public:
     uint64_t N1PlusFront(const node_type &node, 
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
+        auto timer = lm_bench::bench(timer_type::N1PlusFront);
+
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;

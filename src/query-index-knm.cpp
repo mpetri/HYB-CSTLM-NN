@@ -79,6 +79,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
     uint64_t ind = 1;
+    lm_bench::reset();
     for (std::vector<uint64_t> pattern : patterns) {
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
@@ -90,14 +91,15 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize);
         auto stop = clock::now();
 
-        // std::ostringstream sp("", std::ios_base::ate);
-        // std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
-        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
-        // duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+        std::ostringstream sp("", std::ios_base::ate);
+        std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
 
         perplexity += sentenceprob;
         total_time += (stop - start);
     }
+    lm_bench::print();
     LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
     perplexity = perplexity / M;
     LOG(INFO) << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity);

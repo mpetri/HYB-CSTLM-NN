@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "logging.hpp"
+#include "timings.hpp"
 
 namespace utils {
 
