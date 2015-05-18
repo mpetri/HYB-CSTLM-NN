@@ -91,10 +91,10 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize);
         auto stop = clock::now();
 
-        std::ostringstream sp("", std::ios_base::ate);
-        std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
-        LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
-        duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+        //std::ostringstream sp("", std::ios_base::ate);
+        //std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        //LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        //duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
 
         perplexity += sentenceprob;
         total_time += (stop - start);

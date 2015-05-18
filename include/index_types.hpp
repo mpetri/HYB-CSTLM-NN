@@ -2,6 +2,7 @@
 
 #include "index_succinct.hpp"
 #include "index_succinct_store_n1fb.hpp"
+#include "index_succinct_compute_n1fb.hpp"
 
 #include "sdsl/suffix_trees.hpp"
 
