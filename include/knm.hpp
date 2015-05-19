@@ -22,7 +22,8 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         t_pat_iter pattern_end, uint64_t ngramsize);
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, 
+        bool fast_index=true)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
@@ -39,8 +40,11 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
             //unk = true;
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
-        //double score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
-        double score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
+        double score;
+        if (fast_index)
+            score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
+        else
+            score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
         final_score += log10(score);
 
     }

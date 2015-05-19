@@ -164,6 +164,7 @@ public:
         //std::cout << "N1PlusBack_from_forward -- pattern ";
         //std::copy(pattern_begin, pattern_end, std::ostream_iterator<uint64_t>(std::cout, " "));
         //std::cout << std::endl;
+        //std::cout << "\tnode is " << node << " root is " << m_cst.root() << std::endl;
 
         uint64_t n1plus_back;
         if (m_cst.is_leaf(node)) {
