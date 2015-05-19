@@ -93,6 +93,9 @@ public:
                     } else {
                         auto depth = cst.depth(node);
                         if (depth > max_node_depth) {
+                            // FIXME: want to store counts_b values for these too
+                            // but not sure it's worth having all the trivial
+                            // n1+fb values stored alongside.
                             tmp_bv[node_id] = 0;
                             itr.skip_subtree();
                         } else {
@@ -147,7 +150,7 @@ public:
     }
 
     template <class t_cst, class t_node_type> 
-    uint64_t lookup(t_cst& cst, t_node_type node) const
+    uint64_t lookup_fb(t_cst& cst, t_node_type node) const
     {
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
@@ -155,12 +158,11 @@ public:
     }
 
     template <class t_cst, class t_node_type> 
-       void lookup(t_cst& cst, t_node_type node, uint64_t &n1plus_fb, uint64_t &n1plus_back) const
+    uint64_t lookup_b(t_cst& cst, t_node_type node) const
     {
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
-        n1plus_fb = m_counts_fb[rank_in_vec];
-        n1plus_back = m_counts_b[rank_in_vec];
+        return m_counts_b[rank_in_vec];
     }
 
     void load(std::istream& in)

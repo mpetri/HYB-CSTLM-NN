@@ -156,6 +156,50 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
+    uint64_t N1PlusBack_from_forward(const node_type &node,
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    {
+        auto timer = lm_bench::bench(timer_type::N1PlusBack);
+
+        //std::cout << "N1PlusBack_from_forward -- pattern ";
+        //std::copy(pattern_begin, pattern_end, std::ostream_iterator<uint64_t>(std::cout, " "));
+        //std::cout << std::endl;
+
+        uint64_t n1plus_back;
+        if (m_cst.is_leaf(node)) {
+            //std::cout << "\tleaf\n";
+            n1plus_back = 1;
+        } else if (m_cst.depth(node) <= t_max_ngram_count) {
+            n1plus_back = m_n1plusfrontback.lookup_b(m_cst, node);
+            //std::cout << "\tnon-leaf\n";
+        } else {
+            //std::cout << "\tdepth exceeded\n";
+            // when depth is exceeded, we don't precompute the N1+FB/N1+B scores
+            // so we need to compute these explictly
+
+            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+
+            auto lb = m_cst.lb(node);
+            auto rb = m_cst.rb(node);
+            typename t_cst::csa_type::size_type num_syms = 0;
+            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, 
+                    left, right);
+            n1plus_back = num_syms;
+        }
+
+        // adjust for sentinel start of sentence
+        auto symbol = *pattern_begin;
+        if (symbol == PAT_START_SYM) {
+            //std::cout << "\tpat start decrement\n";
+            n1plus_back -= 1;
+        }
+        //std::cout << "N1PlusBack_from_forward returning: " << n1plus_back << "\n";
+
+        return n1plus_back;
+    }
+
     uint64_t N1PlusBack(const node_type &node_rev,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
@@ -208,7 +252,7 @@ public:
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             } else {
-                return m_n1plusfrontback.lookup(m_cst, node);
+                return m_n1plusfrontback.lookup_fb(m_cst, node);
             }
         } else {
             // special case, only one way of extending this pattern to the right
@@ -221,6 +265,35 @@ public:
             } else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
                 return N1PlusBack(node_rev, pattern_begin, pattern_end);
+            }
+        }
+    }
+
+    uint64_t N1PlusFrontBack_from_forward(const node_type &node,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    {
+        auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
+
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
+        // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
+            if (*pattern_begin == PAT_START_SYM) {
+                return m_cst.degree(node);
+            } else {
+                return m_n1plusfrontback.lookup_fb(m_cst, node);
+            }
+        } else {
+            // special case, only one way of extending this pattern to the right
+            if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
+                /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
+                return 0;
+            } else if (*pattern_begin == PAT_START_SYM) {
+                /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
+                return 1;
+            } else {
+                /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
+                return N1PlusBack_from_forward(node, pattern_begin, pattern_end);
             }
         }
     }

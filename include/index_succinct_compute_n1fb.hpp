@@ -144,12 +144,16 @@ public:
         return n1plus_back;
     }
 
-    uint64_t N1PlusBack_wt(const node_type &node, 
+    uint64_t N1PlusBack_from_forward(const node_type &node,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+
+//        std::cout << "N1PlusBack_from_forward -- pattern ";
+//        std::copy(pattern_begin, pattern_end, std::ostream_iterator<uint64_t>(std::cout, " "));
+//        std::cout << std::endl;
 
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
         auto lb = m_cst.lb(node);
@@ -160,7 +164,12 @@ public:
         sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, 
                 left, right);
 
-        return num_syms;
+        // adjust for sentinel start of sentence
+        auto symbol = *pattern_begin;
+        if (symbol == PAT_START_SYM)
+            return num_syms - 1;
+        else
+            return num_syms;
     }
 
     double discount(uint64_t level, bool cnt = false) const
@@ -236,6 +245,35 @@ public:
             } else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
                 return N1PlusBack(node_rev, pattern_begin, pattern_end);
+            }
+        }
+    }
+
+    uint64_t N1PlusFrontBack_from_forward(const node_type &node,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    {
+        auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
+
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
+        // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
+            if (*pattern_begin == PAT_START_SYM) {
+                return m_cst.degree(node);
+            } else {
+                return compute_contexts(m_cst, node);
+            }
+        } else {
+            // special case, only one way of extending this pattern to the right
+            if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
+                /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
+                return 0;
+            } else if (*pattern_begin == PAT_START_SYM) {
+                /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
+                return 1;
+            } else {
+                /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
+                return N1PlusBack_from_forward(node, pattern_begin, pattern_end);
             }
         }
     }

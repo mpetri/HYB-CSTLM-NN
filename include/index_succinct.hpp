@@ -122,6 +122,13 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
+    uint64_t N1PlusBack_from_forward(const node_type &node,
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    {
+        // not implemented
+        return 0ULL;
+    }
+
     uint64_t N1PlusBack(const node_type &node_rev,
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
@@ -206,6 +213,12 @@ public:
                 return N1PlusBack(node_rev, pattern_begin, pattern_end);
             }
         }
+    }
+
+    uint64_t N1PlusFrontBack_from_forward(const node_type &node,
+            pattern_iterator pattern_begin, pattern_iterator pattern_end) const {
+        // not implemented
+        return 0ULL;
     }
 
     // Computes N_1+( abc * )

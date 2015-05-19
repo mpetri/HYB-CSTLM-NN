@@ -103,7 +103,8 @@ forward_search_wrapper(
 
 // factored out for timing
 template<class t_csa>
-typename t_csa::size_type backward_search_wrapper(
+typename t_csa::size_type 
+backward_search_wrapper(
     const t_csa& csa,
     typename t_csa::size_type l,
     typename t_csa::size_type r,
@@ -114,4 +115,20 @@ typename t_csa::size_type backward_search_wrapper(
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     return backward_search(csa, l, r, c, l_res, r_res);
+}
+
+// convenience function
+template<class t_cst>
+typename t_cst::size_type 
+backward_search_wrapper(
+    const t_cst& cst,
+    typename t_cst::node_type& v,
+    const typename t_cst::char_type c
+)
+{
+    auto timer = lm_bench::bench(timer_type::backward_search);
+    typename t_cst::size_type l = cst.lb(v), r = cst.rb(v);
+    auto output = backward_search(cst.csa, l, r, c, l, r);
+    v = cst.node(l, r);
+    return output;
 }
