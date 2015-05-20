@@ -1,7 +1,9 @@
-\documentclass{article}
+\documentclass[11pt,a4paper]{article}
 
-\usepackage{a4wide}
-\usepackage{palatino}
+\usepackage{acl2015}
+\usepackage{times}
+\usepackage{url}
+\usepackage{latexsym}
 \usepackage{amsmath}
 \usepackage{ifthen}
 \usepackage{xspace}
@@ -59,15 +61,31 @@
 
 \newcommand{\Order}[1]{O(#1)}
 
+\title{Compact, Efficient and Unlimited Capacity:
+    Language Modelling with Compressed Suffix Trees}
 
-\title{Draft paper for CST LM work for submission to EMNLP}
-\date{\vspace{-5ex}\today}
+\author{First Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  {\tt email@domain} \\\And
+  Second Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  {\tt email@domain} \\}
+
+\date{}
 
 \begin{document}
+\maketitle
+\begin{abstract}
+  Here goes the abstract.
+\end{abstract}
 
-\maketitle 
+\section{Introduction}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern string $\alpha$ 
     \label{alg:n1plus}}
   \begin{algorithmic}[1]
@@ -82,9 +100,9 @@
       \State \Return{$o$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
     \label{alg:n1plusfb}}
   \begin{algorithmic}[1]
@@ -105,9 +123,9 @@
       \State \Return{$o$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute backward occurrence counts, $\nlplus{\patdot}$, using only forward \CST 
     \label{alg:n1plusback_wt}}
   \begin{algorithmic}[1]
@@ -118,9 +136,9 @@
     \State \Return{$|S|$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
     \label{alg:n1plusfb_wt}}
   \begin{algorithmic}[1]
@@ -139,9 +157,9 @@
       \State \Return{$o$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
     \label{alg:pkn}}
   \begin{algorithmic}[1]
@@ -179,9 +197,9 @@
       \State \Return{$p$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
     \label{alg:pkn_fwd}}
   \begin{algorithmic}[1]
@@ -214,9 +232,9 @@
       \State \Return{$p$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
-\begin{algorithm}
+\begin{algorithm*}
   \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
   \begin{algorithmic}[1]
     \Function{PrecomputeDiscounts}{$\tr, n$} 
@@ -253,10 +271,11 @@
       \State \Return{$c, N^1, N^{1+}(\Bigcdot, \Bigcdot)$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
 
-\begin{table}
+\begin{table*}
+\footnotesize
 \begin{tabular}{p{0.27\textwidth}p{0.53\textwidth}p{0.15\textwidth}}
 \toprule
 Function & Description & Complexity \\
@@ -272,6 +291,10 @@ $\intervalsymbols{a}{l}{r}$ & finds the set of symbols preceeding pattern $\alph
 \bottomrule
 \end{tabular}
 \caption{Summary of \CSA and \CST functions used and their time complexity of inference. The above assumes that $n$ or (equivalently) $[l, r]$ matches $\alpha$ in the \CSA $a$ and/or \CST $t$.}
-\end{table}
+\end{table*}
+
+% include your own bib file like this:
+\bibliographystyle{acl}
+\bibliography{acl2015}
 
 \end{document}
