@@ -21,11 +21,12 @@
 
 \newcommand{\rooot}[1]{\text{root}(#1)}
 \newcommand{\leaf}[2]{\text{leaf}(#1, #2)}
-\newcommand{\sizze}[2]{\text{size}(#1, #2)}
+\newcommand{\size}[2]{\text{size}(#1, #2)}
 \newcommand{\depth}[2]{\text{depth}(#1, #2)}
 \newcommand{\degree}[2]{\text{degree}(#1, #2)}
 \newcommand{\edge}[3]{\text{edge}(#1, #2, #3)}
 \newcommand{\children}[2]{\text{children}(#1, #2)}
+\newcommand{\parent}[2]{\text{parent}(#1, #2)}
 \newcommand{\backwardsearch}[4]{\text{backward-search}(#1, [#2,#3], #4)}
 \newcommand{\forwardsearch}[4]{\text{forward-search}(#1, [#2,#3], #4)} % I've abbreviated away depth, char_pos
 \newcommand{\intervalsymbols}[3]{\text{interval-symbols}(#1, [#2,#3])}
@@ -160,8 +161,8 @@
           \Let{$D$}{lookup discount parameter for $n$-gram}
           \If{$i = n$} % or if s == '<s>' 
                  \Comment{compute the `count' for the full match}
-             \Let{$c$}{$\sizze{\tr}{\nrfull}$} 
-             \Let{$d$}{$\sizze{\tf}{\nf}$}
+             \Let{$c$}{$\size{\tr}{\nrfull}$} 
+             \Let{$d$}{$\size{\tf}{\nf}$}
           \Else
              \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
              \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
@@ -196,15 +197,15 @@
           \Let{$D$}{discount parameter for $n$-gram}
           \If{$i = n$} % or if s == '<s>' 
                  \Comment{compute the `count' and `denominator' for the full match}
-             \Let{$c$}{$\sizze{\tf}{\nffull}$} 
-             \Let{$d$}{$\sizze{\tf}{\nf}$}
+             \Let{$c$}{$\size{\tf}{\nffull}$} 
+             \Let{$d$}{$\size{\tf}{\nf}$}
           \Else
              \Let{$c$}{$\nlplusbacklfunc(\tf,\nffull, \Bigcdot w^{k-1}_{k-i+1})$}
              \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
            \EndIf
            \If{$i > 1$}
              \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
-                  \Let{$d$}{$\sizze{\tf}{\nf}$}
+                  \Let{$d$}{$\size{\tf}{\nf}$}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
                   \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
                \EndIf
@@ -215,6 +216,44 @@
   \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+  \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
+  \begin{algorithmic}[1]
+    \Function{PrecomputeDiscounts}{$\tr, n$} 
+        \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
+        \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\cdot \alpha} = j$}
+        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$0$} \Comment{number of unique bigrams}
+        \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
+           \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
+           \If{$\leaf{\tr}{\nr}$} 
+               \State $d \gets \depth{\tr}{\nr}$  \Comment{find the length of the edge}
+            \Else
+               \State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
+             \EndIf
+             \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+n\right)$}
+                \Let{$s$}{$\edge{\tr}{\nr}{k}$} \Comment{FIXME: I haven't been consistent with edge index}
+                \If{$s$ is the end of sentence sentinel}
+                    \State skip all children of $\nr$ 
+                \Else
+                     \Let{$f$}{$\size{\tr}{\nr}$} \Comment{retrieve pattern frequency}
+                     \If{$1 \le f \le 4$}
+                        \Let{$c_{k,f}$}{$c_{k,f} + 1$}
+                     \EndIf
+                     \If{$f = 2$}
+                        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$N^{1+}(\Bigcdot, \Bigcdot) + 1$}
+                     \EndIf
+
+                     \State $g \gets \nlplus{\tr}{\nr}{\dot \alpha}$ \Comment{retrieve occurrence count}
+                     \If{$1 \le g \le 4$}
+                        \Let{$N^1_{g,f}$}{$c_{k,f} + 1$}
+                     \EndIf
+                 \EndIf
+          \EndFor
+        \EndFor
+      \State \Return{$c, N^1, N^{1+}(\Bigcdot, \Bigcdot)$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
 
 
 \begin{table}
