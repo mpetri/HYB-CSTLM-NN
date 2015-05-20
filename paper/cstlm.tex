@@ -37,8 +37,11 @@
 \newcommand{\dotpat}{\Bigcdot \alpha}
 \newcommand{\patdot}{\alpha \Bigcdot}
 \newcommand{\dotpatdot}{\Bigcdot \alpha \Bigcdot}
-\newcommand{\nlplus}[1]{N^{1+}(#1)} % note it's an little L in \nlplus not a 1
-\newcommand{\nlplusfunc}[3]{\textsc{N1Plus}(#1, #2, #3)} % note it's an little L in \nlplus not a 1
+\newcommand{\nlplus}[1]{N^{1+}(#1)} % note it's an little L not a 1
+\newcommand{\nlplusfunc}[3]{\textsc{N1Plus}(#1, #2, #3)} % "
+\newcommand{\nlplusbacklfunc}[3]{\textsc{N1PlusBack1}(#1, #2, #3)} % " ^ 2
+\newcommand{\nlplusfrontbackfunc}[4]{\textsc{N1PlusFrontBack}(#1, #2, #3, #4)} % " 
+\newcommand{\nlplusfrontbacklfunc}[3]{\textsc{N1PlusFrontBack1}(#1, #2, #3)} % "
 
 \newcommand{\tf}{t_{\text{F}}}
 \newcommand{\tr}{t_{\text{R}}}
@@ -46,8 +49,8 @@
 \newcommand{\ar}{a_{\text{R}}}
 \newcommand{\nf}{n_{\text{F}}}
 \newcommand{\nr}{n_{\text{R}}}
-\newcommand{\trfull}{t_{\text{R}}^{\text{all}}}
 \newcommand{\nrfull}{n_{\text{R}}^{\text{all}}}
+\newcommand{\nffull}{n_{\text{F}}^{\text{all}}}
 \newcommand{\chf}{c_{\text{F}}}
 \newcommand{\chr}{c_{\text{R}}}
 
@@ -86,7 +89,7 @@
   \begin{algorithmic}[1]
     \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
     \Require{$\nr$ is the node in the reverse \CST $\tr$ matching pattern $\alpha$}
-    \Function{N1PlusFrontBack}{$\tf, \nf, \alpha$} 
+    \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
         \Let{$o$}{$0$}
         \If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
           \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$} \Comment{in forward \CST have only one right context}
@@ -109,7 +112,7 @@
   \begin{algorithmic}[1]
     \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
     \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
-    \Function{N1PlusBack}{$\tf, \nf, \alpha$} 
+    \Function{N1PlusBack1}{$\tf, \nf, \alpha$} 
     \Let{$S$}{$\intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
     \State \Return{$|S|$}
     \EndFunction
@@ -122,10 +125,10 @@
   \begin{algorithmic}[1]
     \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
     \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
-    \Function{N1PlusFrontBack'}{$\tf, \nf, \alpha$} 
+    \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
         \Let{$o$}{$0$}
         \If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
-          \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$}
+          \Let{$o$}{$\textsc{N1PlusBack1}{\tr, \nr, \dotpat}$}
         \Else
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
               \State Some voodoo with Weiner links
@@ -154,21 +157,22 @@
              \Let{$\nr$}{$\forwardsearch{\tr}{\lb{\nr}}{\rb{\nr}}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
           \EndIf
           \EndIf
-          \Let{$D$}{discount parameter for $n$-gram}
+          \Let{$D$}{lookup discount parameter for $n$-gram}
           \If{$i = n$} % or if s == '<s>' 
                  \Comment{compute the `count' for the full match}
-             \Let{$c$}{$\sizze{\trfull}{\nrfull}$} 
+             \Let{$c$}{$\sizze{\tr}{\nrfull}$} 
+             \Let{$d$}{$\sizze{\tf}{\nf}$}
           \Else
-             \Let{$c$}{$\nlplusfunc{\trfull}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
+             \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
+             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
            \EndIf
            \If{$i > 1$}
              \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
-                  \Let{$d$}{$\sizze{\tf}{\nf}$}
-                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
+                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  \Comment{defined as $0$ for $i=1$}
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
                \EndIf
-          \ElsIf{$i = 1$}
-             \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
+          % \ElsIf{$i = 1$}
+          %    \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
           \EndIf
         \EndFor
       \State \Return{$p$}
@@ -176,6 +180,40 @@
   \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
+    \label{alg:pkn_fwd}}
+  \begin{algorithmic}[1]
+    \Function{ProbKneserNey1}{$\tf, \ws, n$} 
+        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
+        \Let{$\nffull$}{$\rooot{\tf}$} \Comment{match for $w^{k}_{k-i}$}
+        \Let{$p$}{$1$}
+        \For{$i \gets 1 \text{ to } n$}
+          \Let{$\nffull$}{$\backwardsearch{\tf}{\lb{\nffull}}{\rb{\nffull}}{w_{k-i+1}}$} \Comment{update matches in \CST}
+          \If{$i > 1$}
+             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$}
+          \EndIf
+          \Let{$D$}{discount parameter for $n$-gram}
+          \If{$i = n$} % or if s == '<s>' 
+                 \Comment{compute the `count' and `denominator' for the full match}
+             \Let{$c$}{$\sizze{\tf}{\nffull}$} 
+             \Let{$d$}{$\sizze{\tf}{\nf}$}
+          \Else
+             \Let{$c$}{$\nlplusbacklfunc(\tf,\nffull, \Bigcdot w^{k-1}_{k-i+1})$}
+             \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
+           \EndIf
+           \If{$i > 1$}
+             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
+                  \Let{$d$}{$\sizze{\tf}{\nf}$}
+                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
+               \EndIf
+          \EndIf
+        \EndFor
+      \State \Return{$p$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
 
 
 
