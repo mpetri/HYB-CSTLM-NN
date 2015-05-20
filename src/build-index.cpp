@@ -82,6 +82,10 @@ int main(int argc, const char* argv[])
         create_and_store<index_type>(col, args.dodgy_discounts);
     }
     {
+        using index_type = index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type>;
+        create_and_store<index_type>(col, args.dodgy_discounts);
+    }
+    {
         using index_type = index_succinct_store_n1fb<default_cst_type, default_cst_rev_type>;
         create_and_store<index_type>(col, args.dodgy_discounts);
     }

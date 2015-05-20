@@ -24,6 +24,8 @@ typedef struct cmdargs {
     std::string collection_dir;
     int ngramsize;
     bool ismkn;
+    bool isbackward;
+    bool isstored;
 } cmdargs_t;
 
 void print_usage(const char* program)
@@ -33,8 +35,10 @@ void print_usage(const char* program)
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
-    fprintf(stdout, "  -m <ismkn>  : the flag for Modified-KN (true), or KN (false).\n");
+    fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
+    fprintf(stdout, "  -b : use faster index lookup using only backward search (default = forward+backward).\n");
+    fprintf(stdout, "  -s : use fastest index lookup using pre-stored counts (implies -b).\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -45,7 +49,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.collection_dir = "";
     args.ismkn = false;
     args.ngramsize = 1;
-    while ((op = getopt(argc, (char* const*)argv, "p:c:n:m:")) != -1) {
+    args.isbackward = false;
+    args.isstored = false;
+    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs")) != -1) {
         switch (op) {
         case 'p':
             args.pattern_file = optarg;
@@ -54,11 +60,17 @@ cmdargs_t parse_args(int argc, const char* argv[])
             args.collection_dir = optarg;
             break;
         case 'm':
-            if (strcmp(optarg, "true") == 0)
-                args.ismkn = true;
+            args.ismkn = true;
             break;
         case 'n':
             args.ngramsize = atoi(optarg);
+            break;
+        case 'b':
+            args.isbackward = true;
+            break;
+        case 's':
+            args.isstored = true;
+            args.isbackward = true;
             break;
         }
     }
@@ -70,9 +82,11 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
+// fast_index = true -- use N1+Back/FrontBack based solely on forward CST & backward search
+//            = false -- use N1+Back/FrontBack using reverse CST & forward search
 template <class t_idx>
 void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
-                 uint64_t ngramsize)
+                 uint64_t ngramsize, bool fast_index)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -88,7 +102,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index);
         auto stop = clock::now();
 
         //std::ostringstream sp("", std::ios_base::ate);
@@ -136,7 +150,7 @@ int main(int argc, const char* argv[])
     }
 
     /* load index */
-    {
+    if (!args.isbackward && !args.isstored) {
         index_succinct<default_cst_type> idx;
         auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
                           + ".sdsl";
@@ -150,9 +164,27 @@ int main(int argc, const char* argv[])
 
         /* print precomputed parameters */
         idx.print_params(args.ismkn, args.ngramsize);
-        run_queries(idx, patterns, args.ngramsize);
-    }
-    {
+        run_queries(idx, patterns, args.ngramsize, false);
+
+    } else if (args.isbackward && !args.isstored) {
+
+        index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> idx;
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize, true);
+
+    } else if (args.isbackward && args.isstored) {
+
         index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> idx;
         auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
                           + ".sdsl";
@@ -166,7 +198,7 @@ int main(int argc, const char* argv[])
 
         /* print precomputed parameters */
         idx.print_params(args.ismkn, args.ngramsize);
-        run_queries(idx, patterns, args.ngramsize);
+        run_queries(idx, patterns, args.ngramsize, true);
     }
 
     return EXIT_SUCCESS;
