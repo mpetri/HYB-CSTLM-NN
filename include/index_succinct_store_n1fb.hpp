@@ -205,6 +205,8 @@ public:
             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
+
+        // FIXME: if pattern is longer than t_max_ngram_count we may not have prestored counts so we should compute them explicitly.
         
         // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -226,6 +228,9 @@ public:
 
     double discount(uint64_t level, bool cnt = false) const
     {
+        // trim to the maximum computed length, assuming that
+        // discounts stay flat beyond this (a reasonable guess)
+        level = std::min(level, (uint64_t) t_max_ngram_count);
         if (cnt)
             return m_precomputed.Y_cnt[level];
         else
