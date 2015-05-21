@@ -26,6 +26,7 @@ typedef struct cmdargs {
     bool ismkn;
     bool isbackward;
     bool isstored;
+    bool isreranking;
 } cmdargs_t;
 
 void print_usage(const char* program)
@@ -39,6 +40,7 @@ void print_usage(const char* program)
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
     fprintf(stdout, "  -b : use faster index lookup using only backward search (default = forward+backward).\n");
     fprintf(stdout, "  -s : use fastest index lookup using pre-stored counts (implies -b).\n");
+    fprintf(stdout, "  -r : doing reranking (default = language modelling).\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -51,7 +53,8 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.ngramsize = 1;
     args.isbackward = false;
     args.isstored = false;
-    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs")) != -1) {
+    args.isreranking = false;
+    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbsr")) != -1) {
         switch (op) {
         case 'p':
             args.pattern_file = optarg;
@@ -72,6 +75,8 @@ cmdargs_t parse_args(int argc, const char* argv[])
             args.isstored = true;
             args.isbackward = true;
             break;
+	case 'r':
+	    args.isreranking = true;
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
@@ -119,6 +124,61 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     LOG(INFO) << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity);
 }
 
+template <class t_idx>
+void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
+                 uint64_t ngramsize, bool fast_index)
+{
+    using clock = std::chrono::high_resolution_clock;
+    double perplexity = 0;
+    double min = 1000000;
+    uint64_t min_candidate_idx = 0;
+    uint64_t M = 0;
+    std::chrono::nanoseconds total_time(0);
+    uint64_t candidate_idx = 1;//line number to find the unconverted sentence
+    uint64_t source_idx=0;
+    lm_bench::reset();
+    for (std::vector<uint64_t> pattern : patterns) {
+        if(pattern[0]!=source_idx)
+	{
+	      std::cout<<"--------------------------------------------------------------"<<endl;
+	      std::cout<<" for source_id: "<<source_idx<<
+                         " the best candidate is translation number: "<<min_candidate_idx<<
+                         " with perplexity: "<<min<<endl;
+              std::cout<<"--------------------------------------------------------------"<<endl;
+              min= 1000000;
+	      min_candidate_idx = 0;
+  	}
+        source_idx = pattern[0];//stores the source sentence id in n-best submission
+	pattern.erase(pattern.begin(), pattern.begin() + 1); //removes sentence_index 
+        uint64_t pattern_size = pattern.size();
+        std::string pattern_string;
+        M = pattern_size + 1; // +1 for adding </s>
+        pattern.push_back(PAT_END_SYM);
+        pattern.insert(pattern.begin(), PAT_START_SYM);
+        // run the query
+        auto start = clock::now();
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index);
+        auto stop = clock::now();
+
+        //std::ostringstream sp("", std::ios_base::ate);
+        //std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
+        //LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        //duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+
+        perplexity = pow(10,-sentenceprob/M);
+        if(perplexity < min)
+	{
+		min = perplexity;
+		min_candidate_idx = candidate_idx;
+	}
+        total_time += (stop - start);
+    }
+    lm_bench::print();
+    LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
+}
+
+
+
 int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
@@ -164,7 +224,10 @@ int main(int argc, const char* argv[])
 
         /* print precomputed parameters */
         idx.print_params(args.ismkn, args.ngramsize);
-        run_queries(idx, patterns, args.ngramsize, false);
+        if(args.isreranking)
+    	    run_reranker(idx, patterns, args.ngramsize, false);
+	else
+            run_queries(idx, patterns, args.ngramsize, false);
 
     } else if (args.isbackward && !args.isstored) {
 
@@ -181,7 +244,10 @@ int main(int argc, const char* argv[])
 
         /* print precomputed parameters */
         idx.print_params(args.ismkn, args.ngramsize);
-        run_queries(idx, patterns, args.ngramsize, true);
+    	if(args.isreranking)
+            run_reranker(idx, patterns, args.ngramsize, true);
+	else
+            run_queries(idx, patterns, args.ngramsize, true);
 
     } else if (args.isbackward && args.isstored) {
 
@@ -198,7 +264,10 @@ int main(int argc, const char* argv[])
 
         /* print precomputed parameters */
         idx.print_params(args.ismkn, args.ngramsize);
-        run_queries(idx, patterns, args.ngramsize, true);
+        if(args.isreranking)
+            run_reranker(idx, patterns, args.ngramsize, true);
+        else
+            run_queries(idx, patterns, args.ngramsize, true);
     }
 
     return EXIT_SUCCESS;
