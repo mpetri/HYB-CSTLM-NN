@@ -1,0 +1,52 @@
+\newcommand{\trevor}[1]{{\color{Maroon}{\bf{Trevor says:}} \emph{#1}}}
+\newcommand{\matthias}[1]{{\color{RedOrange}{\bf{Matthias says:}} \emph{#1}}}
+\newcommand{\ehsan}[1]{{\color{Cerulean}{\bf{Ehsan says:}} \emph{#1}}}
+\newcommand{\reza}[1]{{\color{Blue}{\bf{Reza says:}} \emph{#1}}}
+
+
+\newcommand*\Let[2]{\State #1 $\gets$ #2}
+\newcommand*\CSA{\textsc{Csa}\xspace}
+\newcommand*\CST{\textsc{Cst}\xspace}
+\algrenewcommand\algorithmicrequire{\textbf{Precondition:}}
+\algrenewcommand\algorithmicensure{\textbf{Postcondition:}}
+
+
+\newcommand{\rooot}[1]{\text{root}(#1)}
+\newcommand{\leaf}[2]{\text{leaf}(#1, #2)}
+\newcommand{\size}[2]{\text{size}(#1, #2)}
+\newcommand{\depth}[2]{\text{depth}(#1, #2)}
+\newcommand{\degree}[2]{\text{degree}(#1, #2)}
+\newcommand{\edge}[3]{\text{edge}(#1, #2, #3)}
+\newcommand{\children}[2]{\text{children}(#1, #2)}
+\newcommand{\parent}[2]{\text{parent}(#1, #2)}
+\newcommand{\backwardsearch}[4]{\text{backward-search}(#1, [#2,#3], #4)}
+\newcommand{\forwardsearch}[4]{\text{forward-search}(#1, [#2,#3], #4)} % I've abbreviated away depth, char_pos
+\newcommand{\intervalsymbols}[3]{\text{interval-symbols}(#1, [#2,#3])}
+
+\DeclareMathOperator*{\Bigcdot}{\scalerel*{\cdot}{\bigodot}}
+
+\newcommand{\lb}[1]{\text{lb}(#1)}
+\newcommand{\rb}[1]{\text{rb}(#1)}
+\newcommand{\dotpat}{\Bigcdot \alpha}
+\newcommand{\patdot}{\alpha \Bigcdot}
+\newcommand{\dotpatdot}{\Bigcdot \alpha \Bigcdot}
+\newcommand{\nlplus}[1]{N^{1+}(#1)} % note it's an little L not a 1
+\newcommand{\nlplusfunc}[3]{\textsc{N1Plus}(#1, #2, #3)} % "
+\newcommand{\nlplusbacklfunc}[3]{\textsc{N1PlusBack1}(#1, #2, #3)} % " ^ 2
+\newcommand{\nlplusfrontbackfunc}[4]{\textsc{N1PlusFrontBack}(#1, #2, #3, #4)} % " 
+\newcommand{\nlplusfrontbacklfunc}[3]{\textsc{N1PlusFrontBack1}(#1, #2, #3)} % "
+
+\newcommand{\tf}{t_{\text{F}}}
+\newcommand{\tr}{t_{\text{R}}}
+\newcommand{\af}{a_{\text{F}}}
+\newcommand{\ar}{a_{\text{R}}}
+\newcommand{\nf}{n_{\text{F}}}
+\newcommand{\nr}{n_{\text{R}}}
+\newcommand{\nrfull}{n_{\text{R}}^{\text{all}}}
+\newcommand{\nffull}{n_{\text{F}}^{\text{all}}}
+\newcommand{\chf}{c_{\text{F}}}
+\newcommand{\chr}{c_{\text{R}}}
+
+\newcommand{\ws}{\textbf{w}}
+
+\newcommand{\Order}[1]{O(#1)}
