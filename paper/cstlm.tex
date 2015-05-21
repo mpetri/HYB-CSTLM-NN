@@ -99,52 +99,17 @@ Brief outline of how the method works; using one or two suffix trees. Forward/ba
 Pata on experiments: pplx good; can scale to large n and massive corpora; adequate runtime
 performance, around 100x slower than SRILM. Reranking gains? Can we run with INFINITE order?
 
-\section{Background}
-
-\subsection{Suffix Arrays and Suffix Trees}
-
-Overview with pretty picture. E.g., character level CSA / CST for 
-'a quick brown fox jumped over the lazy dog' or similar.
-
-Including something on BWT \& self indexes.
-
-Forward and backward search.
-
-\subsection{Compressed Suffix Structures}
-
-WT, nested brackets CST, rank/select etc. Wiener links even?
+\section{Suffix-based Indexing}
+\input{sec-suffix.tex}
 
 \section{Language Modelling}
+\input{sec-lm.tex}
 
-\subsection{Kneser Ney}
-
-Background, mathematical formulation.
-
-\subsection{Using \CST for KN Counting}
-
-Computing counts, N1+ of several flavours of different sized n-grams.
-
-\subsection{Dual \CST Algorithm} 
-
-Algorithm overview.
-
-Include paragraph on computing the discounts.
-
-\subsection{Complexity Analysis}
-
-\section{Improved single \CST approach}
-
-Just show N1+fb algo; leave rest to supporting material.
+\section{Using \CST for KN}
+\input{sec-lmsdsl.tex}
 
 \section{Experiments}
-
-\subsection{Datasets}
-
-\subsection{Perplexity Evaluation}
-
-\subsection{MT Reranking}
-
-
+\input{sec-experiments.tex}
 
 \begin{algorithm*}
   \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern string $\alpha$ 
@@ -376,6 +341,6 @@ $\intervalsymbols{a}{l}{r}$ & finds the set of symbols preceeding pattern $\alph
 
 % include your own bib file like this:
 \bibliographystyle{acl}
-\bibliography{Bibliography}
+\bibliography{local}
 
 \end{document}
