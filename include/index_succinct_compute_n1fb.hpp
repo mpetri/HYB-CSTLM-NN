@@ -174,6 +174,9 @@ public:
 
     double discount(uint64_t level, bool cnt = false) const
     {
+        // trim to the maximum computed length, assuming that
+        // discounts stay flat beyond this (a reasonable guess)
+        level = std::min(level, (uint64_t) t_max_ngram_count);
         if (cnt)
             return m_precomputed.Y_cnt[level];
         else

@@ -118,7 +118,8 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
     \Require{$n$ is the node in the \CST $t$ matching pattern $\alpha$}
     \Function{N1Plus}{$t, n, \alpha$} \Comment{ $t$ is either forward or reverse \CST}
         \Let{$o$}{$0$} \Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
-        \If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
+        %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
+        \If{$\depth{t}{n} = |\alpha|$}
           \Let{$o$}{$\degree{t}{n}$}
         \Else
           \Let{$o$}{$1$}
@@ -136,11 +137,13 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
     \Require{$\nr$ is the node in the reverse \CST $\tr$ matching pattern $\alpha$}
     \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
         \Let{$o$}{$0$}
-        \If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
-          \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$} \Comment{in forward \CST have only one right context}
+        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
+        \Let{$d$}{$\depth{\tf}{\nf} >$}   
+        \If{$d > |\alpha|$}   \Comment{patterns internal to an edge}
+          \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$} \Comment{have only one right context}
         \Else
            \For{$\chf \gets \children{\tf}{\nf}$} 
-              \Let{$s$}{$\edge{\tf}{\chf}{1}$} \Comment{find the first symbol on the edge label}
+              \Let{$s$}{$\edge{\tf}{\chf}{d+1}$} \Comment{find the first symbol on the edge label}
               \Let{$\chr$}{$\backwardsearch{\ar}{\lb{\nr}}{\rb{\nr}}{s}$} \Comment{find child node in reverse \CST}
               \Statex    \Comment{$\ar$ is the \CSA component of $\tr$}
               \Let{$o$}{$o + \nlplusfunc{\tr}{\chr}{\dotpat s}$}
@@ -172,7 +175,8 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
     \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
     \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
         \Let{$o$}{$0$}
-        \If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
+        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
+        \If{$\depth{\tf}{\nf} > |\alpha|$}   
           \Let{$o$}{$\textsc{N1PlusBack1}{\tr, \nr, \dotpat}$}
         \Else
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
@@ -263,17 +267,17 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
 \begin{algorithm*}
   \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
   \begin{algorithmic}[1]
-    \Function{PrecomputeDiscounts}{$\tr, n$} 
+    \Function{PrecomputeDiscounts}{$\tr, n$}
         \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
         \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\cdot \alpha} = j$}
         \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$0$} \Comment{number of unique bigrams}
         \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
            \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
-           \If{$\leaf{\tr}{\nr}$} 
+           %\If{$\leaf{\tr}{\nr}$} 
                \State $d \gets \depth{\tr}{\nr}$  \Comment{find the length of the edge}
-            \Else
-               \State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
-             \EndIf
+            %\Else
+               %\State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
+             %\EndIf
              \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+n\right)$}
                 \Let{$s$}{$\edge{\tr}{\nr}{k}$} \Comment{FIXME: I haven't been consistent with edge index}
                 \If{$s$ is the end of sentence sentinel}
@@ -308,7 +312,7 @@ Function & Description & Complexity \\
 \midrule
 $\leaf{t}{n}$ & tests if node $n$ is a leaf of the  $t$ & $\Order{1}$ \\
 $\depth{t}{n}$ & pattern length for the path from root to $n$ (inclusive) & $\Order{1} \text{~non-leaf;}$ $\Order{\cdots} \text{~leaf}$\\
-$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label for node $n$ &  $\Order{\cdots}$ \\
+$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label from root for node $n$ &  $\Order{\cdots}$ \\
 $\degree{t}{n}$ &  number of child nodes under parent $n$  &  $\Order{\cdots}$ \\
 $\children{t}{n}$ & list of child nodes under $n$  &  $\Order{\cdots}$ \\
 $\backwardsearch{a}{l}{r}{s}$ & finds the node in the  $a$ matching the pattern $s \alpha$, returning $[l',r']$ pair  &  $\Order{\cdots}$ \\

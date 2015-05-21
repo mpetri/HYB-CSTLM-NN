@@ -90,106 +90,49 @@ struct precomputed_stats {
         sdsl::load(D3_cnt, in);
     }
 
+    template <class t_nums>
+    void display_vec(const char *name, const t_nums &nums, size_t ngramsize) const
+    {
+        LOG(INFO) << name << " = " << t_nums(nums.begin()+1, nums.begin() + std::min(ngramsize+1,nums.size()));
+    }
+
     void print(bool ismkn, uint32_t ngramsize) const
     {
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
-        std::cout << "-------------Based on actual counts-------------" << std::endl;
-        std::cout << "n1 = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n1[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n2 = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n2[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n3 = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n3[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n4 = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n4[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "Y = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << Y[size] << " ";
-        }
-        if (ismkn) {
-            std::cout << std::endl;
-            std::cout << "D1 = ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D1[size] << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "D2 = ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D2[size] << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "D3+= ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D3[size] << " ";
-            }
-        }
-        std::cout << std::endl;
+        LOG(INFO) << "------------------------------------------------";
+        LOG(INFO) << "-------------PRECOMPUTED QUANTITIES-------------";
+        LOG(INFO) << "-------------Based on actual counts-------------";
 
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "-------------PRECOMPUTED QUANTITIES-------------" << std::endl;
-        std::cout << "-------------Based on continuation counts-------" << std::endl;
-        std::cout << "n1_cnt = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n1_cnt[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n2_cnt = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n2_cnt[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n3_cnt = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n3_cnt[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "n4_cnt = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << n4_cnt[size] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "Y_cnt = ";
-        for (uint32_t size = 0; size <= ngramsize; size++) {
-            std::cout << Y_cnt[size] << " ";
-        }
-        if (ismkn) {
-            std::cout << std::endl;
-            std::cout << "D1_cnt = ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D1_cnt[size] << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "D2_cnt = ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D2_cnt[size] << " ";
-            }
-            std::cout << std::endl;
-            std::cout << "D3+_cnt= ";
-            for (uint32_t size = 0; size <= ngramsize; size++) {
-                std::cout << D3_cnt[size] << " ";
-            }
-        }
-        std::cout << std::endl;
+        display_vec("n1", n1, ngramsize);
+        display_vec("n2", n2, ngramsize);
+        display_vec("n3", n3, ngramsize);
+        display_vec("n4", n4, ngramsize);
 
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "N1+(..) = " << N1plus_dotdot << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
-        std::cout << "------------------------------------------------" << std::endl;
+        LOG(INFO) << "------------------------------------------------";
+        display_vec("Y", Y, ngramsize);
+        if (ismkn) {
+            display_vec("D1", D1, ngramsize);
+            display_vec("D2", D2, ngramsize);
+            display_vec("D3+", D3, ngramsize);
+        }
+
+        LOG(INFO) << "------------------------------------------------";
+        LOG(INFO) << "-------------PRECOMPUTED QUANTITIES-------------";
+        LOG(INFO) << "-------------Based on continuation counts-------";
+        display_vec("N1", n1_cnt, ngramsize);
+        display_vec("N2", n2_cnt, ngramsize);
+        display_vec("N3", n3_cnt, ngramsize);
+        display_vec("N4", n4_cnt, ngramsize);
+        LOG(INFO) << "------------------------------------------------";
+        display_vec("Yc", Y_cnt, ngramsize);
+        if (ismkn) {
+            display_vec("D1c", D1_cnt, ngramsize);
+            display_vec("D2c", D2_cnt, ngramsize);
+            display_vec("D3c", D3_cnt, ngramsize);
+        }
+        LOG(INFO) << "------------------------------------------------";
+        LOG(INFO) << "N1+(.., ngramsize) = " << N1plus_dotdot;
+        LOG(INFO) << "------------------------------------------------";
+        LOG(INFO) << "------------------------------------------------";
     }
 
 private:
