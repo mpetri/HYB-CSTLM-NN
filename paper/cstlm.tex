@@ -59,15 +59,19 @@ Pata on experiments: pplx good; can scale to large n and massive corpora; adequa
 performance, around 100x slower than SRILM. Reranking gains? Can we run with INFINITE order?
 
 \section{Suffix-based Indexing}
+\label{sec-suffix}
 \input{sec-suffix.tex}
 
 \section{Language Modelling}
+\label{sec-lm}
 \input{sec-lm.tex}
 
-\section{Using \CST for KN}
+\section{Using \CSTs for KN Computation}
+\label{sec-lmsdsl}
 \input{sec-lmsdsl.tex}
 
 \section{Experiments}
+\label{sec-experiments}
 \input{sec-experiments.tex}
 
 
@@ -107,45 +111,7 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
   \end{algorithmic}
 \end{algorithm*}
 
-\begin{algorithm*}
-  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
-    \label{alg:pkn}}
-  \begin{algorithmic}[1]
-    \Function{ProbKneserNey}{$\tf, \tr, \ws, n$} 
-        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for $w^{k}_{k-i}$}
-        \Let{$p$}{$1$}
-        \For{$i \gets 1 \text{ to } n$}
-          \Let{$\nrfull$}{$\forwardsearch{\tr}{\lb{\nrfull}}{\rb{\nrfull}}{w_{k-i+1}}$} \Comment{update matches in \textsc{Cst}s}
-          \If{$i > 1$}
-             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$} %\Comment{update context match in fwd \CST}
-              \If{$i < n$}
-             \Let{$\nr$}{$\forwardsearch{\tr}{\lb{\nr}}{\rb{\nr}}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
-          \EndIf
-          \EndIf
-          \Let{$D$}{lookup discount parameter for $n$-gram}
-          \If{$i = n$} % or if s == '<s>' 
-                 \Comment{compute the `count' for the full match}
-             \Let{$c$}{$\size{\tr}{\nrfull}$} 
-             \Let{$d$}{$\size{\tf}{\nf}$}
-          \Else
-             \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
-             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
-           \EndIf
-           \If{$i > 1$}
-             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
-                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  \Comment{defined as $0$ for $i=1$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
-               \EndIf
-          % \ElsIf{$i = 1$}
-          %    \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
-          \EndIf
-        \EndFor
-      \State \Return{$p$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
+
 
 \begin{algorithm*}
   \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
