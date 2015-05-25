@@ -324,6 +324,8 @@ TYPED_TEST(LMTest, N1PlusBack)
 
 TYPED_TEST(LMTest, N1PlusBack_from_forward)
 {
+    if (!this->idx.supports_forward_querying) return;
+
     // (1) get the text
     std::vector<uint64_t> text;
     std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
@@ -363,11 +365,11 @@ TYPED_TEST(LMTest, N1PlusBack_from_forward)
                                       [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto rev_cnt = backward_search(this->idx.m_cst.csa, 0,
-                                               this->idx.m_cst.csa.size() - 1, 
-                                               cng.begin(), cng.end(), lb, rb);
-                EXPECT_TRUE(rev_cnt > 0);
-                if (rev_cnt > 0) {
+                auto cnt = backward_search(this->idx.m_cst.csa, 0,
+                                           this->idx.m_cst.csa.size() - 1, 
+                                           cng.begin(), cng.end(), lb, rb);
+                EXPECT_TRUE(cnt > 0);
+                if (cnt > 0) {
                     auto actual_count
                         = this->idx.N1PlusBack_from_forward(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusBack_count);
@@ -438,6 +440,64 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
     }
 }
 
+TYPED_TEST(LMTest, N1PlusFrontBack_from_forward)
+{
+    if (!this->idx.supports_forward_querying) return;
+
+    // (1) get the text
+    std::vector<uint64_t> text;
+    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+              std::back_inserter(text));
+
+    // (2) for all n-gram sizes
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+        // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
+        std::unordered_map<std::vector<uint64_t>,
+                           std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
+                           uint64_vector_hasher> ngram_counts;
+        /* compute N1PlusFrontBack c-gram stats */
+        for (size_t i = 1; i < text.size() - cgram; i++) {
+            std::vector<uint64_t> cur_gram(cgram);
+            auto beg = text.begin() + i;
+            std::copy(beg, beg + cgram, cur_gram.begin());
+
+            if (!((text[i - 1] == EOS_SYM) && (text[i + cgram] == EOS_SYM))) {
+                auto ctx_set = ngram_counts[cur_gram];
+                std::vector<uint64_t> ctx{ text[i - 1], text[i + cgram] };
+                ctx_set.insert(ctx);
+                ngram_counts[cur_gram] = ctx_set;
+            } else {
+                if (ngram_counts.find(cur_gram) == ngram_counts.end())
+                    ngram_counts[cur_gram]
+                        = std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>();
+            }
+        }
+
+        // (4) for all valid ngrams, query the index
+        for (const auto& ngc : ngram_counts) {
+            const auto& cng = ngc.first;
+            auto expected_N1PlusFrontBack_count = ngc.second.size();
+            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
+                && std::none_of(cng.cbegin(), cng.cend(),
+                                [](uint64_t i) { return i == EOF_SYM; })) {
+                // (1) perform backward search on reverse csa to get the node [lb,rb]
+                uint64_t lb, rb;
+                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
+                                           cng.begin(), cng.end(), lb, rb);
+
+                EXPECT_TRUE(cnt > 0);
+                if (cnt > 0) {
+                    auto actual_count
+                        = this->idx.N1PlusFrontBack_from_forward(this->idx.m_cst.node(lb, rb), 
+                                cng.begin(), cng.end());
+                    EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
+                }
+            }
+        }
+    }
+}
+
+
 TYPED_TEST(LMTest, N1PlusFront)
 {
     // (1) get the text
@@ -495,8 +555,8 @@ TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order);
-        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying);
+        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
     }
 }
 

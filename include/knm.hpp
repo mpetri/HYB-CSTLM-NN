@@ -22,8 +22,7 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         t_pat_iter pattern_end, uint64_t ngramsize);
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, 
-        bool fast_index=true)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, bool fast_index)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
@@ -35,10 +34,11 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-
+/*
         if (pattern.back() == UNKNOWN_SYM) {
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
+*/
         double score;
         if (fast_index)
             score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
@@ -51,14 +51,14 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
 }
 
 template <class t_idx, class t_pattern>
-double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize)
+double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize, bool fast_index)
 {
     auto pattern_size = pattern.size();
     pattern.push_back(PAT_END_SYM);
     pattern.insert(pattern.begin(), PAT_START_SYM);
     // run the query
     uint64_t M = pattern_size + 1;
-    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize);
+    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index);
     double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
     return perplexity;
 }
@@ -194,11 +194,11 @@ double prob_kneser_ney_forward(const t_idx& idx,
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
 
-    //std::cout << "PKN: pattern:";
-    //for (auto it = pattern_begin; it < pattern_end; ++it)
-        //std::cout << " " << *it;
-    //std::cout << "\n";
-    //LOG(INFO) << std::vector<uint64_t>(pattern_begin, pattern_end);
+    LOG(INFO) << "PKN: pattern:";
+    for (auto it = pattern_begin; it < pattern_end; ++it)
+        LOG(INFO) << " " << *it;
+    LOG(INFO) << "\n";
+    LOG(INFO) << std::vector<uint64_t>(pattern_begin, pattern_end);
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -221,17 +221,17 @@ double prob_kneser_ney_forward(const t_idx& idx,
             else // which is the special case of n<ngramsize that starts with <s>
                 D = idx.discount(i, true);
             double numerator = (!unk && c - D > 0) ? (c - D) : 0;
-            //std::cout << "\tsize " << i << " (top): numer=" << numerator << "\n";
+            LOG(INFO) << "\tsize " << i << " (top): numer=" << numerator;
 
             if (backward_search_wrapper(idx.m_cst, node_excl, *start) > 0) {
                 auto denominator = idx.m_cst.size(node_excl);
                 double N1plus_front = idx.N1PlusFront(node_excl, start, pattern_end - 1);
                 probability = (numerator / denominator) + (D * N1plus_front / denominator) * probability;
-                //std::cout << "\tsize " << i << " (top): " << probability << "\n";
-                //std::cout << "\tsize " << i << " (top): N1+f=" << N1plus_front << " D=" << D << " denom=" << denominator << "\n";
+                LOG(INFO) << "\tsize " << i << " (top): " << probability;
+                LOG(INFO) << "\tsize " << i << " (top): N1+f=" << N1plus_front << " D=" << D << " denom=" << denominator;
             } else {
                 // just use backoff probability 
-                //std::cout << "\tsize " << i << " (top): fall-through\n";
+                LOG(INFO) << "\tsize " << i << " (top): fall-through";
             }
         } else if (i < ngramsize && i != 1) {
             auto timer = lm_bench::bench(timer_type::lowerorder);
@@ -244,18 +244,18 @@ double prob_kneser_ney_forward(const t_idx& idx,
             // compute discount
             double D = idx.discount(i, true);
             double numerator = (!unk && c - D > 0) ? (c - D) : 0;
-            //std::cout << "\tsize " << i << " (mid): numer=" << numerator << "\n";
+            //LOG(INFO) << "\tsize " << i << " (mid): numer=" << numerator << "\n";
 
             // compute N1+ components
             if (backward_search_wrapper(idx.m_cst, node_excl, *start) > 0) { 
                 auto N1plus_front = idx.N1PlusFront(node_excl, start, pattern_end - 1);
                 auto back_N1plus_front = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
                 probability = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * probability;
-                //std::cout << "\tsize " << i << " (mid): " << probability << "\n";
-                //std::cout << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front << "\n";
+                LOG(INFO) << "\tsize " << i << " (mid): " << probability;
+                LOG(INFO) << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front;
             } else {
                 // just use backoff probability 
-                //std::cout << "\tsize " << i << " (mid): fall-through\n";
+                LOG(INFO) << "\tsize " << i << " (mid): fall-through\n";
                 break;
             }
         } else if (i == 1 || ngramsize == 1) {
@@ -267,20 +267,20 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 t_pat_iter start = pattern_end-1;
                 backward_search_wrapper(idx.m_cst, node_incl, *start);
                 numerator = idx.N1PlusBack_from_forward(node_incl, start, pattern_end); 
-                //std::cout << "\t\thello, girls! " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]" << std::endl;
+                LOG(INFO) << "\t\tunigram, not UNK numer: " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]";
             } else {
                 // TODO: will the node_incl be invalid? shouldn't we still do forward_search?
                 // seems values are ignored all the way up
                 numerator = idx.discount(1, true);
-                //std::cout << "\t\thello, boys! " << numerator << std::endl;
+                LOG(INFO) << "\t\tunigram, UNK numer: " << numerator;
             }
             probability = numerator / idx.m_precomputed.N1plus_dotdot;
-            //std::cout << "\tsize 1: " << probability << "\n";
+            LOG(INFO) << "\tsize 1: " << probability;
         } else {
             assert(false);
         }
     }
 
-    //std::cout << "PKN: returning " << probability << "\n";
+    LOG(INFO) << "PKN: returning " << probability;
     return probability;
 }

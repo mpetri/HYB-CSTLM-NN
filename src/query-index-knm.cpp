@@ -103,6 +103,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
+//        if(pattern.back() ==UNKNOWN_SYM) M--;
         pattern.push_back(PAT_END_SYM);
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query

@@ -22,6 +22,7 @@ public:
     typedef typename t_cst::string_type string_type;
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
+    static const bool supports_forward_querying = true;
 
 public: // data
     t_cst m_cst;
