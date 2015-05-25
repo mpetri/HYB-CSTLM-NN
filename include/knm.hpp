@@ -193,11 +193,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
 
-    LOG(INFO) << "PKN: pattern:";
-    for (auto it = pattern_begin; it < pattern_end; ++it)
-        LOG(INFO) << " " << *it;
-    LOG(INFO) << "\n";
-    LOG(INFO) << std::vector<uint64_t>(pattern_begin, pattern_end);
+    LOG(INFO) << "PKN: pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -254,7 +250,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 LOG(INFO) << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front;
             } else {
                 // just use backoff probability 
-                LOG(INFO) << "\tsize " << i << " (mid): fall-through\n";
+                LOG(INFO) << "\tsize " << i << " (mid): fall-through";
                 break;
             }
         } else if (i == 1 || ngramsize == 1) {
