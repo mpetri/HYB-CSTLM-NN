@@ -34,10 +34,11 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-
+/*
         if (pattern.back() == UNKNOWN_SYM) {
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
+*/
         double score;
         if (fast_index)
             score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
