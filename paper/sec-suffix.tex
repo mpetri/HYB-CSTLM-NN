@@ -1,27 +1,52 @@
 
 \subsection{Suffix Arrays and Suffix Trees}
 
-Given a text {\col} of size {\collen} drawn from an alphabet {\alphabet} of
-size {\alphabetsize}, the {\it suffix tree} of {\col} is the compact labeled
-tree where the root to leaf paths corresponds to all suffixes of {\col}.
-Figure~\ref{fig-suffix-tree}
 
 \begin{figure}
 \centering
 %\scalebox{0.9}{
 \input{figures/fig-suffix-tree.tex}
 %}
-\caption{Word-based Suffix Tree for the 
-text ``\# the old night keeper keeps the keep in the town \# the night keeper keeps the keep in the night \# \$''.}
+\caption{Word-based Suffix Tree and Suffix Array for a sample the 
+text.}
 \label{fig-suffix-tree}
 \end{figure}
 
-Overview with pretty picture. E.g., character level CSA / CST for 
-'a quick brown fox jumped over the lazy dog' or similar.
+Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
+size {\alphabetsize}. Let {$\col[i..n-1]$} be a {\it suffix} of {\col}.
+The {\it suffix tree}~\cite{w-swat73} of {\col} is the compact labeled
+tree of $n+1$ leaves where the root to leaf paths correspond to all suffixes of {\col\$},
+where \$ is a terminating symbol not in {\alphabet}. The {\it path-label}
+of each node $v$ corresponds to the concatenation of edge labels from the
+root node to $v$. The {\it node depth} of $v$ corresponds to the number
+of ancestors in the tree, whereas the {\it string depth} corresponds to the
+length of the path-label. Searching for a pattern {\pattern} of 
+size {\plen} in {\col} translates to finding the {\it locus} node $v$ closest to
+the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{m}$ time.
+Figure~\ref{fig-suffix-tree} shows a suffix tree over {\col=``\#the old night keeper 
+keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}''. 
+The sample text is drawn from the word alphabet 
+{\alphabet=\{the,old,night,keeper,keeps,keep,in,town,\#\}}. A suffix tree requires $\Order{n}$ space 
+and can be constructed in $\Order{n}$ time~\cite{u-algo95}. The children
+of each node in the suffix tree are lexicographically ordered by their edge labels.
+The $i$-th smallest suffix in {\col} corresponds to the path-label of the $i$-th 
+leaf. The starting postion of the suffix can be associated its corresponding
+leaf in the tree as shown in Figure~\ref{fig-suffix-tree}. All 
+occurrences of {\pattern} in {\col} can be retrieved by visiting all leaves
+in the subtree of the locus of {\pattern}. For example, pattern ``the night'' occurs
+at positions $12$ and $19$ in the sample text. We further refer the number of children
+of a node $v$ as its {\it degree} and the number of leaves in the subtree rooted at $v$
+as the {\it size} of $v$.
 
-Including something on BWT \& self indexes.
-
-Forward and backward search.
+The {\it suffix array}~\cite{mm-jcomp93} of {\col} is an array $\SA[0\ldots n-1]$ such
+that $\SA[i]$ corresponds to the starting position of the $i$-th smallest suffix
+in {\col} or the $i$-th leaf in the suffix tree of {\col}. The suffix array requires
+$n \log n$ bits of space and can also be constructed in $\Order{n}$ time~\cite{ksb-jacm06}.
+Using only the suffix array and the text, pattern search can be performed using binary search
+in $\Order{m \log n}$ time.
+In practice, suffix arrays use $4-8n$ bytes of space whereas the most efficient
+suffix tree implementations require at least $20n$ bytes of space~\cite{k-spe99} which
+are both much larger than {\col}.
 
 \subsection{Compressed Suffix Structures}
 

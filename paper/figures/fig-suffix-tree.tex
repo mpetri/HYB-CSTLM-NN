@@ -133,7 +133,7 @@
 
 % % edges from root-subtree-4 to children
 \draw (root-subtree-4) -- (leaf-10.north)  node [midway,above=-3pt,sloped] {\tiny \tt \$\#night};
-\draw (root-subtree-4) -- (leaf-11.north)  node [sloped,midway,above=-3pt] {\tiny \tt town \# the night..};
+\draw (root-subtree-4) -- (leaf-11.north)  node [sloped,midway,above=-3pt] {\tiny \tt town\# the night..};
 
 % % edges from subtree-5-subtree-1 to children
 \draw (root-subtree-5) -- (leaf-12.north)  node [midway,above=-3pt,sloped] {\tiny \tt \$\#};
@@ -162,5 +162,23 @@
 % \draw (subtree-6-subtree-2)  -- (leaf-15.north)  node [sloped,midway,above=-3pt] {\tiny \tt \$};
 % \draw (subtree-6-subtree-2)  -- (leaf-16.north)  node [sloped,midway,above=-3pt] {\tiny \tt keeper..\$};
 
+
+\matrix[
+  matrix of nodes,
+  nodes={
+    draw,
+    minimum height=2ex,
+    minimum width=1.5ex,
+    inner sep=1pt,
+    font=\fontsize{5}{7}\selectfont,
+    align=center
+    }
+  ]
+ (mat) at (3.8,0)
+ {
+ 22 & 21 & 11 & 0 & 18 & 8 & 17 & 7 & 14 & 4 & 15 & 5 & 20 & 13 & 3 & 2 & 16 & 6 & 19 & 12 & 1 & 9 & 10 \\
+ };
+
+\node[left of=mat,node distance=3.7cm] {\SA};
 
 \end{tikzpicture}
