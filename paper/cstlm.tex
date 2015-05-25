@@ -70,48 +70,7 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
 \section{Experiments}
 \input{sec-experiments.tex}
 
-\begin{algorithm*}
-  \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern string $\alpha$ 
-    \label{alg:n1plus}}
-  \begin{algorithmic}[1]
-    \Require{$n$ is the node in the \CST $t$ matching pattern $\alpha$}
-    \Function{N1Plus}{$t, n, \alpha$} \Comment{ $t$ is either forward or reverse \CST}
-        \Let{$o$}{$0$} \Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
-        %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
-        \If{$\depth{t}{n} = |\alpha|$}
-          \Let{$o$}{$\degree{t}{n}$}
-        \Else
-          \Let{$o$}{$1$}
-        \EndIf
-      \State \Return{$o$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
 
-\begin{algorithm*}
-  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
-    \label{alg:n1plusfb}}
-  \begin{algorithmic}[1]
-    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
-    \Require{$\nr$ is the node in the reverse \CST $\tr$ matching pattern $\alpha$}
-    \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
-        \Let{$o$}{$0$}
-        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
-        \Let{$d$}{$\depth{\tf}{\nf} >$}   
-        \If{$d > |\alpha|$}   \Comment{patterns internal to an edge}
-          \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$} \Comment{have only one right context}
-        \Else
-           \For{$\chf \gets \children{\tf}{\nf}$} 
-              \Let{$s$}{$\edge{\tf}{\chf}{d+1}$} \Comment{find the first symbol on the edge label}
-              \Let{$\chr$}{$\backwardsearch{\ar}{\lb{\nr}}{\rb{\nr}}{s}$} \Comment{find child node in reverse \CST}
-              \Statex    \Comment{$\ar$ is the \CSA component of $\tr$}
-              \Let{$o$}{$o + \nlplusfunc{\tr}{\chr}{\dotpat s}$}
-            \EndFor
-        \EndIf
-      \State \Return{$o$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
 
 \begin{algorithm*}
   \caption{Compute backward occurrence counts, $\nlplus{\patdot}$, using only forward \CST 
