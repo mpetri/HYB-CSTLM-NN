@@ -1,14 +1,249 @@
+%Computing counts, N1+ of several flavours of different sized n-grams.
 
-Computing counts, N1+ of several flavours of different sized n-grams.
+The central requirement for computing probabilities under a Kneser-Ney
+language model boils down to computing two types of counts: raw
+frequencies of \ngrams and occurrence counts, quantifying in how many different contexts the \ngram has occurred.%
+\footnote{The need such counts is not specific to Kneser Ney, indeed
+  many other smoothing variants for \ngram LMs impose similar
+  requirements and could be computed straightforwardly using the algorithms below.}
+By electing to store the corpus directly in a suffix tree, we need to
+provide mechanisms for computing these counts as they are needed based
+on querying the data structure.
+
+Raw frequency counts are the simplest to compute, requiring first
+identifying the node in the suffix tree labelled with the query
+\ngram, from which we can read off the node's \emph{size}, defined as the
+distance between its left and right bounds (corresponding to the
+number of descendents under the node). To illustrate, consider
+searching for \emph{the night} in  Figure~\ref{fig-suffix-tree}, which
+matches a node with two descendents (labelled 19 and 12), and thus the
+\ngram has count 2. This is a simple $\Order{1}$ operation once the
+node has been identified.
+
+More problematic are the occurrence counts, which come in several
+flavours: with the dot to the right of the pattern, $\nlplus{\patdot}$,
+to the left,  $\nlplus{\dotpat}$, and on both sides
+$\nlplus{\dotpatdot}$. The first of these can be handled easily, by
+querying the \emph{degree} of the matching node in the suffix tree. E.g., 
+\emph{keep in} has two child nodes in  Figure~\ref{fig-suffix-tree},  
+and thus there are two unique contexts in
+which it can occur, $\nlplus{\emph{keep in~}\Bigcdot}=2$. This follows naturally from the suffix tree
+construction, all descendent nodes correspond to larger \ngrams with
+same prefix, and each child edge extends the \ngram with a different
+subsequent symbol. 
+
+\begin{algorithm}[th]
+  \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern $\alpha$ 
+    \label{alg:n1plus}}
+  \begin{algorithmic}[1]
+    \Require{node $n$ in \CST $t$ matches $\alpha$}
+    \Function{N1Plus}{$t, n, \alpha$} %\Comment{ $t$ is either forward or reverse \CST}
+        \Let{$o$}{$0$} %\Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
+        %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
+        \If{$\depth{t}{n} = |\alpha|$}
+          \Let{$o$}{$\degree{t}{n}$}
+        \Else
+          \Let{$o$}{$1$}
+        \EndIf
+      \State \Return{$o$}
+    \EndFunction
+  \end{algorithmic}
+\label{alg-nlplus}
+\end{algorithm}
+
+A similar line of reasoning applies to computing
+$\nlplus{\dotpat}$. Assuming we also have a suffix tree representing
+the \emph{reversed corpus}, we can easily identify the reversed pattern
+\emph{in keep} and query the degree for the matching node. This
+approach is illustrated in Algorithm~\ref{alg-nlplus}, where we first
+test if the node matches the pattern completely, i.e., its
+\emph{depth} corresponds to the pattern length, in which case we use
+the degree;\footnote{There are some corner cases involving sentinels \#
+  and \$, which aren't counted in computing unique contexts.
+  Such tests have been omitted from the algorithms for clarity, hereinafter. On publication the
+  source code will be released with the complete implementation of the
+  algorithms.}
+otherwise the pattern is a prefix of the node, and
+therefore can only be followed by a single unique symbol. 
+For instance, \emph{the keep} partly matches an edge in
+Figure~\ref{fig-suffix-tree} as it can only be followed by \emph{in}.
+Finally, note that to compute $\nlplus{\dotpat}$ then $t$ must be the reversed \CST,
+while supplying the forward \CST will yield $\nlplus{\patdot}$. 
+
+The final component of the Kneser-Ney LM computation is
+$\nlplus{\dotpatdot}$, the number of unique contexts consider symbols
+on both sides of the pattern. 
+Clearly this does not map naturally to a simple suffix tree operation,
+requiring a more complex approach.
+Algorithm~\ref{alg-occ-two-sided} presents an iterative approach 
+which enumerates the set of symbols which can follow the pattern
+(lines 7,8), by querying the edge label for the next symbol on each
+child node.
+For each symbol, line 9 searches for an extended pattern incorporating
+the new symbol in the reverse \CSA (part of the reverse \CST), by refining the existing match
+$\nr$ using a single backward search operation.\footnote{Backward 
+search in the reverse tree corresponds to extending the patttern to the right.}
+Finally we can query the unique left contexts for the node (line 10),
+which we accumulate to yield the return value.
+The other option is in line 5 where the pattern does not match a
+complete edge, in which case there is only only unique right context
+and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
+
+\begin{algorithm}[th]
+  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
+    \label{alg:n1plusfb}}
+  \begin{algorithmic}[1]
+    \Require{node $\nf$ in forward \CST $\tf$ matches $\alpha$}
+    \Require{node $\nf$ in reverse \CST $\tr$ matches $\alpha$}
+    \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
+        \Let{$o$}{$0$}
+        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
+        \Let{$d$}{$\depth{\tf}{\nf}$}   
+        \If{$d > |\alpha|$}   %\Comment{patterns internal to an edge}
+          \Let{$o$}{$\nlplusfunc{\tr}{\nr}{\dotpat}$} %\Comment{have only one right context}
+        \Else
+           \For{$\chf \gets \children{\tf}{\nf}$} 
+              \Let{$s$}{$\edge{\tf}{\chf}{d+1}$} %\Comment{find the first symbol on the edge label}
+              \Let{$\chr$}{$\backwardsearch{\ar}{\lb{\nr}}{\rb{\nr}}{s}$} %\Comment{find child node in reverse \CST}
+%              \Statex    %\Comment{$\ar$ is the \CSA component of $\tr$}
+              \Let{$o$}{$o + \nlplusfunc{\tr}{\chr}{\dotpat s}$}
+            \EndFor
+        \EndIf
+      \State \Return{$o$}
+    \EndFunction
+  \end{algorithmic}
+\label{alg-occ-two-sided}
+\end{algorithm}
+
+Although algorithms~\ref{alg-nlplus} and~\ref{alg-occ-two-sided} can
+compute the required occurence counts for \ngram language modelling,
+they incur considerable costs, in terms of both space and time. 
+The need for reversed and forward \CST incurs double the
+storage overhead of a single \CST, and requires searching in both
+\CSTs. We show later how we can avoid the need for the reversed suffix 
+tree, giving rise to lower memory requirements and
+faster runtime. Beyond the need for twin suffix trees, the most costly
+aspects of the algorithms are the calls to \emph{depth} (Algs 
+\ref{alg-nlplus}~and~\ref{alg-occ-two-sided}), \emph{edge} and 
+\emph{backward-search} (Alg~\ref{alg-occ-two-sided}).
+Calling \emph{depth} is cheap for internal nodes, but costly for leaf
+nodes; fortunately we can avoid calling \emph{depth} for leaves, which
+by definition extend to the end of the corpus and consequently will
+extend further than our pattern.\footnote{We assume search patterns do
+not extend beyond a single sentence, and thus will always be shorter
+than the edge labels.}
+The costly calls to \emph{edge} and \emph{backward-search} however cannot be
+avoided.
+This leads to an overall time complexity of $\Order{1}$ and $\Order{FIXME}$ for
+algorithms \ref{alg-nlplus}~and~\ref{alg-occ-two-sided}, respectively.
 
 \subsection{Dual \CST Algorithm} 
 
-Algorithm overview.
+Having methods for computing the frequency and occurrence
+counts, we are now in able to compute the \ngram language model
+probability $P(w_k | w^{k-1}_{k-(n-1)})$ of word $w_k$ given the $n-1$
+preceeding words. A key problem is what patterns we need to search for
+in the forward and reverse \CST structures in order to support the
+various frequency queries and $N^{1+}$ computations. 
+
+We consider an interpolated Kneser Ney model formulation, in which
+probabilities from higher order contexts are interpolated with lower
+order estimates following a simple recursion. 
+Equivalently, this iteration can be considered in reverse, starting from unigram
+estimates and successively growing to large \ngrams, which better
+suits our \CST data-structures.
+% Our approach starts by querying the target word unigram $w_k$ and
+% empty context $\emptyset$, from which the unigram probability can be computed
+% Both patterns are extended to the left with symbol $w_{k-1}$, to form
+% a bigram and the context unigram.
+% In each step the probability is computed before extending the pattern,
+% stopping after a fixed number of steps, $n$, or on encountering an
+% unseen context.
+This iterative process is apparent in Table~\ref{tab-counts-example} which
+shows the quantities required for probabilty scoring for an example \ngram.
+Considered bottom to top the patterns are incrementally being extended
+to the left.
+The requirement for $\nlplus{\dotpat}, \nlplus{\patdot}$ and
+$\nlplus{\dotpatdot}$ justifies careful consideration of whether the
+patterns should be matched in the forward or reverse \CST; moreover,
+the high cost of search means that fresh searches over the entire
+structure are much too costly, and instead running matches must be
+maintained and refined to achieve the best time complexity of inference. 
+
+\begin{table}
+\begin{align*}
+c(\text{keep in the town})  & \quad 1 \\
+c(\text{keep in the}) & \quad 2 \\
+\nlplus{\text{keep in the} \Bigcdot} & \quad 2 \\ \hline
+\nlplus{\Bigcdot \text{in the town}} & \quad 1\\
+\nlplus{\Bigcdot \text{in the} \Bigcdot} & \quad 2 \\
+\nlplus{\text{in the} \Bigcdot} & \quad 2 \\ \hline
+\nlplus{\Bigcdot \text{the town}} & \quad 1\\
+\nlplus{\Bigcdot \text{the} \Bigcdot} & \quad 4 \\
+\nlplus{\text{the} \Bigcdot} & \quad 4  \\ \hline
+\nlplus{\Bigcdot \text{town}} & \quad 1 \\
+\nlplus{\Bigcdot \Bigcdot} & \quad 13 \\ % would be 14 but we exclude #$ right?
+\nlplus{\Bigcdot} & \quad 9  % exclude $ right?
+\end{align*}
+\caption{Counts required for computing $P(\text{town} | \text{keep in
+    the})$, and their values. Horizontal lines show the different
+  stages in the backoff computation.}
+\label{tab-counts-example}
+\end{table}
+
+The algorithm outline is presented in
+Alg~\ref{alg-kn-slow}. \trevor{I will complete this}
+
+\begin{algorithm*}
+  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
+    \label{alg:pkn}}
+  \begin{algorithmic}[1]
+    \Function{ProbKneserNey}{$\tf, \tr, \ws, n$} 
+        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
+        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for context $w^{k-1}_{k-i}$}
+        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for $w^{k}_{k-i}$}
+        \Let{$p$}{$1$}
+        \For{$i \gets 1 \text{ to } n$}
+          \Let{$\nrfull$}{$\forwardsearch{\tr}{\lb{\nrfull}}{\rb{\nrfull}}{w_{k-i+1}}$} \Comment{update matches in \textsc{Cst}s}
+          \If{$i > 1$}
+             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$} %\Comment{update context match in fwd \CST}
+              \If{$i < n$}
+             \Let{$\nr$}{$\forwardsearch{\tr}{\lb{\nr}}{\rb{\nr}}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
+          \EndIf
+          \EndIf
+          \Let{$D$}{lookup discount parameter for $n$-gram}
+          \If{$i = n$} % or if s == '<s>' 
+                 \Comment{compute the `count' for the full match}
+             \Let{$c$}{$\size{\tr}{\nrfull}$} 
+             \Let{$d$}{$\size{\tf}{\nf}$}
+          \Else
+             \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
+             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
+           \EndIf
+           \If{$i > 1$}
+             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
+                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  \Comment{defined as $0$ for $i=1$}
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
+               \EndIf
+          % \ElsIf{$i = 1$}
+          %    \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
+          \EndIf
+        \EndFor
+      \State \Return{$p$}
+    \EndFunction
+  \end{algorithmic}
+\label{alg-kn-slow}
+\end{algorithm*}
 
 Include paragraph on computing the discounts.
+
 
 \subsection{Complexity Analysis}
 
 \section{Improved single \CST approach}
 
 Just show N1+fb algo; leave rest to supporting material.
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cstlm"
+%%% End: 
