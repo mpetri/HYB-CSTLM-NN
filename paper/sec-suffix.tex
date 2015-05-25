@@ -46,7 +46,8 @@ Using only the suffix array and the text, pattern search can be performed using 
 in $\Order{m \log n}$ time.
 In practice, suffix arrays use $4-8n$ bytes of space whereas the most efficient
 suffix tree implementations require at least $20n$ bytes of space~\cite{k-spe99} which
-are both much larger than {\col}.
+are both much larger than {\col} and prohibit the use these structures for all but
+small data sets.
 
 \subsection{Compressed Suffix Structures}
 
