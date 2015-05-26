@@ -229,11 +229,10 @@ Conversely in the reverse \CST, we must use \emph{forward search} as we are effe
 
 Alg~\ref{alg-kn-slow} uses the  the counts (lines 14 and 17), the denominator (lines 15 and 18) and backoff components (line 21) can be computed.
 The probability is initially set in line 24 and updated with each iteration following the KN interpolation in line 22.
-Finally, the discount $D$ on line 12 and $\nlplus{\Bigcdot\Bigcdot}$ can be precomputed directly from the \CSTs reusing several of the algorithms, to avoid further costly computations at runtime. 
-The full algorithm is provided in Algorithm~7 in the \supp, which operates \trevor{by traversing the \ldots}. \trevor{Provide time complexity?}
-
-
-\subsection{Complexity Analysis}
+Finally, the discount $D$ on line 12 and $\nlplus{\Bigcdot\Bigcdot}$ can be precomputed directly from the \CSTs  thus avoiding several costly computations at runtime. 
+The full algorithm is provided in Algorithm~7 in the \supp, which operates by traversing the nodes of the reverse \CST and at each stage computing the number of \ngrams that occur 1--4 times and $\nlplus{\dotpat}$ equal to 1--4, for various lengths of \ngrams (up to a limit, here 10, beyond which we use the values for the largest computed size).
+These quantities are used to compute the discount parameters, which are then stored for use in estimation.
+Note that this algorithm can be quite slow, although expensive calls to \emph{depth} can be avoided as described before; additionally the calls to \emph{edge} can also be skipped which reduces the runtime by about an order of magnitude, albeit incurring a slight bias to the estimates. \trevor{Complexity?}
 
 \section{Improved single \CST approach}
 
