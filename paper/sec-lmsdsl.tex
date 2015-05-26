@@ -222,15 +222,15 @@ Many of these calls impose conditions on the direction of the suffix tree, e.g.,
 labels and node degree can be used to compute the number of left or right contexts in which a pattern appears. 
 The matching process is illustrated in Figure~\ref{fig-counts-example} where the three search nodes are shown on the left, considered bottom to top, and their corresponding count operations are shown to the right.
 The $\nlplus{\dotpat}$ calls require a match in the reverse \CST (left-most column, $\nrfull$), while the $\nlplus{\patdot}$ require a match in the forward \CST (right-most column, $\nf$, matching the $(i-1)$gram context). 
-The $\nlplus{\dotpatdot}$ computation reuses the forward match while also requiring a match for the $(i-1)$gram context in the reversed \CST, as tracked by the middle column ($\nr$)}.
+The $\nlplus{\dotpatdot}$ computation reuses the forward match while also requiring a match for the $(i-1)$gram context in the reversed \CST, as tracked by the middle column ($\nr$).
 Because of the mix of forward and reverse \CSTs, coupled with search patterns that are revealed right-to-left, incremental search in each of the \CSTs needs to be handled differently (lines 7--11).
 In the forward \CST, we perform \emph{backward search} to extend the search pattern to the left, which can be computed very efficiently from the BWT in the \CSA \trevor{Complexity?}.
 Conversely in the reverse \CST, we must use \emph{forward search} as we are effectively extending the reversed pattern to the right; this operation is considerably more costly \trevor{Complexity? Constraints on type of \CST/\CSA}.
 
 Alg~\ref{alg-kn-slow} uses the  the counts (lines 14 and 17), the denominator (lines 15 and 18) and backoff components (line 21) can be computed.
 The probability is initially set in line 24 and updated with each iteration following the KN interpolation in line 22.
-Finally, the discount $D$ on line 12 and $\nlplus{\Bigcdot\Bigcdot}$ can be precomputed directly from the \CSTs reusing several of the algorithms, to avoid further costly runtime computations. 
-Please see Algorithm~5 in the \supp for details. \trevor{Provide time complexity?}
+Finally, the discount $D$ on line 12 and $\nlplus{\Bigcdot\Bigcdot}$ can be precomputed directly from the \CSTs reusing several of the algorithms, to avoid further costly computations at runtime. 
+The full algorithm is provided in Algorithm~7 in the \supp, which operates \trevor{by traversing the \ldots}. \trevor{Provide time complexity?}
 
 
 \subsection{Complexity Analysis}
