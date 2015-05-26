@@ -67,7 +67,7 @@ Compact, Efficient and Unlimited Capacity:
 %\onecolumn
 
 \begin{algorithm*}[htpb]
-  \caption{Compute backward occurrence counts, $\nlplus{\patdot}$, using only forward \CST 
+  \caption{Compute backward occurrence counts, $\nlplus{\dotpat}$, using only forward \CST 
     \label{alg:n1plusback_wt}}
   \begin{algorithmic}[1]
     \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
@@ -123,7 +123,7 @@ Compact, Efficient and Unlimited Capacity:
     \Function{PrecomputeDiscounts}{$\tr, n$}
         \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
         \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\dotpat} = j$}
-        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$0$} \Comment{number of unique bigrams}
+        \Let{$N^{1+}(\Bigcdot\Bigcdot)$}{$0$} \Comment{number of unique bigrams}
         \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
            \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
            %\If{$\leaf{\tr}{\nr}$} 
