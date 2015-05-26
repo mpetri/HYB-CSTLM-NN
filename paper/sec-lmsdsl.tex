@@ -1,18 +1,15 @@
 %Computing counts, N1+ of several flavours of different sized n-grams.
 
-The central requirement for computing probabilities under a Kneser-Ney
-language model boils down to computing two types of counts: raw
-frequencies of \ngrams and occurrence counts, quantifying in how many different contexts the \ngram has occurred.%
+The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying in how many different contexts the \ngram has occurred.%
 \footnote{The need such counts is not specific to Kneser Ney, indeed
   many other smoothing variants for \ngram LMs impose similar
   requirements and could be computed straightforwardly using the algorithms below.}
-By electing to store the corpus directly in a suffix tree, we need to
-provide mechanisms for computing these counts as they are needed based
-on querying the data structure.
+Table~\ref{tab-counts-example} illustrates the numbers needed in calculating the probability of an example 4-gram.
+By electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queryies into the suffix tree.
 
-Raw frequency counts are the simplest to compute, requiring first
-identifying the node in the suffix tree labelled with the query
-\ngram, from which we can read off the node's \emph{size}, defined as the
+The raw frequency counts are the simplest to compute. First we
+identify the node in the suffix tree labelled with the query
+\ngram; the frequency corresponds to the node's \emph{size}, defined as the
 distance between its left and right bounds (corresponding to the
 number of descendents under the node). To illustrate, consider
 searching for \emph{the night} in  Figure~\ref{fig-suffix-tree}, which
@@ -28,11 +25,11 @@ querying the \emph{degree} of the matching node in the suffix tree. E.g.,
 \emph{keep in} has two child nodes in  Figure~\ref{fig-suffix-tree},  
 and thus there are two unique contexts in
 which it can occur, $\nlplus{\emph{keep in~}\Bigcdot}=2$. This follows naturally from the suffix tree
-construction, all descendent nodes correspond to larger \ngrams with
+construction, where all descendent nodes correspond to larger \ngrams with
 same prefix, and each child edge extends the \ngram with a different
 subsequent symbol. 
-
-\begin{algorithm}[th]
+%
+\begin{algorithm}[t]
   \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern $\alpha$ 
     \label{alg:n1plus}}
   \begin{algorithmic}[1]
@@ -50,11 +47,11 @@ subsequent symbol.
   \end{algorithmic}
 \label{alg-nlplus}
 \end{algorithm}
-
+%
 A similar line of reasoning applies to computing
 $\nlplus{\dotpat}$. Assuming we also have a suffix tree representing
 the \emph{reversed corpus}, we can easily identify the reversed pattern
-\emph{in keep} and query the degree for the matching node. This
+(e.g., \emph{in keep}) and query the degree for the matching node. This
 approach is illustrated in Algorithm~\ref{alg-nlplus}, where we first
 test if the node matches the pattern completely, i.e., its
 \emph{depth} corresponds to the pattern length, in which case we use
@@ -65,31 +62,24 @@ the degree;\footnote{There are some corner cases involving sentinels \#
   algorithms.}
 otherwise the pattern is a prefix of the node, and
 therefore can only be followed by a single unique symbol. 
-For instance, \emph{the keep} partly matches an edge in
+For instance, \emph{the keep} partly matches an edge in the forward suffix tree in
 Figure~\ref{fig-suffix-tree} as it can only be followed by \emph{in}.
-Finally, note that to compute $\nlplus{\dotpat}$ then $t$ must be the reversed \CST,
+Finally, note that in order to compute $\nlplus{\dotpat}$ then $t$ must be the reversed \CST,
 while supplying the forward \CST will yield $\nlplus{\patdot}$. 
 
 The final component of the Kneser-Ney LM computation is
 $\nlplus{\dotpatdot}$, the number of unique contexts consider symbols
 on both sides of the pattern. 
-Clearly this does not map naturally to a simple suffix tree operation,
+Unfortunately this does not map naturally to a simple suffix tree operation,
 requiring a more complex approach.
-Algorithm~\ref{alg-occ-two-sided} presents an iterative approach 
-which enumerates the set of symbols which can follow the pattern
-(lines 7,8), by querying the edge label for the next symbol on each
-child node.
-For each symbol, line 9 searches for an extended pattern incorporating
-the new symbol in the reverse \CSA (part of the reverse \CST), by refining the existing match
-$\nr$ using a single backward search operation.\footnote{Backward 
-search in the reverse tree corresponds to extending the patttern to the right.}
+Algorithm~\ref{alg-occ-two-sided} presents an iterative method for computing this quantity by enumerating the set of symbols which can follow the pattern, and for each symbol $s$ accumulating the values of $\nlplus{\Bigcdot \alpha s}$.
+Lines 7 and 8 emunerate the child nodes in the \CST, performing a lookup for the next symbol on each child edge (\emph{edge}).
+For each symbol, line 9 searches for an extended pattern incorporating the new symbol in the reverse \CSA (part of the reverse \CST), by refining the existing match $\nr$ using a single backward search operation.\footnote{Backward search in the reverse tree corresponds to extending the patttern to the right.}
 Finally we can query the unique left contexts for the node (line 10),
 which we accumulate to yield the return value.
-The other option is in line 5 where the pattern does not match a
-complete edge, in which case there is only only unique right context
-and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
+Alternatively line 5 deals with the case where the pattern does not match a complete edge, in which case there is only only unique right context and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
 
-\begin{algorithm}[th]
+\begin{algorithm}[t]
   \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
     \label{alg:n1plusfb}}
   \begin{algorithmic}[1]
@@ -115,38 +105,24 @@ and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
 \label{alg-occ-two-sided}
 \end{algorithm}
 
-Although algorithms~\ref{alg-nlplus} and~\ref{alg-occ-two-sided} can
-compute the required occurence counts for \ngram language modelling,
-they incur considerable costs, in terms of both space and time. 
-The need for reversed and forward \CST incurs double the
-storage overhead of a single \CST, and requires searching in both
-\CSTs. We show later how we can avoid the need for the reversed suffix 
-tree, giving rise to lower memory requirements and
-faster runtime. Beyond the need for twin suffix trees, the most costly
-aspects of the algorithms are the calls to \emph{depth} (Algs 
-\ref{alg-nlplus}~and~\ref{alg-occ-two-sided}), \emph{edge} and 
-\emph{backward-search} (Alg~\ref{alg-occ-two-sided}).
-Calling \emph{depth} is cheap for internal nodes, but costly for leaf
-nodes; fortunately we can avoid calling \emph{depth} for leaves, which
-by definition extend to the end of the corpus and consequently will
-extend further than our pattern.\footnote{We assume search patterns do
-not extend beyond a single sentence, and thus will always be shorter
-than the edge labels.}
-The costly calls to \emph{edge} and \emph{backward-search} however cannot be
-avoided.
-This leads to an overall time complexity of $\Order{1}$ and $\Order{FIXME}$ for
-algorithms \ref{alg-nlplus}~and~\ref{alg-occ-two-sided}, respectively.
+Algorithms~\ref{alg-nlplus} and~\ref{alg-occ-two-sided} can compute the required occurence counts for \ngram language modelling, however they incur considerable costs, in terms of both space and time. 
+The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as significant search time to match the pattern in both \CSTs. 
+We show later how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
+Beyond the need for twin suffix trees, the most costly aspects of the algorithms are the calls to \emph{depth} (Algs \ref{alg-nlplus}~and~\ref{alg-occ-two-sided}), \emph{edge} and \emph{backward-search} (Alg~\ref{alg-occ-two-sided}).
+Calling \emph{depth} is cheap ($\Order{1}$) for internal nodes, but costly for leaf nodes; fortunately we can avoid calling \emph{depth} for leaves, which by definition extend to the end of the corpus and consequently will extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
+The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
+This leads to an overall time complexity of $\Order{1}$ and $\Order{FIXME}$ for algorithms \ref{alg-nlplus}~and~\ref{alg-occ-two-sided}, respectively.
 
 \subsection{Dual \CST Algorithm} 
 
-Having methods for computing the frequency and occurrence
-counts, we are now in able to compute the \ngram language model
-probability $P(w_k | w^{k-1}_{k-(n-1)})$ of word $w_k$ given the $n-1$
+Using the methods above for computing the frequency and occurrence
+counts, we now have the ingredients necessary to compute \ngram language model
+probabilities, $P(w_k | w^{k-1}_{k-(n-1)})$ for word $w_k$ given the $n-1$
 preceeding words. A key problem is what patterns we need to search for
 in the forward and reverse \CST structures in order to support the
 various frequency queries and $N^{1+}$ computations. 
 
-We consider an interpolated Kneser Ney model formulation, in which
+In this paper we consider an interpolated Kneser Ney model formulation, in which
 probabilities from higher order contexts are interpolated with lower
 order estimates following a simple recursion. 
 Equivalently, this iteration can be considered in reverse, starting from unigram
@@ -162,32 +138,41 @@ suits our \CST data-structures.
 This iterative process is apparent in Table~\ref{tab-counts-example} which
 shows the quantities required for probabilty scoring for an example \ngram.
 Considered bottom to top the patterns are incrementally being extended
-to the left.
+to the left, which matches the manner of searching a \CST one symbol at a time.  
 The requirement for $\nlplus{\dotpat}, \nlplus{\patdot}$ and
 $\nlplus{\dotpatdot}$ justifies careful consideration of whether the
-patterns should be matched in the forward or reverse \CST; moreover,
+patterns should be matched in the forward or reverse \CST (based on the use 
+of $\emph{degree}$ to compute the unique symbols to the left or right); moreover,
 the high cost of search means that fresh searches over the entire
 structure are much too costly, and instead running matches must be
 maintained and refined to achieve the best time complexity of inference. 
 
-\begin{table}
-\begin{align*}
-c(\text{keep in the town})  & \quad 1 \\
-c(\text{keep in the}) & \quad 2 \\
-\nlplus{\text{keep in the} \Bigcdot} & \quad 2 \\ \hline
-\nlplus{\Bigcdot \text{in the town}} & \quad 1\\
-\nlplus{\Bigcdot \text{in the} \Bigcdot} & \quad 2 \\
-\nlplus{\text{in the} \Bigcdot} & \quad 2 \\ \hline
-\nlplus{\Bigcdot \text{the town}} & \quad 1\\
-\nlplus{\Bigcdot \text{the} \Bigcdot} & \quad 4 \\
-\nlplus{\text{the} \Bigcdot} & \quad 4  \\ \hline
-\nlplus{\Bigcdot \text{town}} & \quad 1 \\
-\nlplus{\Bigcdot \Bigcdot} & \quad 13 \\ % would be 14 but we exclude #$ right?
-\nlplus{\Bigcdot} & \quad 9  % exclude $ right?
-\end{align*}
+\begin{table}[t]
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{>{$}c<{$}>{$}c<{$}>{$}c<{$}}
+c(\text{keep in the town})  &  c(\text{keep in the}) &  \nlplus{\text{keep in the} \Bigcdot} \\
+% 1 & 2 & 2 
+%\hline
+\nlplus{\Bigcdot \text{in the town}} & 
+%\quad 1\\
+\nlplus{\Bigcdot \text{in the} \Bigcdot} & 
+%\quad 2 \\
+\nlplus{\text{in the} \Bigcdot} \\
+%& \quad 2 
+\nlplus{\Bigcdot \text{the town}} & 
+%\quad 1\\
+\nlplus{\Bigcdot \text{the} \Bigcdot} & 
+%\quad 4 \\
+\nlplus{\text{the} \Bigcdot} \\
+%& \quad 4  \\ \hline
+\nlplus{\Bigcdot \text{town}} & 
+%\quad 1 \\
+\nlplus{\Bigcdot \Bigcdot} & %\quad 13 \\ % would be 14 but we exclude #$ right?
+\nlplus{\Bigcdot} %& \quad 9  % exclude $ right?
+\end{tabular}}
 \caption{Counts required for computing $P(\text{town} | \text{keep in
-    the})$, and their values. Horizontal lines show the different
-  stages in the backoff computation.}
+    the})$, and their values. Each line shows the different
+  stages in the backoff computation, 4-gram through 1-gram.}
 \label{tab-counts-example}
 \end{table}
 
