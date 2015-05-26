@@ -4,7 +4,7 @@ The key requirements for computing probability under a Kneser-Ney language model
 \footnote{The need such counts is not specific to Kneser Ney, indeed
   many other smoothing variants for \ngram LMs impose similar
   requirements and could be computed straightforwardly using the algorithms below.}
-Table~\ref{tab-counts-example} illustrates the numbers needed in calculating the probability of an example 4-gram.
+Figure~\ref{fig-counts-example} (right) illustrates the numbers needed in calculating the probability of an example 4-gram.
 By electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queryies into the suffix tree.
 
 The raw frequency counts are the simplest to compute. First we
@@ -135,7 +135,7 @@ suits our \CST data-structures.
 % In each step the probability is computed before extending the pattern,
 % stopping after a fixed number of steps, $n$, or on encountering an
 % unseen context.
-This iterative process is apparent in Table~\ref{tab-counts-example} which
+This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which
 shows the quantities required for probabilty scoring for an example \ngram.
 Considered bottom to top the patterns are incrementally being extended
 to the left, which matches the manner of searching a \CST one symbol at a time.  
@@ -147,39 +147,36 @@ the high cost of search means that fresh searches over the entire
 structure are much too costly, and instead running matches must be
 maintained and refined to achieve the best time complexity of inference. 
 
-\begin{table}[t]
-\resizebox{\columnwidth}{!}{
-\begin{tabular}{>{$}c<{$}>{$}c<{$}>{$}c<{$}}
-c(\text{keep in the town})  &  c(\text{keep in the}) &  \nlplus{\text{keep in the} \Bigcdot} \\
-% 1 & 2 & 2 
-%\hline
-\nlplus{\Bigcdot \text{in the town}} & 
-%\quad 1\\
-\nlplus{\Bigcdot \text{in the} \Bigcdot} & 
-%\quad 2 \\
-\nlplus{\text{in the} \Bigcdot} \\
-%& \quad 2 
-\nlplus{\Bigcdot \text{the town}} & 
-%\quad 1\\
-\nlplus{\Bigcdot \text{the} \Bigcdot} & 
-%\quad 4 \\
-\nlplus{\text{the} \Bigcdot} \\
-%& \quad 4  \\ \hline
-\nlplus{\Bigcdot \text{town}} & 
-%\quad 1 \\
-\nlplus{\Bigcdot \Bigcdot} & %\quad 13 \\ % would be 14 but we exclude #$ right?
-\nlplus{\Bigcdot} %& \quad 9  % exclude $ right?
-\end{tabular}}
-\caption{Counts required for computing $P(\text{town} | \text{keep in
-    the})$, and their values. Each line shows the different
-  stages in the backoff computation, 4-gram through 1-gram.}
-\label{tab-counts-example}
-\end{table}
+\begin{figure*}[p]
+\includegraphics[width=\textwidth]{figures/kn_dual_cst}
+\vspace{-3ex}
+% \resizebox{1.05\columnwidth}{!}{\hspace{-3ex}
+% \begin{tabular}{>{$}c<{$}>{$}c<{$}>{$}c<{$}}
+% c(\text{keep in the town})  &  c(\text{keep in the}) &  \nlplus{\text{keep in the} \Bigcdot} \\
+% % 1 & 2 & 2 
+% %\hline
+% \nlplus{\Bigcdot \text{in the town}} & 
+% %\quad 1\\
+% \nlplus{\Bigcdot \text{in the} \Bigcdot} & 
+% %\quad 2 \\
+% \nlplus{\text{in the} \Bigcdot} \\
+% %& \quad 2 
+% \nlplus{\Bigcdot \text{the town}} & 
+% %\quad 1\\
+% \nlplus{\Bigcdot \text{the} \Bigcdot} & 
+% %\quad 4 \\
+% \nlplus{\text{the} \Bigcdot} \\
+% %& \quad 4  \\ \hline
+% \nlplus{\Bigcdot \text{town}} & 
+% %\quad 1 \\
+% \nlplus{\Bigcdot \Bigcdot} & %\quad 13 \\ % would be 14 but we exclude #$ right?
+% \nlplus{\Bigcdot} %& \quad 9  % exclude $ right?
+% \end{tabular}}
+\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to \emph{forward-search} in the reverse \CST and the righter-most column correspons to \emph{backward-search} in the forward \CST. The algorithm works from bottom to top to compute 1-gram up to 4-gram probability estimates, as described in Alg~\ref{alg:pkn}.}
+\label{fig-counts-example}
+\end{figure*}
 
-The algorithm outline is presented in
-Alg~\ref{alg-kn-slow}. \trevor{I will complete this}
-
-\begin{algorithm*}
+\begin{algorithm*}[p]
   \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
     \label{alg:pkn}}
   \begin{algorithmic}[1]
@@ -202,16 +199,16 @@ Alg~\ref{alg-kn-slow}. \trevor{I will complete this}
              \Let{$c$}{$\size{\tr}{\nrfull}$} 
              \Let{$d$}{$\size{\tf}{\nf}$}
           \Else
-             \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k-1}_{k-i+1}}$}
-             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
+             \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k}_{k-i+1}}$} 
+             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{precompute $\nlplus{\Bigcdot\Bigcdot}$}
            \EndIf
            \If{$i > 1$}
              \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  \Comment{defined as $0$ for $i=1$}
                   \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
                \EndIf
-          % \ElsIf{$i = 1$}
-          %    \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
+          \ElsIf{$i = 1$}
+              \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
           \EndIf
         \EndFor
       \State \Return{$p$}
@@ -219,6 +216,15 @@ Alg~\ref{alg-kn-slow}. \trevor{I will complete this}
   \end{algorithmic}
 \label{alg-kn-slow}
 \end{algorithm*}
+
+\afterpage{\clearpage}
+
+Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
+This uses both a forward \CST, $\tf$, and a reverse \CST, $\tr$, and three \CST nodes (lines 2--4) which track the match progress for the full $i$gram ($\nrfull$) and the $i-1$gram context ($\nf, \nr$).
+The reverse match is needed for the full $\ngram$. \trevor{up to here}
+Matching is performed right to left, starting with a 1-gram $i=1$ and incrementally expanding the pattern to the left. 
+This 
+
 
 Include paragraph on computing the discounts.
 
@@ -228,6 +234,30 @@ Include paragraph on computing the discounts.
 \section{Improved single \CST approach}
 
 Just show N1+fb algo; leave rest to supporting material.
+
+\begin{algorithm}
+  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
+    \label{alg:n1plusfb_wt}}
+  \begin{algorithmic}[1]
+    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
+    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
+    \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
+        \Let{$o$}{$0$}
+        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
+        \If{$\depth{\tf}{\nf} > |\alpha|$}   
+          \Let{$o$}{$\textsc{N1PlusBack1}{\tr}{\nr}{\dotpat}$}
+        \Else
+            \For{$\langle l, r, s\rangle \gets \intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
+              \State Some voodoo with Weiner links
+               \Let{$o$}{$o +$ something}
+            \EndFor
+          \EndIf
+      \State \Return{$o$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
 %%% Local Variables: 
 %%% mode: latex
 %%% TeX-master: "cstlm"

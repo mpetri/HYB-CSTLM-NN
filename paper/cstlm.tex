@@ -11,12 +11,13 @@
 \usepackage{algorithm}
 \usepackage{algorithmicx}
 \usepackage{scalerel}
-\usepackage{scalerel}
+\usepackage{array}
 \usepackage[noend]{algpseudocode}
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{tikz}
 \usepackage[all]{nowidow}
 \usetikzlibrary{trees,matrix}
+\usepackage{afterpage}
 
 \input{macros.tex}
 
@@ -76,136 +77,10 @@ performance, around 100x slower than SRILM. Reranking gains? Can we run with INF
 
 
 
-\begin{algorithm*}
-  \caption{Compute backward occurrence counts, $\nlplus{\patdot}$, using only forward \CST 
-    \label{alg:n1plusback_wt}}
-  \begin{algorithmic}[1]
-    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
-    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
-    \Function{N1PlusBack1}{$\tf, \nf, \alpha$} 
-    \Let{$S$}{$\intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
-    \State \Return{$|S|$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
-
-\begin{algorithm*}
-  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
-    \label{alg:n1plusfb_wt}}
-  \begin{algorithmic}[1]
-    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
-    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
-    \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
-        \Let{$o$}{$0$}
-        %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
-        \If{$\depth{\tf}{\nf} > |\alpha|$}   
-          \Let{$o$}{$\textsc{N1PlusBack1}{\tr, \nr, \dotpat}$}
-        \Else
-            \For{$\langle l, r, s\rangle \gets \intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
-              \State Some voodoo with Weiner links
-               \Let{$o$}{$o +$ something}
-            \EndFor
-          \EndIf
-      \State \Return{$o$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
 
 
 
-\begin{algorithm*}
-  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
-    \label{alg:pkn_fwd}}
-  \begin{algorithmic}[1]
-    \Function{ProbKneserNey1}{$\tf, \ws, n$} 
-        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nffull$}{$\rooot{\tf}$} \Comment{match for $w^{k}_{k-i}$}
-        \Let{$p$}{$1$}
-        \For{$i \gets 1 \text{ to } n$}
-          \Let{$\nffull$}{$\backwardsearch{\tf}{\lb{\nffull}}{\rb{\nffull}}{w_{k-i+1}}$} \Comment{update matches in \CST}
-          \If{$i > 1$}
-             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$}
-          \EndIf
-          \Let{$D$}{discount parameter for $n$-gram}
-          \If{$i = n$} % or if s == '<s>' 
-                 \Comment{compute the `count' and `denominator' for the full match}
-             \Let{$c$}{$\size{\tf}{\nffull}$} 
-             \Let{$d$}{$\size{\tf}{\nf}$}
-          \Else
-             \Let{$c$}{$\nlplusbacklfunc(\tf,\nffull, \Bigcdot w^{k-1}_{k-i+1})$}
-             \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
-           \EndIf
-           \If{$i > 1$}
-             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
-                  \Let{$d$}{$\size{\tf}{\nf}$}
-                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
-               \EndIf
-          \EndIf
-        \EndFor
-      \State \Return{$p$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
 
-\begin{algorithm*}
-  \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
-  \begin{algorithmic}[1]
-    \Function{PrecomputeDiscounts}{$\tr, n$}
-        \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
-        \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\cdot \alpha} = j$}
-        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$0$} \Comment{number of unique bigrams}
-        \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
-           \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
-           %\If{$\leaf{\tr}{\nr}$} 
-               \State $d \gets \depth{\tr}{\nr}$  \Comment{find the length of the edge}
-            %\Else
-               %\State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
-             %\EndIf
-             \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+n\right)$}
-                \Let{$s$}{$\edge{\tr}{\nr}{k}$} \Comment{FIXME: I haven't been consistent with edge index}
-                \If{$s$ is the end of sentence sentinel}
-                    \State skip all children of $\nr$ 
-                \Else
-                     \Let{$f$}{$\size{\tr}{\nr}$} \Comment{retrieve pattern frequency}
-                     \If{$1 \le f \le 4$}
-                        \Let{$c_{k,f}$}{$c_{k,f} + 1$}
-                     \EndIf
-                     \If{$f = 2$}
-                        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$N^{1+}(\Bigcdot, \Bigcdot) + 1$}
-                     \EndIf
-
-                     \State $g \gets \nlplus{\tr}{\nr}{\dot \alpha}$ \Comment{retrieve occurrence count}
-                     \If{$1 \le g \le 4$}
-                        \Let{$N^1_{g,f}$}{$c_{k,f} + 1$}
-                     \EndIf
-                 \EndIf
-          \EndFor
-        \EndFor
-      \State \Return{$c, N^1, N^{1+}(\Bigcdot, \Bigcdot)$}
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm*}
-
-
-\begin{table*}
-\footnotesize
-\begin{tabular}{p{0.27\textwidth}p{0.53\textwidth}p{0.15\textwidth}}
-\toprule
-Function & Description & Complexity \\
-\midrule
-$\leaf{t}{n}$ & tests if node $n$ is a leaf of the  $t$ & $\Order{1}$ \\
-$\depth{t}{n}$ & pattern length for the path from root to $n$ (inclusive) & $\Order{1} \text{~non-leaf;}$ $\Order{\cdots} \text{~leaf}$\\
-$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label from root for node $n$ &  $\Order{\cdots}$ \\
-$\degree{t}{n}$ &  number of child nodes under parent $n$  &  $\Order{\cdots}$ \\
-$\children{t}{n}$ & list of child nodes under $n$  &  $\Order{\cdots}$ \\
-$\backwardsearch{a}{l}{r}{s}$ & finds the node in the  $a$ matching the pattern $s \alpha$, returning $[l',r']$ pair  &  $\Order{\cdots}$ \\
-%\forwardsearch}
-$\intervalsymbols{a}{l}{r}$ & finds the set of symbols preceeding pattern $\alpha$ matched by $[l, r]$; returns a list of tuples describing the bounds and the precedding symbol $\langle l, r, s\rangle$  &  $\Order{\cdots}$ \\
-\bottomrule
-\end{tabular}
-\caption{Summary of \CSA and \CST functions used and their time complexity of inference. The above assumes that $n$ or (equivalently) $[l, r]$ matches $\alpha$ in the \CSA $a$ and/or \CST $t$.}
-\end{table*}
 
 \section{Related Work}
 
