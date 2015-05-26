@@ -122,7 +122,7 @@ preceeding words. A key problem is what patterns we need to search for
 in the forward and reverse \CST structures in order to support the
 various frequency queries and $N^{1+}$ computations. 
 
-In this paper we consider an interpolated Kneser Ney model formulation, in which
+This paper considers an interpolated Kneser Ney model formulation, in which
 probabilities from higher order contexts are interpolated with lower
 order estimates following a simple recursion. 
 Equivalently, this iteration can be considered in reverse, starting from unigram
@@ -135,17 +135,11 @@ suits our \CST data-structures.
 % In each step the probability is computed before extending the pattern,
 % stopping after a fixed number of steps, $n$, or on encountering an
 % unseen context.
-This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which
-shows the quantities required for probabilty scoring for an example \ngram.
-Considered bottom to top the patterns are incrementally being extended
-to the left, which matches the manner of searching a \CST one symbol at a time.  
-The requirement for $\nlplus{\dotpat}, \nlplus{\patdot}$ and
-$\nlplus{\dotpatdot}$ justifies careful consideration of whether the
-patterns should be matched in the forward or reverse \CST (based on the use 
-of $\emph{degree}$ to compute the unique symbols to the left or right); moreover,
-the high cost of search means that fresh searches over the entire
-structure are much too costly, and instead running matches must be
-maintained and refined to achieve the best time complexity of inference. 
+The iterative process is apparent in Figure~\ref{fig-counts-example} (right) which
+shows the quantities required for probability scoring for an example \ngram.
+Structuring the search in order of the \ngram length, means that each step involves adding a new symbol to the left of the pattern.
+This kind of incremental search is well suited to \CSTs, which can be searched efficiently by refining an existing search result.
+%This fits well with cheaply searching a \CST one symbol at a time.  
 
 \begin{figure*}[p]
 \includegraphics[width=\textwidth]{figures/kn_dual_cst}
@@ -172,7 +166,7 @@ maintained and refined to achieve the best time complexity of inference.
 % \nlplus{\Bigcdot \Bigcdot} & %\quad 13 \\ % would be 14 but we exclude #$ right?
 % \nlplus{\Bigcdot} %& \quad 9  % exclude $ right?
 % \end{tabular}}
-\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to \emph{forward-search} in the reverse \CST and the righter-most column correspons to \emph{backward-search} in the forward \CST. The algorithm works from bottom to top to compute 1-gram up to 4-gram probability estimates, as described in Alg~\ref{alg:pkn}.}
+\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. The algorithm is described below in Alg~\ref{alg:pkn}.}
 \label{fig-counts-example}
 \end{figure*}
 
@@ -217,16 +211,26 @@ maintained and refined to achieve the best time complexity of inference.
 \label{alg-kn-slow}
 \end{algorithm*}
 
+
+
 \afterpage{\clearpage}
 
 Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
-This uses both a forward \CST, $\tf$, and a reverse \CST, $\tr$, and three \CST nodes (lines 2--4) which track the match progress for the full $i$gram ($\nrfull$) and the $i-1$gram context ($\nf, \nr$).
-The reverse match is needed for the full $\ngram$. \trevor{up to here}
-Matching is performed right to left, starting with a 1-gram $i=1$ and incrementally expanding the pattern to the left. 
-This 
+This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $i-1$gram context ($\nf, \nr$), $i=1 \ldots n$.
+The need to maintain three concurrent searches arises from the calls to size, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14,15; 17; 21; and 18, respectively).
+Many of these calls impose conditions on the direction of the suffix tree, e.g., such that the edge 
+labels and node degree can be used to compute the number of left or right contexts in which a pattern appears. 
+The matching process is illustrated in Figure~\ref{fig-counts-example} where the three search nodes are shown on the left, considered bottom to top, and their corresponding count operations are shown to the right.
+The $\nlplus{\dotpat}$ calls require a match in the reverse \CST (left-most column, $\nrfull$), while the $\nlplus{\patdot}$ require a match in the forward \CST (right-most column, $\nf$, matching the $(i-1)$gram context). 
+The $\nlplus{\dotpatdot}$ computation reuses the forward match while also requiring a match for the $(i-1)$gram context in the reversed \CST, as tracked by the middle column ($\nr$)}.
+Because of the mix of forward and reverse \CSTs, coupled with search patterns that are revealed right-to-left, incremental search in each of the \CSTs needs to be handled differently (lines 7--11).
+In the forward \CST, we perform \emph{backward search} to extend the search pattern to the left, which can be computed very efficiently from the BWT in the \CSA \trevor{Complexity?}.
+Conversely in the reverse \CST, we must use \emph{forward search} as we are effectively extending the reversed pattern to the right; this operation is considerably more costly \trevor{Complexity? Constraints on type of \CST/\CSA}.
 
-
-Include paragraph on computing the discounts.
+Alg~\ref{alg-kn-slow} uses the  the counts (lines 14 and 17), the denominator (lines 15 and 18) and backoff components (line 21) can be computed.
+The probability is initially set in line 24 and updated with each iteration following the KN interpolation in line 22.
+Finally, the discount $D$ on line 12 and $\nlplus{\Bigcdot\Bigcdot}$ can be precomputed directly from the \CSTs reusing several of the algorithms, to avoid further costly runtime computations. 
+Please see Algorithm~5 in the \supp for details. \trevor{Provide time complexity?}
 
 
 \subsection{Complexity Analysis}
