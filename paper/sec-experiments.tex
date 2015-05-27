@@ -1,8 +1,178 @@
 
 \subsection{Datasets}
+\begin{table}\footnotesize
+\centering
+\resizebox{1\columnwidth}{!}{
+\begin{tabular}{ll|cc|c}
+Language&&Size(MB)&Tokens&Training(Sen)\\
+\toprule 
+Bulgarian&BG&36.11&8532196&329308\\
+Czech&CS&53.48&12250717&534916\\
+German&DE&171.80&44069482&1785153\\
+English&EN&179.15&49320705&1815123\\
+Finnish&FI&145.32&32858462&1737304\\
+French&FR&197.68&53824454&1791739\\
+Hungarian&HU&52.53&12018326&527061\\
+Italian&IT&186.67&48084515&1703367\\
+Portuguese&PT&187.20&49032478&1736676\\
+\end{tabular}}
+\caption{Data statistics after tokenizing, sentence-splitting, and removing markups, and numberizing.}
+\end{table}
+
+\begin{table*}\footnotesize
+\centering
+\begin{tabular}{llllllll|llll|llll}
+\toprule 
+& & \multicolumn{6}{c}{KenLM - ModifiedKN} & \multicolumn{4}{c}{SRILM - KN} & \multicolumn{4}{c}{CST - KN}\\
+& & \multicolumn{2}{c}{probing}& \multicolumn{2}{c}{trie}& \multicolumn{2}{c}{compact trie}& \multicolumn{2}{c}{default} & \multicolumn{2}{c}{compact} &\multicolumn{2}{c}{Dual}& \multicolumn{2}{c}{Single}\\
+ \midrule
+&&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec\\
+      \midrule
+\multirow{3}{*}{BG} 
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{CS}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{DE}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{EN} 
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{FI}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{FR}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{HU}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{IT}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{PT}
+ & n=2 &&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&\\
+     \bottomrule
+\end{tabular}
+\caption{Memory and Space consumption during kenlm and srilm training, and buidling the CST.}
+\end{table*}
+\begin{table*}\footnotesize
+\centering
+\begin{tabular}{lllllllll|lllll|lllll}
+\toprule 
+& & \multicolumn{7}{c}{KenLM - ModifiedKN} & \multicolumn{5}{c}{SRILM - KN} & \multicolumn{5}{c}{CST - KN}\\
+& & \multicolumn{2}{c}{probing}& \multicolumn{2}{c}{trie}& \multicolumn{2}{c}{compact trie}& \multicolumn{1}{c}{pplx} & \multicolumn{2}{c}{default} & \multicolumn{2}{c}{compact} &\multicolumn{1}{c}{pplx} &\multicolumn{2}{c}{Dual}& \multicolumn{2}{c}{Single}& \multicolumn{1}{c}{pplx}\\
+ \midrule
+&&MB&Sec&MB&Sec&MB&Sec&&MB&Sec&MB&Sec&&MB&Sec&MB&Sec&\\
+      \midrule
+\multirow{3}{*}{BG} 
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{CS}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{DE}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{EN} 
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{FI}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{FR}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{HU}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline
+ \multirow{3}{*}{IT}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\\hline 
+ \multirow{3}{*}{PT}
+ & n=2 &&&&&&&&&&&&&&&&&\\
+ & n=3 &&&&&&&&&&&&&&&&&\\
+ & n=4 &&&&&&&&&&&&&&&&&\\
+ & n=8 &&&&&&&&&&&&&&&&&\\
+ & n=9 &&&&&&&&&&&&&&&&&\\
+ & n=10 &&&&&&&&&&&&&&&&&\\
+     \bottomrule
+\end{tabular}
+\caption{Memory and Space consumption during the query time, and the perplexities}
+\end{table*}
 
 \subsection{Perplexity Evaluation}
 
-\subsection{MT Reranking}
 
 
