@@ -190,27 +190,18 @@ These quantities are used to compute the discount parameters, which are then sto
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow, although it is significantly faster if we remove the \emph{edge} calls and simply include in our counts all \ngrams finishing a sentence or spanning more than one sentence. 
 These approximate discounts are typically within $10^{-2}$ of the correct values.
 
-\section{Improved single \CST approach}
+\section{Improved Single \CST Approach}
 
 The above dual \CST algorithm provides an elegant means of computing LM probabilities of arbitrary order and with a limited space complexity ($\Order{n}$, or roughly $n$ in practice).
 However the time complexity is problematic, stemming from the expensive method for computing \textsc{N1PlusFrontBack} and repeated searches over the \CST, particularly \emph{forward-search}.
 Now we outline a method for speeding up the algorithm by doing away with the reverse \CST.
 Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are computed directly from a single forward \CST. 
-This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (lines 9 and 11 in Alg~\ref{alg-kn-slow}).
+This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
 
-The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
-Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
-This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify the range of \SA entries in $[\lb{\tf}{\nf}, \rb{\tf}{\nf}]$ the set of preceeding symbols, and for each of these their range of occurrence counts in the corpus.
-For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
-These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
-These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
-In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+4-1,16+5-1] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
-
-\begin{algorithm*}[htpb]
+\begin{algorithm}[htpb]
   \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
     \label{alg:n1plusfb_wt}}
+\footnotesize
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
 %    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
@@ -218,21 +209,32 @@ In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
         \If{$\depth{\tf}{\nf} > |\alpha|$}   
-          \Let{$o$}{$\nlplusbacklfunc{\tf}{\nf}{\dotpat}$} \Comment{only one unique right context}
+          \Let{$o$}{$\nlplusbacklfunc{\tf}{\nf}{\dotpat}$} %\Comment{only one unique right context}
         \Else
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\tf}{\lb{\nf}}{\rb{\nf}}$}
-               \Let{$l'$}{$C_s + l$} \Comment{compute offsets into \SA for patterns starting with symbol $s$}
-               \Let{$r'$}{$C_s + r$} \Comment{adjusted by occurence indices $[l,r]$}
+               \Let{$l'$}{$C_s + l$}% \Comment{compute offsets into \SA for patterns starting with symbol $s$}
+               \Let{$r'$}{$C_s + r$} %\Comment{adjusted by occurence indices $[l,r]$}
                \Let{$o$}{$o + \nlplusbacklfunc{\tf}{\text{node}(l', r')}{\dotpat s}$}
             \EndFor
           \EndIf
       \State \Return{$o$}
     \EndFunction
   \end{algorithmic}
-\end{algorithm*}
+\end{algorithm}
 
-The \textsc{N1PlusBack1} is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
-Overall the time complexity of inference for both \textsc{N1PlusBack1} and \textsc{N1PlusFrontBack1} is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over  \textsc{N1PlusFrontBack}.
+The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
+Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
+The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
+The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
+For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
+These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
+These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
+In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
+
+\textsc{N1PlusBack1} is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
+Overall the time complexity of inference for both \textsc{N1PlusBack1} and \textsc{N1PlusFrontBack1} is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \textsc{N1PlusFrontBack} using the forward and reverse \CSTs.
+Overall this leads to considerably faster computation of \ngram probabilities compared to the two \CST approach, and although still slower than highly optimised LM toolkits like \textsc{Srilm}, it is fast enough to support large scale experiments, and has considerably better scaling performance with the Markov order $m$ (even allowing unlimited order), as we will now demonstrate.
 
 
 %%% Local Variables: 
