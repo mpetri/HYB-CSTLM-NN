@@ -64,8 +64,7 @@ public:
                 total_contexts++;
             } else {
                 auto new_node = cst.node(new_lb, new_rb);
-                auto new_node_depth = cst.depth(new_node);
-                if (new_node_depth != node_depth + 1) {
+                if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
                     total_contexts++;
                 } else {
                     auto deg = cst.degree(new_node);

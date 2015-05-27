@@ -181,7 +181,7 @@ The matching process is illustrated in Figure~\ref{fig-counts-example} where the
 The $\nlplus{\dotpat}$ calls require a match in the reverse \CST (left-most column, $\nrfull$), while the $\nlplus{\patdot}$ require a match in the forward \CST (right-most column, $\nf$, matching the $(i-1)$gram context). 
 The $\nlplus{\dotpatdot}$ computation reuses the forward match while also requiring a match for the $(i-1)$gram context in the reversed \CST, as tracked by the middle column ($\nr$).
 Because of the mix of forward and reverse \CSTs, coupled with search patterns that are revealed right-to-left, incremental search in each of the \CSTs needs to be handled differently (lines 7--11).
-In the forward \CST, we perform \emph{backward search} to extend the search pattern to the left, which can be computed very efficiently from the BWT in the \CSA (see \Supp for their time complexities).
+In the forward \CST, we perform \emph{backward search} to extend the search pattern to the left, which can be computed very efficiently from the BWT in the \CSA.\footnote{See \supp Table~1 for the time complexities of this and other \CSA and \CST methods.}
 Conversely in the reverse \CST, we must use \emph{forward search} as we are effectively extending the reversed pattern to the right; this operation is considerably more costly.
 
 The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and $\nlplus{\Bigcdot\Bigcdot}$ (line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
@@ -190,31 +190,52 @@ These quantities are used to compute the discount parameters, which are then sto
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow, although it is significantly faster if we remove the \emph{edge} calls and simply include in our counts all \ngrams finishing a sentence or spanning more than one sentence. 
 These approximate discounts are typically within $10^{-2}$ of the correct values.
 
-\section{Improved single \CST approach}
+\section{Improved Single \CST Approach}
 
-Just show N1+fb algo; leave rest to supporting material.
+The above dual \CST algorithm provides an elegant means of computing LM probabilities of arbitrary order and with a limited space complexity ($\Order{n}$, or roughly $n$ in practice).
+However the time complexity is problematic, stemming from the expensive method for computing \textsc{N1PlusFrontBack} and repeated searches over the \CST, particularly \emph{forward-search}.
+Now we outline a method for speeding up the algorithm by doing away with the reverse \CST.
+Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are computed directly from a single forward \CST. 
+This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
 
-\begin{algorithm}
+\begin{algorithm}[htpb]
   \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
     \label{alg:n1plusfb_wt}}
+\footnotesize
   \begin{algorithmic}[1]
-    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
-    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
+    \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
+%    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
     \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
         \If{$\depth{\tf}{\nf} > |\alpha|$}   
-          \Let{$o$}{$\textsc{N1PlusBack1}{\tr}{\nr}{\dotpat}$}
+          \Let{$o$}{$\nlplusbacklfunc{\tf}{\nf}{\dotpat}$} %\Comment{only one unique right context}
         \Else
-            \For{$\langle l, r, s\rangle \gets \intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
-              \State Some voodoo with Weiner links
-               \Let{$o$}{$o +$ something}
+            \For{$\langle l, r, s\rangle \gets \intervalsymbols{\tf}{\lb{\nf}}{\rb{\nf}}$}
+               \Let{$l'$}{$C_s + l$}% \Comment{compute offsets into \SA for patterns starting with symbol $s$}
+               \Let{$r'$}{$C_s + r$} %\Comment{adjusted by occurence indices $[l,r]$}
+               \Let{$o$}{$o + \nlplusbacklfunc{\tf}{\text{node}(l', r')}{\dotpat s}$}
             \EndFor
           \EndIf
       \State \Return{$o$}
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
+
+The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
+Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
+The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
+The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify the range of \SA entries in $[\lb{\tf}{\nf}, \rb{\tf}{\nf}]$ the set of preceeding symbols, and for each of these their range of occurrence counts in the corpus.
+For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
+These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
+These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
+In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+4-1,16+5-1] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
+
+
+The \textsc{N1PlusBack1} is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
+Overall the time complexity of inference for both \textsc{N1PlusBack1} and \textsc{N1PlusFrontBack1} is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over  \textsc{N1PlusFrontBack}.
+Overall this leads to considerably faster computation of \ngram probabilities compared to the two \CST approach, and although still slower than competing methods like \textsc{Srilm}, it is fast enough to support large scale experiments and has considerably better scaling performance with the Markov order $m$ (even allowing unlimited order), as we will now demonstrate.
 
 
 %%% Local Variables: 
