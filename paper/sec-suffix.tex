@@ -7,7 +7,7 @@
 %\scalebox{0.9}{
 \input{figures/fig-suffix-tree.tex}
 %}
-\caption{Word-based Suffix Tree and Suffix Array for a sample the 
+\caption{Word-based Suffix Tree and Suffix Array (below) for a sample the 
 text.}
 \label{fig-suffix-tree}
 \end{figure}
@@ -30,7 +30,7 @@ The sample text is drawn from the word alphabet
 and can be constructed in $\Order{n}$ time~\cite{u-algo95}. The children
 of each node in the suffix tree are lexicographically ordered by their edge labels.
 The $i$-th smallest suffix in {\col} corresponds to the path-label of the $i$-th 
-leaf. The starting postion of the suffix can be associated its corresponding
+leaf. The starting position of the suffix can be associated its corresponding
 leaf in the tree as shown in Figure~\ref{fig-suffix-tree}. All 
 occurrences of {\pattern} in {\col} can be retrieved by visiting all leaves
 in the subtree of the locus of {\pattern}. For example, pattern ``the night'' occurs
@@ -43,7 +43,9 @@ that $\SA[i]$ corresponds to the starting position of the $i$-th smallest suffix
 in {\col} or the $i$-th leaf in the suffix tree of {\col}. The suffix array requires
 $n \log n$ bits of space and can also be constructed in $\Order{n}$ time~\cite{ksb-jacm06}.
 Using only the suffix array and the text, pattern search can be performed using binary search
-in $\Order{m \log n}$ time.
+in $\Order{m \log n}$ time. For example, the pattern ``the night'' is found by performing
+binary search using \SA\ and \col\ to determine \SA$[18,19]$, the interval in 
+\SA\ corresponding the the suffixes in \col\ prefixed by the pattern.
 In practice, suffix arrays use $4-8n$ bytes of space whereas the most efficient
 suffix tree implementations require at least $20n$ bytes of space~\cite{k-spe99} which
 are both much larger than {\col} and prohibit the use of these structures for all but
@@ -51,4 +53,84 @@ small data sets.
 
 \subsection{Compressed Suffix Structures}
 
-WT, nested brackets CST, rank/select etc. Wiener links even?
+Reducing the space usage of suffix based index structure has recently become an 
+active area of research. The space usage of a suffix array can be reduced 
+significantly by utilizing the compressibility of text combined 
+with succinct data structures. A {\it succinct} data structure provides the
+same functionality as an equivalent uncompressed data structure, but requires
+only space equivalent to the information-theoretic lower bound of the underlying
+data. For simplicity, we focus on the {\it FM-Index} which emulates the
+functionality of a suffix array over $\col$ using $\collen H_k(\col)+o(\collen \log \sigma)$
+bits of space where $H_k$ refers to the $k$-th order entropy of the text~\cite{fmmn-talg07}.
+In practice, the FM-Index of $\col$ uses roughly space equivalent to
+the compressed representation of $\col$ using a standard compressor such as {\tt bzip2}.
+For a more comprehensive overview on succinct text indexes, we refer to the
+excellent survey of~\newcite{fgnv-jea08}.
+
+The FM-Index relies on the duality between the suffix array and the BWT~\cite{bw-dec94}, 
+a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$. Searching for
+a pattern using the FM-Index is performed in reverse order by performing  
+{\rankop$(\colbwt,i,c)$} operations $\Order{m}$ times. Here, {\rankop$(\colbwt,i,c)$}  
+counts the number of times symbol $c$ occurs in $\colbwt[0\ldots i-1]$. 
+This process is usually referred to as {\it backward search}. Let \SA$[l_i,r_i]$ be
+the interval corresponding to the suffixes in \col\ matching \pattern$[i\ldots m-1]$.
+By definition of the BWT, $\colbwt[l_i,r_i]$ corresponds to the symbols in \col\
+preceding \pattern$[i\ldots m-1]$ in \col. Due to the lexicographical ordering
+of all suffixes in \SA, the interval \SA$[l_{i-1},r_{i-1}]$ corresponding to all
+occurrences of \pattern$[i-1\ldots m-1]$ can be determined by computing the rank
+of all occurrences of $c=\pattern[i-1]$ in $\colbwt[l_i,r_i]$. Thus, we compute
+\rankop$(\colbwt,l_i,c)$, the number of times symbol $c$ occurs before
+$l_i$ and \rankop$(\colbwt,r_i+1,c)$, the number of occurrences of $c$ in $\colbwt[0,r_i]$.
+To determine \SA$[l_{i-1},r_{i-1}]$, we additionally store the starting positions $C_{s}$
+of all suffixes for each symbol $s$ in $\alphabet$ at a negligible cost 
+of $\alphabetsize \log \collen$ bits.
+Thus, the new interval is computed as $l_{i-1} = C_c + $\rankop$(\colbwt,l_i,c)$ 
+and $r_{i-1} = C_c + $\rankop$(\colbwt,r_i+1,c)$.
+
+\begin{figure}[tb]
+\centering
+\input{figures/fig-wt-bwt.tex}
+\caption{Wavelet tree of \colbwt\ with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
+{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
+{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
+\label{fig-wt-bwt}
+\end{figure}
+
+
+The time and space complexity of the FM-index thus depends on the cost of storing
+and pre-processing \colbwt\ to answer \rankop\ efficiently. A {\it wavelet tree}
+can be used to answer \rankop\ over $\colbwt$ in $\Order{\log \alphabetsize}$ time.
+The wavelet tree reduces \rankop\ over an alphabet $\alphabet$ into multiple
+\rankop\ operations over a binary alphabet which can be answered 
+in $\Order{1}$ time and $o(n)$ bits extra space~\cite{m-fsttcs96}. The alphabet is
+reduced by recursively splitting symbols based on their code words into subgroups to 
+form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
+\rankop$(\colbwt,i,c)$, the tree is traversed based on the code word of $c$, performing
+binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`the`)$ translates
+to performing \rankop$(WT_{lvl-0},17,1)=11$ on the top level of the wavelet 
+tree, as {\tt t=the=110}. We recurse to the right subtree of the root node and
+compute \rankop$(WT_{lvl-1-1},11,1)$ as there were $11$ ones in the root node and
+the next bit in the codeword of `the' is also one. This process continues until 
+the correct leaf node is reached to answer \rankop$(\colbwt,17,`the`)=5$ in 
+$\Order{\log \alphabetsize}$ time. The space usage of a regular wavelet tree is
+$\collen \log \alphabetsize + o(\collen \log \alphabetsize)$ bits which roughly
+matches the size of the text. However, if code-words for each symbol are chosen
+based on their Huffman-codes the size of the wavelet tree reduces to $nH_0(\col)(1 + o(1))$
+bits which can be further be reduced to to $nH_k(\col)(1 + o(1))$ bits by using 
+entropy compressed bitvectors. Additional space is required to access $\SA[i]$
+or the inverse suffix array $\SA^{-1}[SA[i]]=i$ which are periodically sampled
+and require \rankop\ operations relative to the sample rate to access each value.
+Different sample rates, bitvector implementations and wavelet tree types result
+in a wide variety of time-space tradeoffs which can be explored 
+in practice~\cite{gbmp2014sea}.
+
+In the same way the FM-index emulates the functionality of the suffix array in
+little space, {\it compressed suffix trees} (CST) provide the functionality
+of suffix trees while requiring significantly less space than their uncompressed
+counterparts~\cite{ofg-spire10}. A CST uses a compressed suffix array (CSA) such
+as the FM-Index but stores additional information to represent the shape of
+the suffix tree as well as information about path-labels. Again a variety
+of different storage schemes exist, however for simplicity we focus on
+the CST of~\newcite{ofg-spire10}. Here, the shape of the tree
+is stored using a balanced-parenthesis (BP) sequence which for a tree of $p$ nodes
+requires $\approx 2p$ bits.

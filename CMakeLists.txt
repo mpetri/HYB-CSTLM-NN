@@ -19,7 +19,7 @@ else()
   message(STATUS "Compiler is recent enough to support C++11.")
 endif()
 if( CMAKE_COMPILER_IS_GNUCXX )
-    append_cxx_compiler_flags("-std=c++11 -Wall -Wextra  -DNDEBUG" "GCC" CMAKE_CXX_FLAGS)
+    append_cxx_compiler_flags("-std=c++11 -Wall -Wextra " "GCC" CMAKE_CXX_FLAGS)
     append_cxx_compiler_flags("-ffast-math -funroll-loops" "GCC" CMAKE_CXX_FLAGS)
 else()
     append_cxx_compiler_flags("-std=c++11 -DNDEBUG" "CLANG" CMAKE_CXX_FLAGS)
@@ -54,11 +54,18 @@ target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64)
 add_executable(create-collection.x src/create-collection.cpp)
 target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64)
 
+add_executable(create-byte-collection.x src/create-byte-collection.cpp)
+target_link_libraries(create-byte-collection.x sdsl pthread divsufsort divsufsort64)
+
 add_executable(query-index-knm.x src/query-index-knm.cpp)
 target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(query-index-stupid.x src/query-index-stupid.cpp)
 target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
+
+add_executable(check-query-file.x src/check-query-file.cpp)
+target_link_libraries(check-query-file.x sdsl pthread divsufsort divsufsort64)
+
 
 add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
