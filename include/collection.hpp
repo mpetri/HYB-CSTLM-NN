@@ -85,30 +85,30 @@ struct collection {
                       << " sec)";
         }
 
-        if (file_map.count(KEY_SA) == 0) {
-            LOG(INFO) << "CONSTRUCT " << KEY_SA;
-            auto start = clock::now();
-            sdsl::int_vector<> sa;
-            sdsl::qsufsort::construct_sa(sa, file_map[KEY_TEXT].c_str(), 0);
-            auto sa_path = path + "/" + KEY_PREFIX + KEY_SA;
-            sdsl::store_to_file(sa, sa_path);
-            file_map[KEY_SA] = sa_path;
-            auto stop = clock::now();
-            LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                      << " sec)";
-        }
+        // if (file_map.count(KEY_SA) == 0) {
+        //     LOG(INFO) << "CONSTRUCT " << KEY_SA;
+        //     auto start = clock::now();
+        //     sdsl::int_vector<> sa;
+        //     sdsl::qsufsort::construct_sa(sa, file_map[KEY_TEXT].c_str(), 0);
+        //     auto sa_path = path + "/" + KEY_PREFIX + KEY_SA;
+        //     sdsl::store_to_file(sa, sa_path);
+        //     file_map[KEY_SA] = sa_path;
+        //     auto stop = clock::now();
+        //     LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+        //               << " sec)";
+        // }
 
-        if (file_map.count(KEY_SAREV) == 0) {
-            LOG(INFO) << "CONSTRUCT " << KEY_SAREV;
-            auto start = clock::now();
-            sdsl::int_vector<> sarev;
-            sdsl::qsufsort::construct_sa(sarev, file_map[KEY_TEXTREV].c_str(), 0);
-            auto sarev_path = path + "/" + KEY_PREFIX + KEY_SAREV;
-            sdsl::store_to_file(sarev, sarev_path);
-            file_map[KEY_SAREV] = sarev_path;
-            auto stop = clock::now();
-            LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                      << " sec)";
-        }
+        // if (file_map.count(KEY_SAREV) == 0) {
+        //     LOG(INFO) << "CONSTRUCT " << KEY_SAREV;
+        //     auto start = clock::now();
+        //     sdsl::int_vector<> sarev;
+        //     sdsl::qsufsort::construct_sa(sarev, file_map[KEY_TEXTREV].c_str(), 0);
+        //     auto sarev_path = path + "/" + KEY_PREFIX + KEY_SAREV;
+        //     sdsl::store_to_file(sarev, sarev_path);
+        //     file_map[KEY_SAREV] = sarev_path;
+        //     auto stop = clock::now();
+        //     LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+        //               << " sec)";
+        // }
     }
 };

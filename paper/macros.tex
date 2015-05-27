@@ -12,8 +12,8 @@
 \algrenewcommand\algorithmicrequire{\textbf{Precondition:}}
 \algrenewcommand\algorithmicensure{\textbf{Postcondition:}}
 
-\newcommand{\ngram}{$n$gram\xspace}
-\newcommand{\ngrams}{$n$grams\xspace}
+\newcommand{\ngram}{$m$gram\xspace}
+\newcommand{\ngrams}{$m$grams\xspace}
 
 \newcommand{\rooot}[1]{\text{root}(#1)}
 \newcommand{\leaf}[2]{\text{leaf}(#1, #2)}
@@ -26,6 +26,7 @@
 \newcommand{\backwardsearch}[4]{\text{backward-search}(#1, [#2,#3], #4)}
 \newcommand{\forwardsearch}[4]{\text{forward-search}(#1, [#2,#3], #4)} % I've abbreviated away depth, char_pos
 \newcommand{\intervalsymbols}[3]{\text{interval-symbols}(#1, [#2,#3])}
+\newcommand{\pathlabel}[2]{\text{label}(#1, #2)}
 
 \DeclareMathOperator*{\Bigcdot}{\scalerel*{\cdot}{\bigodot}}
 
@@ -44,12 +45,12 @@
 \newcommand{\tr}{t_{\text{R}}}
 \newcommand{\af}{a_{\text{F}}}
 \newcommand{\ar}{a_{\text{R}}}
-\newcommand{\nf}{n_{\text{F}}}
-\newcommand{\nr}{n_{\text{R}}}
-\newcommand{\nrfull}{n_{\text{R}}^{\text{all}}}
-\newcommand{\nffull}{n_{\text{F}}^{\text{all}}}
-\newcommand{\chf}{c_{\text{F}}}
-\newcommand{\chr}{c_{\text{R}}}
+\newcommand{\nf}{v_{\text{F}}}
+\newcommand{\nr}{v_{\text{R}}}
+\newcommand{\nrfull}{v_{\text{R}}^{\text{all}}}
+\newcommand{\nffull}{v_{\text{F}}^{\text{all}}}
+\newcommand{\chf}{u_{\text{F}}}
+\newcommand{\chr}{u_{\text{R}}}
 
 \newcommand{\ws}{\textbf{w}}
 
@@ -71,12 +72,12 @@
 
 
 %-- ALG/DS
-\newcommand{\SA}{\mbox{\emph{SA}}}
 \newcommand{\method}[1]{{\sc #1}}
 \newcommand{\colbwt}{\ensuremath{\mathcal{T}^{bwt}}}  % collection
 \newcommand{\accessop}{\method{access}}
 \newcommand{\rankop}{\method{rank}}
 \newcommand{\selectop}{\method{select}}
+\newcommand{\SA}{\mbox{\emph{SA}}\xspace}
 
 %%% Local Variables: 
 %%% mode: latex

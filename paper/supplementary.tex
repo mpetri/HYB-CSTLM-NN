@@ -66,6 +66,26 @@ Compact, Efficient and Unlimited Capacity:
 \maketitle
 %\onecolumn
 
+\begin{algorithm}[htpb]
+  \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern $\alpha$ 
+    \label{alg:n1plus}}
+  \begin{algorithmic}[1]
+    \Require{node $n$ in \CST $t$ matches $\alpha$}
+    \Function{N1Plus}{$t, n, \alpha$} %\Comment{ $t$ is either forward or reverse \CST}
+        \Let{$o$}{$1$} %\Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
+        %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
+        \If{$\depth{t}{n} = |\alpha|$}
+          \Let{$o$}{$\degree{t}{n}$}
+        % \Else
+        %   \Let{$o$}{$1$}
+        \EndIf
+      \State \Return{$o$}
+    \EndFunction
+  \end{algorithmic}
+\label{alg-nlplus}
+\end{algorithm}
+
+
 \begin{algorithm*}[htpb]
   \caption{Compute backward occurrence counts, $\nlplus{\dotpat}$, using only forward \CST 
     \label{alg:n1plusback_wt}}
