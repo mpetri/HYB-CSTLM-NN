@@ -1,0 +1,159 @@
+\tikzstyle{internal}=[draw,rectangle,inner sep=0pt,minimum size=1ex,align=center]
+\tikzstyle{leaf}=[draw,rectangle,fill=blue!50,inner sep=0pt,minimum size=1ex,minimum height=15pt,align=center]
+
+\def\yscale{1}
+\def\xscale{1}
+
+\def\lvlzero{9.5}
+\def\lvlone{8.1}
+\def\lvltwo{6.8}
+\def\lvlthree{5.5}
+\def\lvlfour{4.3}
+
+\begin{tikzpicture}
+
+\node[internal,text width=6.5cm] (root) at (5*\xscale,\lvlzero*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccccccccccccccccccccccc}
+{\tt \#} & {\tt n} & {\tt T} &{\tt \$} &{\tt p} &{\tt p} &{\tt t} &{\tt t} &{\tt n} &{\tt n} 
+&{\tt r} &{\tt r} &{\tt t} &{\tt t} &{\tt o} &{\tt t} &{\tt s} &{\tt s}&{\tt i}
+&{\tt \#}&{\tt \#}&{\tt i}&{\tt t} \\
+{\tt 0} & {\tt 1} & {\tt 1} &{\tt 0} &{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} 
+&{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1}&{\tt 0}
+&{\tt 0}&{\tt 0}&{\tt 0}&{\tt 1} \\
+\end{tabular}
+};
+
+\node[internal,text width=2.7cm] (n-hdppri) at (3*\xscale,\lvlone*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccccccccc}
+{\tt \#} &{\tt \$} &{\tt p} &{\tt p} &{\tt r} &{\tt r} &{\tt i}&{\tt \#}&{\tt \#}&{\tt i} \\
+{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 0}&{\tt 0}&{\tt 0}&{\tt 0}
+\end{tabular}
+};
+
+\node[internal,text width=3.6cm] (n-ntTos) at (6.6*\xscale,\lvlone*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccccccccccccc}
+{\tt n} & {\tt T} &{\tt t} &{\tt t} &{\tt n} &{\tt n} &{\tt t} &{\tt t} &{\tt o} &{\tt t} &{\tt s} &{\tt s}&{\tt t} \\
+{\tt 0} & {\tt 1} &{\tt 1} &{\tt 1} &{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 0} &{\tt 1} &{\tt 0} &{\tt 0}&{\tt 1} \\
+\end{tabular}
+};
+
+\node[internal,text width=1.6cm] (n-hashidollar) at (2.3*\xscale,\lvltwo*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccccc}
+{\tt \#} &{\tt \$} &{\tt i}&{\tt \#}&{\tt \#}&{\tt i} \\
+{\tt 0} &{\tt 0} &{\tt 1} &{\tt 0}&{\tt 0}&{\tt 1}
+\end{tabular}
+};
+
+\node[internal,text width=1.1cm] (n-pr) at (3.9*\xscale,\lvltwo*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccc}
+{\tt p} &{\tt p} &{\tt r}&{\tt r}  \\
+{\tt 0} &{\tt 0} &{\tt 1}&{\tt 1}
+\end{tabular}
+};
+
+\node[leaf,text width=0.3cm] (l-p) at (3.5*\xscale,\lvlthree*\yscale) {
+{\tt p}
+};
+
+\node[leaf,text width=0.3cm] (l-r) at (4.1*\xscale,\lvlthree*\yscale) {
+{\tt r}
+};
+
+\node[internal,text width=1.1cm] (n-hashdollar) at (1.8*\xscale,\lvlthree*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccc}
+{\tt \#} &{\tt \$} &{\tt \#}&{\tt \#}  \\
+{\tt 1} &{\tt 0} &{\tt 1}&{\tt 1}
+\end{tabular}
+};
+
+\node[leaf,text width=0.3cm] (l-i) at (2.8*\xscale,\lvlthree*\yscale) {
+{\tt i}
+};
+
+\node[leaf,text width=0.3cm] (l-dollar) at (1.4*\xscale,\lvlfour*\yscale) {
+{\tt \$}
+};
+
+\node[leaf,text width=0.3cm] (l-hash) at (2.1*\xscale,\lvlfour*\yscale) {
+{\tt \#}
+};
+
+
+\node[internal,text width=1.7cm] (n-nso) at (5.6*\xscale,\lvltwo*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{cccccc}
+{\tt n} & {\tt n} &{\tt n} &{\tt o} &{\tt s} &{\tt s}\\
+{\tt 1} & {\tt 1} &{\tt 1} &{\tt 0} &{\tt 0} &{\tt 0} \\
+\end{tabular}
+};
+
+\node[internal,text width=1.9cm] (n-tT) at (7.5*\xscale,\lvltwo*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{ccccccc}
+{\tt T} & {\tt t} &{\tt t} &{\tt t} &{\tt t} &{\tt t}&{\tt t}\\
+{\tt 1} & {\tt 0} &{\tt 0} &{\tt 0} &{\tt 0} &{\tt 0}&{\tt 0} \\
+\end{tabular}
+};
+
+\node[leaf,text width=0.3cm] (l-t) at (7*\xscale,\lvlthree*\yscale) {
+{\tt t}
+};
+
+\node[leaf,text width=0.3cm] (l-T) at (8*\xscale,\lvlthree*\yscale) {
+{\tt T}
+};
+
+\node[internal,text width=1.3cm] (n-ns) at (5.2*\xscale,\lvlthree*\yscale) {
+\setlength\tabcolsep{0.5pt}
+\begin{tabular}{ccccc}
+{\tt n} & {\tt n} &{\tt n} &{\tt s} &{\tt s}\\
+{\tt 1} & {\tt 1} &{\tt 1} &{\tt 0} &{\tt 0} \\
+\end{tabular}
+};
+
+\node[leaf,text width=0.3cm] (l-o) at (6.2*\xscale,\lvlthree*\yscale) {
+{\tt o}
+};
+
+\node[leaf,text width=0.3cm] (l-s) at (4.7*\xscale,\lvlfour*\yscale) {
+{\tt s}
+};
+
+\node[leaf,text width=0.3cm] (l-n) at (5.5*\xscale,\lvlfour*\yscale) {
+{\tt n}
+};
+
+\draw (l-n.north) -- (n-ns);
+\draw (l-s.north) -- (n-ns);
+
+\draw (l-t.north) -- (n-tT);
+\draw (l-T.north) -- (n-tT);
+
+\draw (l-p.north) -- (n-pr);
+\draw (l-r.north) -- (n-pr);
+
+\draw (l-hash.north) -- (n-hashdollar);
+\draw (l-dollar.north) -- (n-hashdollar);
+
+\draw (l-i.north) -- (n-hashidollar);
+\draw (l-o.north) -- (n-nso);
+
+\draw (n-hashdollar.north) -- (n-hashidollar);
+
+\draw (n-ns.north) -- (n-nso);
+
+\draw (n-nso.north) -- (n-ntTos);
+\draw (n-tT.north) -- (n-ntTos);
+\draw (n-pr.north) -- (n-hdppri);
+\draw (n-hashidollar.north) -- (n-hdppri);
+
+\draw (n-hdppri.north) -- (root);
+\draw (n-ntTos.north) -- (root);
+
+\end{tikzpicture}
