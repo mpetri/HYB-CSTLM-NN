@@ -93,8 +93,8 @@ Line 5 deals with the special case where the pattern does not match a complete e
 \nlplusname and \nlplusfrontbackname can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
 The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as the search time to match the pattern in both \CSTs. 
 We show in Section \ref{sec-single-cst}  how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
-Beyond the need for twin suffix trees, the non-constant complexity operations are the calls to \emph{depth}, \emph{edge} and \emph{backward-search}.
-Calling \emph{depth} is constant time for internal nodes, but costly for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
+Beyond the need for twin suffix trees, the highest time complexity calls are \emph{string-depth}, \emph{edge} and \emph{backward-search}.
+Calling \emph{string-depth} is constant time for internal nodes, but $\Order{n\log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
 This leads to an overall time complexity of $\Order{1}$ for \nlplusname and $\Order{F m \log\sigma}$ for \nlplusfrontbackname, where $F$ is the number of following symbols, $\sigma=|\Sigma|$ the vocabulary size, and $m=|\alpha|$ is the pattern length.
 
@@ -103,16 +103,12 @@ This leads to an overall time complexity of $\Order{1}$ for \nlplusname and $\Or
 
 Using the methods above for computing the frequency and occurrence
 counts, we now have the ingredients necessary to compute \ngram language model
-probabilities. The remaining question is to determine which patterns we need to search for
-in the forward and reverse \CST structures in order to support the
-various frequency queries and $N^{1+}$ computations.
+probabilities. This leaves the algorithmic problem of efficiently ordering the search 
+operations in forward and reverse \CST structures.
 
-As this paper considers an interpolated Kneser Ney model formulation, in which
+This paper considers an interpolated LM formulation, in which
 probabilities from higher order contexts are interpolated with lower
-order estimates following a simple recursion (as do several other LMs). 
-Equivalently, this iteration can be considered in reverse, starting from unigram
-estimates and successively growing to large \ngrams, which better
-suits our \CST data-structures.
+order estimates.
 % Our approach starts by querying the target word unigram $w_k$ and
 % empty context $\emptyset$, from which the unigram probability can be computed
 % Both patterns are extended to the left with symbol $w_{k-1}$, to form
@@ -120,10 +116,9 @@ suits our \CST data-structures.
 % In each step the probability is computed before extending the pattern,
 % stopping after a fixed number of steps, $n$, or on encountering an
 % unseen context.
-This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which
-shows the quantities required for probability scoring for an example \ngram.
-Structuring the search in order of the \ngram length means that each step involves adding a new symbol to the left of the pattern.
-This kind of incremental search is well suited to \CSTs, which can be searched efficiently by refining an existing search result.
+This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which shows the quantities required for probability scoring for an example \ngram.
+Equivalently, the iteration can be considered in reverse, starting from unigram estimates and successively growing to large \ngrams, in each stage adding a single new symbol to left of the pattern. 
+This suits incremental search in a \CST in which search bounds are iteratively refined, which has a substantially lower time complexity compared to searching over the full range.
 %This fits well with cheaply searching a \CST one symbol at a time.  
 
 
