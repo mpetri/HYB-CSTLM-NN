@@ -10,12 +10,12 @@ To be useful, LMs not only need to be accurate but they also need to be fast and
 %
 %where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
 %A typical count-based LM can contain as many as several hundred billions of $n$grams
-In this paper, we build  fast and compact $n$gram LMs, the predominant approach in count-based language modeling, on web-scale corpora using modern succinct data structures.
+%In this paper, we build  fast and compact $n$gram LMs, the predominant approach in count-based language modeling, on web-scale corpora using modern succinct data structures.
 %
-We show how to compactly index the text statistics needed by $n$gram language models, so that they can be queried efficiently to make the probabilities on the fly.       
+%We show how to compactly index the text statistics needed by $n$gram language models, so that they can be queried efficiently to make the probabilities on the fly.       
 %
-Importantly, the stored index and text statistics are kept intact for $n$gram LMs with different orders (i.e. the context size), hence allow to relax the
-Markov assumption made in these LMs by considering very large contexts.
+%Importantly, the stored index and text statistics are kept intact for $n$gram LMs with different orders (i.e. the context size), hence allow to relax the
+%Markov assumption made in these LMs by considering very large contexts.
 
 
 
