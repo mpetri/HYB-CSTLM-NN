@@ -90,13 +90,14 @@ Line 5 deals with the special case where the pattern does not match a complete e
 \label{alg-occ-two-sided}
 \end{algorithm}
 
-\nlplusname and \nlplusfrontbackname can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
+\nlplusname\ and \nlplusfrontbackname\ can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
 The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as the search time to match the pattern in both \CSTs. 
 We show in Section \ref{sec-single-cst}  how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
 Beyond the need for twin suffix trees, the highest time complexity calls are \emph{string-depth}, \emph{edge} and \emph{backward-search}.
-Calling \emph{string-depth} is constant time for internal nodes, but $\Order{n\log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
+Calling \emph{string-depth} is constant time for internal nodes, but $\Order{\SASAMPLE \log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
-This leads to an overall time complexity of $\Order{1}$ for \nlplusname and $\Order{F m \log\sigma}$ for \nlplusfrontbackname, where $F$ is the number of following symbols, $\sigma=|\Sigma|$ the vocabulary size, and $m=|\alpha|$ is the pattern length.
+This leads to an overall time complexity of $\Order{1}$ for \nlplusname\ and $\Order{F(\alpha) \times \SASAMPLE \times \log\sigma}$ for \nlplusfrontbackname, where $F(\alpha)$ is the number of following symbols and \SASAMPLE is the suffix array value sample rate described
+in section~\ref{sec-css}.
 
 \section{Dual \CST Algorithm} 
 \label{sec-dual-cst}
