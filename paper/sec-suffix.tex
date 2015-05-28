@@ -1,16 +1,32 @@
 
 \subsection{Suffix Arrays and Suffix Trees}
 
-
-\begin{figure}
+\begin{figure*}[phbt]
+\begin{subfigure}[t]{0.5\textwidth}
 \centering
 %\scalebox{0.9}{
 \input{figures/fig-suffix-tree.tex}
 %}
-\caption{Word-based Suffix Tree and Suffix Array (below) for a sample the 
-text.}
+\caption{Word-based Suffix Tree and Suffix Array and BWT.}
 \label{fig-suffix-tree}
-\end{figure}
+\end{subfigure}
+\quad
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\input{figures/fig-wt-bwt.tex}
+\caption{Wavelet tree}
+\label{fig-wt-bwt}
+\end{subfigure}
+\begin{subfigure}[b]{1\textwidth}
+\centering
+\input{figures/fig-sa-bwt.tex}
+\label{fig-wt-bwt}
+\end{subfigure}
+\vspace{-0.8cm}
+\caption{Data structures for our running example with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
+{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
+{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
+\end{figure*}
 
 Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
 size {\alphabetsize}. Let {$\col[i..n-1]$} be a {\it suffix} of {\col}.
@@ -87,22 +103,14 @@ of $\alphabetsize \log \collen$ bits.
 Thus, the new interval is computed as $l_{i-1} = C_c + $\rankop$(\colbwt,l_i,c)$ 
 and $r_{i-1} = C_c + $\rankop$(\colbwt,r_i+1,c)$.
 
-\begin{figure}[tb]
-\centering
-\input{figures/fig-wt-bwt.tex}
-\caption{Wavelet tree of \colbwt\ with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
-{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
-{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
-\label{fig-wt-bwt}
-\end{figure}
-
 
 The time and space complexity of the FM-index thus depends on the cost of storing
 and pre-processing \colbwt\ to answer \rankop\ efficiently. A {\it wavelet tree}
 can be used to answer \rankop\ over $\colbwt$ in $\Order{\log \alphabetsize}$ time.
 The wavelet tree reduces \rankop\ over an alphabet $\alphabet$ into multiple
 \rankop\ operations over a binary alphabet which can be answered 
-in $\Order{1}$ time and $o(n)$ bits extra space~\cite{m-fsttcs96}. The alphabet is
+in $\Order{1}$ time and $o(n)$ bits extra space by periodically storing absolute
+and relative \rankop\ counts~\cite{m-fsttcs96}. The alphabet is
 reduced by recursively splitting symbols based on their code words into subgroups to 
 form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
 \rankop$(\colbwt,i,c)$, the tree is traversed based on the code word of $c$, performing

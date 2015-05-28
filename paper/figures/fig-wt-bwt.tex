@@ -1,7 +1,7 @@
 \tikzstyle{internal}=[draw,rectangle,inner sep=0pt,minimum size=1ex,align=center]
 \tikzstyle{leaf}=[draw,rectangle,fill=blue!50,inner sep=0pt,minimum size=1ex,minimum height=15pt,align=center]
 
-\def\yscale{1}
+\def\yscale{0.9}
 \def\xscale{1}
 
 \def\lvlzero{9.5}
@@ -12,14 +12,14 @@
 
 \begin{tikzpicture}
 
-\node[internal,text width=6.5cm] (root) at (5*\xscale,\lvlzero*\yscale) {
+\node[internal,text width=6.2cm] (root) at (5*\xscale,\lvlzero*\yscale) {
 \setlength\tabcolsep{0.5pt}
-\begin{tabular}{cccccccccccccccccccccccc}
+\begin{tabular}{ccccccccccccccccccccccc}
 {\tt \#} & {\tt n} & {\tt T} &{\tt \$} &{\tt p} &{\tt p} &{\tt t} &{\tt t} &{\tt n} &{\tt n} 
 &{\tt r} &{\tt r} &{\tt t} &{\tt t} &{\tt o} &{\tt t} &{\tt s} &{\tt s}&{\tt i}
 &{\tt \#}&{\tt \#}&{\tt i}&{\tt t} \\
 {\tt 0} & {\tt 1} & {\tt 1} &{\tt 0} &{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} 
-&{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1}&{\tt 0}
+&{\tt 0} &{\tt 0} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1} &{\tt 1}&{\tt 0}
 &{\tt 0}&{\tt 0}&{\tt 0}&{\tt 1} \\
 \end{tabular}
 };
@@ -129,31 +129,31 @@
 {\tt n}
 };
 
-\draw (l-n.north) -- (n-ns);
-\draw (l-s.north) -- (n-ns);
+\draw (l-n.north) -- (n-ns.south)  node [near start,above=-2pt] {\tiny \bf 1};
+\draw (l-s.north) -- (n-ns.south)  node [near start,above=-2pt] {\tiny \bf 0};
 
-\draw (l-t.north) -- (n-tT);
-\draw (l-T.north) -- (n-tT);
+\draw (l-t.north) -- (n-tT.south)  node [near start,above=-2pt] {\tiny \bf 0};
+\draw (l-T.north) -- (n-tT.south)  node [near start,above=-2pt] {\tiny \bf 1};
 
-\draw (l-p.north) -- (n-pr);
-\draw (l-r.north) -- (n-pr);
+\draw (l-p.north) -- (n-pr.south)  node [near start,above=-2pt] {\tiny \bf 0};
+\draw (l-r.north) -- (n-pr.south)  node [near start,above=-2pt] {\tiny \bf 1};
 
-\draw (l-hash.north) -- (n-hashdollar);
-\draw (l-dollar.north) -- (n-hashdollar);
+\draw (l-hash.north) -- (n-hashdollar.south)  node [near start,above=-2pt] {\tiny \bf 1};
+\draw (l-dollar.north) -- (n-hashdollar.south)  node [near start,above=-2pt] {\tiny \bf 0};
 
-\draw (l-i.north) -- (n-hashidollar);
-\draw (l-o.north) -- (n-nso);
+\draw (l-i.north) -- (n-hashidollar.south)  node [near start,above] {\tiny \bf 1};
+\draw (l-o.north) -- (n-nso.south)  node [near start,above] {\tiny \bf 1};
 
-\draw (n-hashdollar.north) -- (n-hashidollar);
+\draw (n-hashdollar.north) -- (n-hashidollar.south)  node [near start,above=-2pt] {\tiny \bf 0};
 
-\draw (n-ns.north) -- (n-nso);
+\draw (n-ns.north) -- (n-nso.south)  node [near start,above=-2pt] {\tiny \bf 0};
 
-\draw (n-nso.north) -- (n-ntTos);
-\draw (n-tT.north) -- (n-ntTos);
-\draw (n-pr.north) -- (n-hdppri);
-\draw (n-hashidollar.north) -- (n-hdppri);
+\draw (n-nso.north) -- (n-ntTos.south)  node [near start,above=-2pt] {\tiny \bf 0};
+\draw (n-tT.north) -- (n-ntTos.south)  node [near start,above=-2pt] {\tiny \bf 1};
+\draw (n-pr.north) -- (n-hdppri.south)  node [near start,above=-2pt] {\tiny \bf 1};
+\draw (n-hashidollar.north) -- (n-hdppri.south)  node [near start,above=-2pt] {\tiny \bf 0};
 
-\draw (n-hdppri.north) -- (root);
-\draw (n-ntTos.north) -- (root);
+\draw (n-hdppri.north) -- (root.south)  node [near start,above=-3pt] {\tiny \bf 0};
+\draw (n-ntTos.north) -- (root.south)  node [near start,above=-3pt] {\tiny \bf 1};
 
 \end{tikzpicture}
