@@ -123,16 +123,16 @@ This suits incremental search in a \CST in which search bounds are iteratively r
 
 
 \begin{algorithm}[tpb]
-  \caption{KN probability $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
+  \caption{KN probability $P\big(w_k | w^{k-1}_{k-(m-1)}\big)$
     \label{alg:pkn}}
 \footnotesize
   \begin{algorithmic}[1]
-    \Function{ProbKneserNey}{$\tf, \tr, \ws, n$} 
-        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for $w^{k}_{k-i}$}
+    \Function{ProbKneserNey}{$\tf, \tr, \ws, m$} 
+        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for suffix of $w^{k-1}_{k-(m-1)}$}
+        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for suffix of $w^{k-1}_{k-(m-1)}$}
+        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for suffix of $w^{k}_{k-(m-1)}$}
         \Let{$p$}{$1$}
-        \For{$i \gets 1 \text{ to } $}
+        \For{$i \gets 1 \text{ to } m$}
           \Let{$\nrfull$}{$\forwardsearchnode{\tr}{\nrfull}{w_{k-i+1}}$} %\Comment{update matches in \textsc{Cst}s}
           \If{$i > 1$}
              \Let{$\nf$}{$\backwardsearchnode{\tf}{\nf}{w_{k-i+1}}$} %\Comment{update context match in fwd \CST}
@@ -140,7 +140,7 @@ This suits incremental search in a \CST in which search bounds are iteratively r
              \Let{$\nr$}{$\forwardsearchnode{\tr}{\nr}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
           \EndIf
           \EndIf
-          \Let{$D$}{lookup discount for $i$gram}
+          \Let{$D_i$}{lookup discount for $i$gram}
           \If{$i = m$} % or if s == '<s>' 
 %                 \Comment{compute frequency count and denominator}
              \Let{$c$}{$\size{\tr}{\nrfull}$} 
@@ -153,7 +153,7 @@ This suits incremental search in a \CST in which search bounds are iteratively r
            \If{$i > 1$}
              \If{$\nf$ is valid} %\Comment{compute backoff probability, or backoff for unseen contexts}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  %\Comment{defined as $0$ for $i=1$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D_i, 0)  + D_i  q  p \right)$} 
                \EndIf
           \ElsIf{$i = 1$}
               \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
