@@ -23,28 +23,27 @@
 \label{fig-sa-bwt}
 \end{subfigure}
 \vspace{-0.8cm}
-\caption{Data structures for our running example with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
-{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
-{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
+\caption{Data structures for the sample text {\col=``\#the old night keeper 
+keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}'' with alphabet {\alphabet=\{the, old, night, keeper, keeps, keep, in, town, \#\}} and code words {\em \$=0000}, {\em \#=0001}, 
+{\em i=in=001}, {\em p=keep=010}, {\em r=keeper=011}, {\em s=keeps=1000}, 
+{\em o=old=101}, {\em t=the=110}, {\em n=night=1001} and {\em T=town=111}.}
 \label{fig-example}
 \end{figure*}
 
 Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
-size {\alphabetsize}. Let {$\col[i..n-1]$} be a {\it suffix} of {\col}.
+size {\alphabetsize}. Let {$\col[i..\collen-1]$} be a {\it suffix} of {\col}.
 The {\it suffix tree}~\cite{w-swat73} of {\col} is the compact labeled
-tree of $n+1$ leaves where the root to leaf paths correspond to all suffixes of {\col\$},
+tree of $\collen+1$ leaves where the root to leaf paths correspond to all suffixes of {\col\$},
 where \$ is a terminating symbol not in {\alphabet}. The {\it path-label}
 of each node $v$ corresponds to the concatenation of edge labels from the
 root node to $v$. The {\it node depth} of $v$ corresponds to the number
 of ancestors in the tree, whereas the {\it string depth} corresponds to the
 length of the path-label. Searching for a pattern {\pattern} of 
 size {\plen} in {\col} translates to finding the {\it locus} node $v$ closest to
-the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{m}$ time.
-Figure~\ref{fig-suffix-tree} shows a suffix tree over {\col=``\#the old night keeper 
-keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}''. 
-The sample text is drawn from the word alphabet 
-{\alphabet=\{the, old, night, keeper, keeps, keep, in, town, \#\}}. A suffix tree requires $\Order{n}$ space 
-and can be constructed in $\Order{n}$ time~\cite{u-algo95}. The children
+the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{\plen}$ time.
+Figure~\ref{fig-suffix-tree} shows a suffix tree over a sample text. 
+A suffix tree requires $\Order{\collen}$ space 
+and can be constructed in $\Order{\collen}$ time~\cite{u-algo95}. The children
 of each node in the suffix tree are lexicographically ordered by their edge labels.
 The $i$-th smallest suffix in {\col} corresponds to the path-label of the $i$-th 
 leaf. The starting position of the suffix can be associated its corresponding
@@ -55,16 +54,16 @@ at positions $12$ and $19$ in the sample text. We further refer the number of ch
 of a node $v$ as its {\it degree} and the number of leaves in the subtree rooted at $v$
 as the {\it size} of $v$.
 
-The {\it suffix array}~\cite{mm-jcomp93} of {\col} is an array $\SA[0\ldots n-1]$ such
+The {\it suffix array}~\cite{mm-jcomp93} of {\col} is an array $\SA[0\ldots \collen-1]$ such
 that $\SA[i]$ corresponds to the starting position of the $i$-th smallest suffix
 in {\col} or the $i$-th leaf in the suffix tree of {\col}. The suffix array requires
-$n \log n$ bits of space and can also be constructed in $\Order{n}$ time~\cite{ksb-jacm06}.
+$\collen \log \collen$ bits of space and can also be constructed in $\Order{\collen}$ time~\cite{ksb-jacm06}.
 Using only the suffix array and the text, pattern search can be performed using binary search
-in $\Order{m \log n}$ time. For example, the pattern ``the night'' is found by performing
+in $\Order{\plen \log \collen}$ time. For example, the pattern ``the night'' is found by performing
 binary search using \SA\ and \col\ to determine \SA$[18,19]$, the interval in 
 \SA\ corresponding the the suffixes in \col\ prefixed by the pattern.
-In practice, suffix arrays use $4-8n$ bytes of space whereas the most efficient
-suffix tree implementations require at least $20n$ bytes of space~\cite{k-spe99} which
+In practice, suffix arrays use $4-8\collen$ bytes of space whereas the most efficient
+suffix tree implementations require at least $20\collen$ bytes of space~\cite{k-spe99} which
 are both much larger than {\col} and prohibit the use of these structures for all but
 small data sets.
 
@@ -87,14 +86,14 @@ excellent survey of~\newcite{fgnv-jea08}.
 The FM-Index relies on the duality between the suffix array and the BWT~\cite{bw-dec94}, 
 a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$ (see Figure~\ref{fig-example}). Searching for
 a pattern using the FM-Index is performed in reverse order by performing  
-{\rankop$(\colbwt,i,c)$} operations $\Order{m}$ times. Here, {\rankop$(\colbwt,i,c)$}  
+{\rankop$(\colbwt,i,c)$} operations $\Order{\plen}$ times. Here, {\rankop$(\colbwt,i,c)$}  
 counts the number of times symbol $c$ occurs in $\colbwt[0\ldots i-1]$. 
 This process is usually referred to as {\it backward search}. Let \SA$[l_i,r_i]$ be
-the interval corresponding to the suffixes in \col\ matching \pattern$[i\ldots m-1]$.
+the interval corresponding to the suffixes in \col\ matching \pattern$[i\ldots \plen-1]$.
 By definition of the BWT, $\colbwt[l_i,r_i]$ corresponds to the symbols in \col\
-preceding \pattern$[i\ldots m-1]$ in \col. Due to the lexicographical ordering
+preceding \pattern$[i\ldots \plen-1]$ in \col. Due to the lexicographical ordering
 of all suffixes in \SA, the interval \SA$[l_{i-1},r_{i-1}]$ corresponding to all
-occurrences of \pattern$[i-1\ldots m-1]$ can be determined by computing the rank
+occurrences of \pattern$[i-1\ldots \plen-1]$ can be determined by computing the rank
 of all occurrences of $c=\pattern[i-1]$ in $\colbwt[l_i,r_i]$. Thus, we compute
 \rankop$(\colbwt,l_i,c)$, the number of times symbol $c$ occurs before
 $l_i$ and \rankop$(\colbwt,r_i+1,c)$, the number of occurrences of $c$ in $\colbwt[0,r_i]$.
@@ -110,7 +109,7 @@ and pre-processing \colbwt\ to answer \rankop\ efficiently. A {\it wavelet tree}
 can be used to answer \rankop\ over $\colbwt$ in $\Order{\log \alphabetsize}$ time.
 The wavelet tree reduces \rankop\ over an alphabet $\alphabet$ into multiple
 \rankop\ operations over a binary alphabet which can be answered 
-in $\Order{1}$ time and $o(n)$ bits extra space by periodically storing absolute
+in $\Order{1}$ time and $o(\collen)$ bits extra space by periodically storing absolute
 and relative \rankop\ counts~\cite{m-fsttcs96}. The alphabet is
 reduced by recursively splitting symbols based on their code words into subgroups to 
 form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
@@ -123,23 +122,35 @@ the next bit in the codeword of `the' is also one. This process continues until
 the correct leaf node is reached to answer \rankop$(\colbwt,17,`t`)=5$ in 
 $\Order{\log \alphabetsize}$ time. The space usage of a regular wavelet tree is
 $\collen \log \alphabetsize + o(\collen \log \alphabetsize)$ bits which roughly
-matches the size of the text. However, if code-words for each symbol are chosen
+matches the size of the text.\footnote{However, if code-words for each symbol are chosen
 based on their Huffman-codes the size of the wavelet tree reduces to $nH_0(\col)(1 + o(1))$
-bits which can be further be reduced to to $nH_k(\col)(1 + o(1))$ bits by using 
-entropy compressed bitvectors. Additional space is required to access $\SA[i]$
-or the inverse suffix array $\SA^{-1}[SA[i]]=i$ which are periodically sampled
-and require \rankop\ operations relative to the sample rate to access each value.
+bits which can be further be reduced to to $\collen H_k(\col)+o(\collen \log \sigma)$ bits by using 
+entropy compressed bitvectors.} Additional space is required to access $\SA[i]$
+or the inverse suffix array $\SA^{-1}[SA[i]]=i$. In the simplest scheme, both 
+values are periodically sampled using a given sample rate \SASAMPLE (e.g. 32). Then, 
+for any $\SA[i]$ or $\SA^{-1}[i]$, at most $\Order{\SASAMPLE}$ \rankop\
+operations on \colbwt\ are required to access the value.
 Different sample rates, bitvector implementations and wavelet tree types result
 in a wide variety of time-space tradeoffs which can be explored 
 in practice~\cite{gbmp2014sea}.
 
 In the same way the FM-index emulates the functionality of the suffix array in
-little space, {\it compressed suffix trees} (CST) provide the functionality
+little space, {\it compressed suffix trees} (\CST) provide the functionality
 of suffix trees while requiring significantly less space than their uncompressed
-counterparts~\cite{ofg-spire10}. A CST uses a compressed suffix array (CSA) such
+counterparts~\cite{ofg-spire10}. A \CST uses a compressed suffix array (\CSA) such
 as the FM-Index but stores additional information to represent the shape of
 the suffix tree as well as information about path-labels. Again a variety
 of different storage schemes exist, however for simplicity we focus on
-the CST of~\newcite{ofg-spire10}. Here, the shape of the tree
-is stored using a balanced-parenthesis (BP) sequence which for a tree of $p$ nodes
-requires $\approx 2p$ bits.
+the \CST of~\newcite{ofg-spire10} which we use in our experiments. Here, the 
+shape of the tree is stored using a balanced-parenthesis (BP) sequence which 
+for a tree of $p$ nodes requires $\approx 2p$ bits. Using little extra space
+and advanced bit-operations, the BP-sequence can be used to perform 
+operations such as \depths{$v$}, \parents{$v$} or 
+accessing the $i$-th leaf can be answered in constant time.
+To support more advanced operations such as accessing path-labels,
+the underlying \CSA or a compressed version of the LCP array are required
+which can be more expensive.~\footnote{See \supp for an overview of the complexities
+of the functionality of the \CST that is used in our experiments} 
+In practice, a \CST requires roughly $4-6\collen$ bits in addition to the
+cost of storing the \CSA. For a more extensive overview of \CSTs we refer
+the reader to~\newcite{rno-talg11}.
