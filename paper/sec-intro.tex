@@ -3,7 +3,8 @@ Language models (LMs) are one of the major and large components in many modern N
 %
 One approach for accurate language modeling is neural XX, but another is  count-based to harness the power of more data.
 %
-%The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
+%The predominant approach to count-based language modelling is the $n$gram model,
+%where a typical LM can contain as many as several hundred billions of $n$grams XX.
 %
 To be useful, LMs not only need to be accurate but they also need to be fast and compact.
 %
@@ -17,8 +18,18 @@ Importantly, the stored index and text statistics are kept intact for $n$gram LM
 Markov assumption made in these LMs by considering very large contexts.
 
 
-Depending on the order $n$ and the training corpus size, a typical $n$gram LM contains as many as several hundred billions of $n$grams XX. 
+
+Depending on the order $n$ and the training corpus size, a typical $n$gram LM may contain as many as several hundred billions of $n$grams [Brants et al 2007],
+so storage and query time become challenge.
 %
+As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs [Chazelle et al., 2004;BRANTS],
+or \emph{loss-less}  not-small LMs [SRI], where compression [Germann 2009], Suffix arrays [KenLM], suffix tries [KenLM], and suffix trees [LREC]  have been used to further reduce the storage.
+% 
+However, none of the aforementioned works scale up to high-order  $n$gram LMs for web scale corpora. 
+%
+We make use of recent advances in \emph{compact suffix arrays} (CSAs) [REF] and 
+\emph{compact suffix trees} (CSTs) [REF] to build small-storage indices  with reasonable query time for high-order $n$gram LMs on web scale corpora.
+
 
 
 %The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
