@@ -23,9 +23,13 @@
 \newcommand{\edge}[3]{\text{edge}(#2, #3)}
 \newcommand{\children}[2]{\text{children}(#2)}
 \newcommand{\parent}[2]{\text{parent}(#2)}
-\newcommand{\backwardsearch}[4]{\text{backward-search}([#2,#3], #4)}
-\newcommand{\forwardsearch}[4]{\text{forward-search}([#2,#3], #4)} % I've abbreviated away depth, char_pos
-\newcommand{\intervalsymbols}[3]{\text{interval-symbols}(#1, [#2,#3])}
+%\newcommand{\backwardsearchnode}[3]{\text{search}_{\leftarrow}([\text{lb}(#2),\text{rb}(#2)], #3)}
+\newcommand{\backwardsearchnode}[3]{\text{back-search}(#2, #3)}
+\newcommand{\backwardsearch}[4]{\text{back-search}([#2,#3], #4)}
+%\newcommand{\forwardsearchnode}[3]{\text{search}_{\rightarrow}([\text{lb}(#2),\text{rb}(#2)], #3)}
+\newcommand{\forwardsearchnode}[3]{\text{forw-search}(#2, #3)}
+\newcommand{\forwardsearch}[4]{\text{fw-search}([#2,#3], #4)} % I've abbreviated away depth, char_pos
+\newcommand{\intervalsymbols}[3]{\text{int-syms}(#1, [#2,#3])}
 \newcommand{\pathlabel}[2]{\text{label}(#2)}
 
 \DeclareMathOperator*{\Bigcdot}{\scalerel*{\cdot}{\bigodot}}
@@ -36,10 +40,14 @@
 \newcommand{\patdot}{\alpha \Bigcdot}
 \newcommand{\dotpatdot}{\Bigcdot \alpha \Bigcdot}
 \newcommand{\nlplus}[1]{N^{1+}(#1)} % note it's an little L not a 1
-\newcommand{\nlplusfunc}[3]{\textsc{N1Plus}(#1, #2, #3)} % "
-\newcommand{\nlplusbacklfunc}[3]{\textsc{N1PlusBack1}(#1, #2, #3)} % " ^ 2
-\newcommand{\nlplusfrontbackfunc}[4]{\textsc{N1PlusFrontBack}(#1, #2, #3, #4)} % " 
-\newcommand{\nlplusfrontbacklfunc}[3]{\textsc{N1PlusFrontBack1}(#1, #2, #3)} % "
+\newcommand{\nlplusname}{\textsc{N1p}}
+\newcommand{\nlplusfunc}[3]{\nlplusname(#1, #2, #3)} % "
+\newcommand{\nlplusbacklname}{\textsc{N1pBack1}}
+\newcommand{\nlplusbacklfunc}[3]{\nlplusbacklname(#1, #2, #3)} % " ^ 2
+\newcommand{\nlplusfrontbackname}{\textsc{N1pFrontBack}}
+\newcommand{\nlplusfrontbackfunc}[4]{\nlplusfrontbackname(#1, #2, #3, #4)} % " 
+\newcommand{\nlplusfrontbacklname}{\textsc{N1pBack1}}
+\newcommand{\nlplusfrontbacklfunc}[3]{\nlplusfrontbacklname(#1, #2, #3)} % "
 
 \newcommand{\tf}{t_{\text{F}}}
 \newcommand{\tr}{t_{\text{R}}}
