@@ -7,20 +7,20 @@
 %\scalebox{0.9}{
 \input{figures/fig-suffix-tree.tex}
 %}
-\caption{Word-based Suffix Tree and Suffix Array and BWT.}
+\caption{Word-based Suffix Tree.}
 \label{fig-suffix-tree}
 \end{subfigure}
 \quad
 \begin{subfigure}[t]{0.5\textwidth}
 \centering
 \input{figures/fig-wt-bwt.tex}
-\caption{Wavelet tree}
+\caption{Wavelet tree and \rankop$(\colbwt,17,'t')=5$.}
 \label{fig-wt-bwt}
 \end{subfigure}
 \begin{subfigure}[b]{1\textwidth}
 \centering
 \input{figures/fig-sa-bwt.tex}
-\label{fig-wt-bwt}
+\label{fig-sa-bwt}
 \end{subfigure}
 \vspace{-0.8cm}
 \caption{Data structures for our running example with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
@@ -114,12 +114,12 @@ and relative \rankop\ counts~\cite{m-fsttcs96}. The alphabet is
 reduced by recursively splitting symbols based on their code words into subgroups to 
 form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
 \rankop$(\colbwt,i,c)$, the tree is traversed based on the code word of $c$, performing
-binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`the`)$ translates
-to performing \rankop$(WT_{lvl-0},17,1)=11$ on the top level of the wavelet 
+binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`t`)$ translates
+to performing \rankop$(WT_{root},17,1)=12$ on the top level of the wavelet 
 tree, as {\tt t=the=110}. We recurse to the right subtree of the root node and
-compute \rankop$(WT_{lvl-1-1},11,1)$ as there were $11$ ones in the root node and
+compute \rankop$(WT_{1},12,1)$ as there were $12$ ones in the root node and
 the next bit in the codeword of `the' is also one. This process continues until 
-the correct leaf node is reached to answer \rankop$(\colbwt,17,`the`)=5$ in 
+the correct leaf node is reached to answer \rankop$(\colbwt,17,`t`)=5$ in 
 $\Order{\log \alphabetsize}$ time. The space usage of a regular wavelet tree is
 $\collen \log \alphabetsize + o(\collen \log \alphabetsize)$ bits which roughly
 matches the size of the text. However, if code-words for each symbol are chosen
