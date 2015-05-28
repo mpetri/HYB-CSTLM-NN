@@ -87,7 +87,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
 
 \textsc{N1Plus} and \textsc{N1PlusFrontBack} can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
 The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as the search time to match the pattern in both \CSTs. 
-We show later how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
+We show in Section \ref{sec-single-cst}  how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
 Beyond the need for twin suffix trees, the non-constant complexity operations are the calls to \emph{depth}, \emph{edge} and \emph{backward-search}.
 Calling \emph{depth} is constant time for internal nodes, but costly for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
@@ -191,6 +191,7 @@ Note that the \textsc{PrecomputeDiscounts} algorithm can be slow, although it is
 These approximate discounts are typically within $10^{-2}$ of the correct values.
 
 \section{Improved Single \CST Approach}
+\label{sec-single-cst}
 
 The above dual \CST algorithm provides an elegant means of computing LM probabilities of arbitrary order and with a limited space complexity ($\Order{n}$, or roughly $n$ in practice).
 However the time complexity is problematic, stemming from the expensive method for computing \textsc{N1PlusFrontBack} and repeated searches over the \CST, particularly \emph{forward-search}.
