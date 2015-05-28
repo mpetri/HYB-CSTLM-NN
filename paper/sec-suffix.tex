@@ -26,6 +26,7 @@
 \caption{Data structures for our running example with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
 {\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
 {\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
+\label{fig-example}
 \end{figure*}
 
 Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
@@ -42,7 +43,7 @@ the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{m}
 Figure~\ref{fig-suffix-tree} shows a suffix tree over {\col=``\#the old night keeper 
 keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}''. 
 The sample text is drawn from the word alphabet 
-{\alphabet=\{the,old,night,keeper,keeps,keep,in,town,\#\}}. A suffix tree requires $\Order{n}$ space 
+{\alphabet=\{the, old, night, keeper, keeps, keep, in, town, \#\}}. A suffix tree requires $\Order{n}$ space 
 and can be constructed in $\Order{n}$ time~\cite{u-algo95}. The children
 of each node in the suffix tree are lexicographically ordered by their edge labels.
 The $i$-th smallest suffix in {\col} corresponds to the path-label of the $i$-th 
@@ -84,7 +85,7 @@ For a more comprehensive overview on succinct text indexes, we refer to the
 excellent survey of~\newcite{fgnv-jea08}.
 
 The FM-Index relies on the duality between the suffix array and the BWT~\cite{bw-dec94}, 
-a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$. Searching for
+a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$ (see Figure~\ref{fig-example}). Searching for
 a pattern using the FM-Index is performed in reverse order by performing  
 {\rankop$(\colbwt,i,c)$} operations $\Order{m}$ times. Here, {\rankop$(\colbwt,i,c)$}  
 counts the number of times symbol $c$ occurs in $\colbwt[0\ldots i-1]$. 
