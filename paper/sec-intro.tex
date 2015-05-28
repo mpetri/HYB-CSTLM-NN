@@ -1,0 +1,47 @@
+%Language modelling is the task of estimating the probability of sequences of words in a language.
+Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation XX and automatic speech recognition XX.
+%
+One approach for accurate language modeling is neural XX, but another is  count-based to harness the power of more data.
+%
+%The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
+%
+To be useful, LMs not only need to be accurate but they also need to be fast and compact.
+%
+%where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
+%A typical count-based LM can contain as many as several hundred billions of $n$grams
+In this paper, we build  fast and compact count-based language models on web-scale corpora using modern succinct data structures.
+%
+We show how to compactly index the text statistics needed by $n$gram language models, so that they can be queried efficiently to make the probabilities on the fly.       
+%
+Importantly, the stored index and text statistics are kept intact for $n$gram LMs with different orders (i.e. the context size), hence allow to relax the
+Markov assumption made in these LMs by considering very large contexts.
+
+
+Depending on the order $n$ and the training corpus size, a typical $n$gram LM contains as many as several hundred billions of $n$grams XX. 
+%
+
+
+%The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
+
+  
+%A typical LM can contain as many as severl hundred billions of $n$gramsFor modern NLP systems 
+%The predominanr approach in language modelling is the $n$gram model, where the probability of a sequence of words is decomposed based on the chain rule and
+%approximated using the Markov assumption XX. 
+%
+ 
+
+%The dominant approach to language modelling is $n$gram  model, where 
+
+%LMs important, critical aspects are speed and scale. One avenue of better LMs using NN; another
+%better count based LMs to harness more data (e.g., stupid backoff). 
+
+%We're the latter, but marrying large scale with KN smoothing (better method). Crux is how to compute
+%the quantities (counts, occ counts). 
+
+%Suffix trees / arrays / tries etc used in the past. Either precomputed (KLM/SRI) or on the fly (slow
+%LREC paper). But doesn't scale. We propose compressed SA/ST methods, which scale to massive datasets.
+
+%Brief outline of how the method works; using one or two suffix trees. Forward/backward search.
+
+%Pata on experiments: pplx good; can scale to large n and massive corpora; adequate runtime
+%performance, around 100x slower than SRILM. Reranking gains? Can we run with INFINITE order?
