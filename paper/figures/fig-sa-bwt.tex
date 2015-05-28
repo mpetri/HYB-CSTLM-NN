@@ -1,0 +1,31 @@
+\def\yscale{0.6}
+\def\xscale{0.7}
+
+\begin{tikzpicture}
+
+\matrix[
+  matrix of nodes,
+  row sep=2pt,
+  nodes={
+    draw,
+    minimum height=2.5ex,
+    minimum width=2.5ex,
+    inner sep=1pt,
+    font=\fontsize{6}{7}\selectfont,
+    anchor=center,
+    align=center
+    }
+  ]
+ (mat) at (0,0)
+ {
+ \# & t & o & n & r & s & t & p & i & t & T & \$ & t & n & r & s & t & p & i & t & n & \# & \$ \\
+ \$ & \# & \# & \# & i & i & p & p & r & r & s & s & n & n & n & o & 16 & t & t & t & t & t & T \\
+ 22 & 21 & 11 & 0 & 18 & 8 & 17 & 7 & 14 & 4 & 15 & 5 & 20 & 13 & 3 & 2 & 16 & 6 & 19 & 12 & 1 & 9 & 10 \\
+\# & n & T &\$ &p &p &t &t &n &n  &r &r &t &t &o &t &s &s &i  &\# &\# &i &t \\
+ };
+
+\node[left of=mat-1-1,node distance=.9cm] {\small $\col$};
+\node[left of=mat-2-1,node distance=.9cm] {\small $\col[\SA[i]]$};
+\node[left of=mat-3-1,node distance=.9cm] {\small \SA};
+\node[left of=mat-4-1,node distance=.9cm] {\small \colbwt};
+\end{tikzpicture}

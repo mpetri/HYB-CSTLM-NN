@@ -1,0 +1,923 @@
+\documentclass[11pt]{article}
+\usepackage{acl2015}
+\usepackage{times}
+\usepackage{url}
+\usepackage{latexsym}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{mathtools}
+\usepackage{natbib}
+\usepackage{booktabs}
+ \usepackage{multirow,color}
+ \usepackage{hyperref}
+ 
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode} 
+
+\makeatletter
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
+
+\newcommand\Algphase[1]{%
+\vspace*{-.7\baselineskip}\Statex\hspace*{\dimexpr-\algorithmicindent-2pt\relax}\rule{\textwidth}{0.1pt}%
+\Statex\hspace*{-\algorithmicindent}\textbf{#1}%
+\vspace*{-.7\baselineskip}\Statex\hspace*{\dimexpr-\algorithmicindent-2pt\relax}\rule{\textwidth}{0.1pt}%
+}
+
+\newcommand*{\LargerCdot}{\raisebox{-0.75ex}{\scalebox{2}{$\cdot$}}}
+%\setlength\titlebox{5cm}
+\newtheorem{mydef}{Definition}
+
+\newcommand{\reza}[1]{\textcolor{red}{#1}}
+\newcommand{\TODO}[1]{\textcolor{blue}{#1}}
+\title{Succinct Data Structures for Language Modelling}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract} \footnotesize
+Efficient implementation of n-gram language models typically uses a mixtures of tries, trees and hash based data structures for storing n-gram statistics. 
+%The choice of data structure must reflect memory limitations and efficiency considerations such that ngram probabilities can be computed quickly, which is critical for integration into a speech recognition or machine translation system. 
+In this paper we introduce a class of succinct data structures based on compressed suffix arrays which are capable of storing n-gram count data without approximation and with very small memory demands. 
+We show how these succinct structures can be used to computing probabilities udner traditional interpolation and backoff n-gram models. 
+On the largest datasets used to date for language modelling, our structures use less memory than KenLM, the most lean current system, while only incurring a small increase in lookup time. 
+Our approach places no limit on $n$, the n-gram size, which can be unbounded without affecting the memory use. 
+We show that using larger $n$ results in improvements over existing approaches in terms of perplexity and translation re-ranking accuracy.
+\end{abstract}
+
+\section{Introduction}
+The task of Language Modelling (LM) can be formulated as assigning a probability to any given sequence of words $w_{1}^{N}$, indicating how likely is to have the given sequence in the language. These probabilities are often calculated in terms of conditional probabilities of form $P(w_i|w_{i-n+1}^{i-1})$, where the probability of each word $w_i$ is conditioned on its $n$-order history of words $w_{i-n+1}^{i-1}$, where $n$ is usually an integer $\in[1,5]$. In $n$-gram language models, the probability of a sequence of words can be computed as the product of these conditional quantities:
+\begin{equation}\label{conditional}
+ P(w_{1}^{N})= \prod_{i=1}^{N} P(w_i|w_{i-n+1}^{i-1})
+\end{equation} 
+Perhaps the most important application of language modelling is in statistical machine translation, \reza{where the target language model contributes to the plausibility of a candidate translation. 
+%
+This requires the language model to be both accurate in computing the  conditional probability terms in Eq.~\ref{conditional} (if they are not stored explicitly), and quick in supporting lots of queries. }
+%
+Another area of application for LM is word prediction for a given sequence of words, which in addition to speed and accuracy requires a representation of a very large dataset, possibly the Web, to be stored in a data structure that is both compact and efficiently search-able.
+
+Almost all \reza{$n$-gram language model} packages have two main components: (I) a probabilistic model that calculates the required probabilities in Eq.\ref{conditional}, and (II) a data structure that stores the training data, or the trained model. While the type of the probabilistic models that can be plugged in these packages are well-explored, the type of data structures used in these packages are usually limited to a combination of suffix trees/tries/arrays and hashing mechanism. A major drawback is that the size of the existing models heavily depends on the order ($n$) of the n-gram language model itself, which quickly grows and becomes much larger than the size of the actual training data.
+ 
+There has been trade-off between the query time and space of the representation, for example~\citep{brants2007large} proposes a method called stupid backoff which is not a good probabilistic model, but is shown to be effective in being computationally very cheap and therefore fast,  mainly because it requires a minimum statistics from the data. Also, another work was done by ~\citep{guthrie2010storing} which uses a lossy compression technique to represent Google Web1T~\citep{brants2006web} dataset in a compact representation.
+   
+As mentioned in~\citep{stolcke2011srilm}, in earlier stages of language modeling development, all the attention was paid to the speed of the models rather than the memory usage. However, in recent years having access to large scale data highlighted the importance of using the memory efficiently. In below we provide a small list of some of the language model packages that provide strong baseline for memory usage:
+\begin{description}
+\item [SRILM]~\citep{stolcke2002srilm} utilizes the memory usage by (I) reducing the number of n-gram counts loaded into the memory, (II) splitting the data into chunks based on the provided vocabulary list in the test data, (III) optimizing heap allocation by only keeping lists of small memory chunks of n-gram tries, (IV) and constructing integer data types for smaller counts that occupy 2-4 bytes. Also is worth noting that SRILM uses an inverted trie data strcture for storing the history of n-grams loaded, in reverse order, to reduce the number of lookups required for backoff.   
+\item [BerkeleyLM]~\citep{pauls2011faster} uses (I) direct-addressing cache to increase the caching speed, and a trie using (II.a) map implemented as a sorted array with keys and values being encoded implicitly to save space, (II.b) hash tables as trie nodes using the same implicit encoding but by allowing extra space to avoid hash collisions. (III) lossless compression of the key/value pairs of the array/hash table, which underperforms Huffman coding in compression, but is computationally faster. It is worth noting that in general in language modelling storing values of sparse keys efficiently is a challenge.      
+\item [KenLM]~\citep{heafield2011kenlm} uses two main techniques similar to BerkeleyLM: (I) Hash tables for storing key/value pairs similar to BerekleyLM and linear probing for handling collisions. However, their hashing technique is different from those of BerekleyLM as it allows jumping to any n-grams with one look-up,  (II) a trie based on a sorted array which has a similar functionality as in SRILM, but reduces the search time for a key from $\mathcal{O}(\log |SA|)$ to $\mathcal{O}(\log\log|SA|)$,  with a more efficient bit level implementation of values in the trie which reduces the memory usage compared to BerkeleyLM, and SRILM.
+
+\item [STLM]~\citep{kennington2012suffix} uses a compressed suffix tree implementation to represent the text itself. Perhaps the most relevant work amongst those mentioned is this work. Our views of the problem contrasts those of KenLM, BerkeleyLM, and SRILM in which we use the data structure to represent the text itself, and not the n-grams and their probabilities, in a compressed way and use this compressed representation on the fly to get the required statistics for calculating the probabilities.
+\end{description}
+
+In this paper, we explore succinct data structures and their applications in language modelling. We show that very large magnitude of data can be stored in a compact structure which outperforms all the existing state-of-the-art lossless compression techniques and language modelling packages, while offering a reasonable query time. \TODO{An example of the compression size of a known dataset and comparison between our representation size, and KenLM/SRILM.}   
+
+
+
+We show that by using succinct data structures we can create a language model representation which its size, as opposed to all the existing language modelling packages such as SRILM and KenLM, does not depend on the size of n-gram being considered. This is a massive capability as we will show that increasing the size of the n-gram directly affects the model size of the named packages while we maintain a same fixed size representation, from which we retrieve all the required statistics. Also, this work sets up the infrastructure for using infinite-order language models such as Sequence Memoizer~\citep{wood2011sequence} which are proved to be more powerful but less explored due to model size limitations in the previous works.
+
+
+\section{Language Models}
+The comprehensive comparison of different language modelling franchise is provided in~\citep{chen1996empirical}, but for the sake of completeness we briefly touch on basics of language modelling in general and in particular Kneser-Ney and its modified version.
+
+While the probability of a sequence is usually calculated as a product of conditional terms in Eq.~\ref{conditional}, there are certain optimizations that we need to make for: (I) handling unseen sequences in the test time, and (II) dealing with the sparsity problem, these conditional terms are often calculated using a smoothing technique where the probability of each n-gram is smoothed by using the statistics of the lower order n-grams. Smoothing can be done via \emph{backoff}:
+\begin{align}
+&P(w_{i}|w_{i-n+1}^{i-1}) = \\ 
+&\hspace{4mm}\begin{cases}
+  \alpha(w_{i}|w_{i-n+1}^{i-1}), &  c(w_{i-n+1}^{i})>0, \\\nonumber
+  \gamma(w_{i-n+1}^{i-1})P(w_{i}|w_{i-n+2}^{i-1}), & \text{o.w.}
+\end{cases}
+\end{align} 
+where $c(.)$ is the count of the sequence in the training data, $\gamma$ is the backoff weight. Perhaps the simplest form of back-off, which does not return actual probabilities is the stupid backoff, where the fixed back-off weight of $0.4$ is used. 
+
+Smoothing can also be done via \emph{interpolation}:
+\begin{align}
+P(w_{i}|w_{i-n+1}^{i-1}) &= \alpha(w_{i}|w_{i-n+1}^{i-1})\\\nonumber
+&+\gamma(w_{i-n+1}^{i-1})P(w_{i}|w_{i-n+2}^{i-1})
+\end{align}
+where the term $\alpha(.)$ is calculated using maximum likelihood estimation of the n-gram, or its refinement by deduction some discounts. The most well-known smoothing technique used for language modelling is Kneser-Ney interpolation which was originally proposed in~\citep{kneser1995improved} as a backoff model, and~\shortcite{chen1996empirical} transformed that into the following interpolative model:
+\begin{align}
+&P_{KN}(w_{i}|w_{i-n+1}^{i-1}) = \frac{\max\{c(w_{i-n+1}^{i} - D,0\}}{c(w_{i-n+1}^{i-1})}\\\nonumber
+&+ \frac{D*N_{1+}(w_{i-n+1}^{i-1}\LargerCdot)}{c(w_{i-n+1}^{i-1})}*P_{KN}(w_{i}|w_{i-n+2}^{i-1})
+\end{align}
+where $N_{1+}(w_{i-n+1}^{i-1}\LargerCdot)$ is the continuation count indicating the number of word types that can complete a sequence, $D$ is the discount parameter which can be estimated using a held-out data, or set to $D=\frac{n_1}{n_{1}+n_{2}*2}$ where $n_x$ is the total number of n-grams with exactly $x$ counts. In lower order n-grams instead of the actual counts the continuation counts are used and this backing-off stops at the unigram level. A modification of Kneser-Ney, proposed by ~\citep{chen1996empirical}, is proved to be more effective which instead of a single discout parameter, discounts will be chosen depending on the actual count of the querried sequence.
+
+While the state-of-the-art performance is reached by using Kneser-Ney, and its refinement, most of the effort in the recent years have been dedicated in exploring data structures and hashing techniques for storing the data, or the sufficient statistics for language models. 
+ 
+\section{Succinct Data Structures}
+The classical indexing data structures such as suffix trees and arrays require 4 to 20 times the text size, this means that while we may have enough memory to hold a text, we may need to use the disk to store the index itself. However, in recent years there have been some interesting branch of work on developing indexing algorithms that make use of the compressibility of text. This means the the size of the data structure itself will be a function of the compressed text. This concept has evolved into \emph{self-indexes}, which are not only compressed data structures allopwing to do sub-string search operations, but can be used to reproduce the text from them. This is in fact an exciting tool that provides us the compressed representation of the text and fast search operation over it.
+
+We need to define three concepts formally before exploring the algorithms:
+\begin{description}
+\item [succinct index]: provides fast search functionality using a space proportional to that of the text itself.
+\item [compressed index]: makes use of the regularities of the text to operate in space proportional to that of the \emph{compressed} text.  
+\item [self-index]: comprresed index that in addition to being compressed, and providing fast search functionality, contain enough information to reproduce the text.
+\end{description}
+
+As we know, classical indexes such as suffix trees and arrays are not succinct. On a text of $n$ character over an alphabet of size $\sigma$, thopse indexes require $\mathcal{\theta(\text{n}\log \text{n})}$ bits of space, whereas the text itself requires $\mathcal{\text{n}\log} \sigma$ bits.
+
+We show on a very high level how classical indexs such as suffix arrays can be augmented with additional structures to be converted to compressed indexes. We start with basic blocks and keep plugging in bits and pieces to give the readers a big picture.
+
+\begin{mydef}
+A trie for a set $\mathcal{S}$ of distinct strings $\mathcal{S}^1, ..., \mathcal{S}^N$ is a tree where each node represents a distinct prefix in the set. The root node represents the empty prefix $\varepsilon$. Node \emph{v} representing a prefix $Y$ is a child of node \emph{u} representing prefix $X \iff Y=Xc$ for some character $c$, which will label the tree edge from \emph{u} to \emph{v}. 
+\end{mydef}
+
+A trie can be easily built in time $\mathcal{O}(|S^1|+...+|S^N|)$ by insertions. Any string $S$ can be search for in the trie in time $\mathcal{O}(|S|)$. Note that we need to multiply the complexity by search for alphabets in each node which is of complexity $\mathcal{O}(\log\sigma)$, and can be done in $\mathcal{O}(1)$ if we use a direct addressing table which costs us more space, or construction time.
+
+\begin{mydef}
+The suffix trie of a text T is a trie data structure built over all the suffixes of T.
+\end{mydef} 
+
+Suffix trie can be used for counting occurrences of pattern $P$ of size $m$ in $T$ in $\mathcal{O}(m)$ by recording the number of leaves of the subtree rooted at that node, and finding all occurrences of $P$ in $T$ in $\mathcal{O}(m+occ)$ time by traversing the whole subtree rooted at the node our search for $P$ stopped at.
+
+The suffix trie usually has $\mathcal{\theta}(n^2)$ nodes, which can be pruned to reduce to $\mathcal{O}(n)$.
+
+\begin{mydef}
+The suffix tree of a text T is a suffix trie where each unary path is converted into a single edge. The converted edges are labeled by strings obtained by concatenating the characters of the path. The leaves of the suffix tree indicate the position where the corresponding suffix start.
+\end{mydef} 
+Suffix trees require $\mathcal{O}(n)$ space, and can be built in $\mathcal{O}(n)$ time. The search for pattern $P$ in the suffix tree of $T$ us similar to trie search and takes $\mathcal{O}(m)$ time. Locating time in suffix trees is $\mathcal{O}(m+occ)$.
+
+The major problem with suffix trees is their high space consumption which is  $\mathcal{\theta}(n\log n)$ bits and at very least $10$ times the text size in practice.
+
+\begin{mydef}
+Suffix array of text T is a permutation of all suffixes of T so that the suffixes are lexicographically sorted. The suffix array of text $T_{1,n}$ is an array denoted by $A[1,n]$ containing a permutation of interval $[1,n]$, such that $T_{A[i],n}<T_{A_[i+1],n}$ for all $l\leq i<n$.
+\end{mydef}
+
+With a naive approach, suffix arrays can be built in $\mathcal{O}(n\log n)$ time, while there are more efficient ways of building them in $\mathcal{O}(n)$ time. The suffix array plus the text itself occupy $n\log n + n\log\sigma$ bits, and contain enough information to search for patterns, and since the result of suffix tree search is subtree, the results of suffix array search (which can be think of it as a sorted list of suffix tree's leaves) is an interval. 
+
+To search for the interval, since the array is sorted one can do binary search to first find the start point of the interval, and then a second binary search to find the end point of the interval containing all the strings having $P$ as their suffix. Also, each step of the binary search requires lexicographical comparison between $P$'s character and suffixes in $T$, which in worst case requires $\mathcal{O}(m)$ time. So the search in worst case can take $\mathcal{O}(m\log n)$ which can be lowered to $\mathcal{O}(m+\log n)$ by using more space ($2n\log n + n\log\sigma$) to store the Longest Common Prefixes (LCP) between consecutive suffixes. Locating a pattern requires addition $\mathcal{O}(occ)$ time.  
+
+So far what we've introduced are basic data structures. We will show how augmenting these data strcutures can result in compressed full-text indexing. The two concepts we will touch on are \emph{backward search}, and \emph{wavelet trees}. We also show how text compression techniques like \emph{Burrows - Wheeler transform} can increase the amount of compression we get in self-index data structures. 
+
+\textbf{Backward Search} The binary search in suffix array can be improved to $\mathcal{O}(m)$ by augmenting the suffix array with an extra array telling us how many characters in $T$ are smaller than a given character, and call this array $\mathcal{C}$. To give you an idea how this search process will work imagine a scenario where we are searching sequence ``abc", and constructing the search in reverse order by:
+
+(I) searching for the start point, (\emph{$sp_c$}), of the interval of the suffixes that start with ``c". This is easy to do by just looking at $\mathcal{C}[``c"]+1$. Also, since we know that ``c" is lexicographically before ``d" we can use $\mathcal{C}[``d"]$ to find the end point (\emph{$ep_c$}) of this interval. So, we retrieve the interval that contains all the suffixes starting with ``c". Now imagine that we have an extra column added to the suffix array such that the corresponding cell of the column for each suffix array's cell $T_{A[i],n}$, stores $T_{A[i]-1}$ character (the character that comes before this suffix and produces suffix in the cell $T_{A[i]-1,n}$). Let's denote this column by $L_{1,n}$.   
+
+(II) And then using efficiently what we already know, we need to find the range in the suffix array that corresponds to the sequence ``bc". In order to do this, we can simply count the number of times that ``b" occurs before \emph{$sp_c$} in those virtual cells storing $T_{A[i]-1}$, denoted by \emph{$\mathcal{O}cc(``b",sp_c)$}, and how many times it occurs before \emph{$ep_c$}, denoted by \emph{$\mathcal{O}cc(``b",ep_c)$}. We can use this information to find the exact interval that will contain ``bc" by simply looking at the sub-interval of suffixes starting with ``b": $[\mathcal{C}[``b"]+1+\mathcal{O}cc(``b",sp_c), \mathcal{C}[``b"]+1+\mathcal{O}cc(``b",ep_c)]$. Once we find this interval, we can repeat the same process to find the interval corresponding to ``abc", and so on. There is a nice connection between this mapping function which we call $LF$ with \emph{Burrows - Wheeler transform} that we will elaborate later on.
+
+Knowing how this backward search process works, now we need explain how we can compute the $\mathcal{O}cc(c,i)$, where $c$ is a character and $i$ is an index, efficiently. For this purpose we need to introduce \emph{Bit-vectors}.
+
+\textbf{Bit-vectors} Consider indicator bit vectors of form $\mathcal{B}^c[i]=1$ if the character at the $ith$ position in $T$ is ``c". We can define an operation called \emph{$rank_{b}(B^c,i)$} as the number of occurrences of bit $b$ in $\mathcal{B}[1,i]$. We can see that \emph{$rank_{1}(B^c,i)=\mathcal{O}cc(c,i)$}. So, we have transformed the problem of counting characters up to a given position in string $L$ to counting bits up to a given position in bit vecotrs. It can be shown that this function $rank$, can be computed in constant time by storing $o(n)$ extra bits for each character in addition to storing a bit vector of size $n$ bits per each character. So this augmentation will increase the space consumption of a suffix array to $n\log n + o(\sigma n)+\sigma n$ but reduces the search time from $\mathcal{O}(m\log n)$ to $\mathcal{O}(m)$.
+
+\textbf{Wavelet trees}
+As we shown we can reduce the search time by increasing the space consumption of the suffix array by augmenting it with bit vectors and extra bits required for doing the rank operation efficiently. Wavelet trees are tools that can actually reduce the amount of alphabet dependence from $\sigma n$ to $n\log \sigma$. 
+
+Wavelet trees are balanced search trees where each symbol of the alphabet corresponds to a leaf. The root holds a bit vector marking $1$ those positions whose corresponding characters go to the right branch, and $0$ for those that go to the left branch. A correspondence of this and the rank operation is represented in Figure~\ref{}\TODO{a figure to be added}. 
+
+Wavelet trees can be represented in $n\log \sigma + o(n\log \sigma)$ bits, supporting the rank operation in constant time. Each $\mathcal{O}cc(c,i)$ can be done in $\log \sigma$ binary ranking operation, and therefore using wavelet operations we can improve the space complexity from $n\log + \sigma n + o(\sigma n)$ to $n\log n + 2n\log\sigma + o(n\log\sigma)$ with a small increase in the search time from $\mathcal{O}(m)$ to $\mathcal{O}(m\log\sigma)$. 
+
+It is worth noting that using wavelet trees, counting strings can be done without using the suffix arrays at all. This makes wavelet trees a good data structures for language models, i.e. \emph{stupid backoff}, that only require the counts. However, for locating the occurrence positions the suffix array and the original text are still required. The way to deal with work without them is to sample the suffix array at regular text position intervals. Then to locate the occurrence position we use the counting to get the interval in the suffix array (using the wavelet trees), given each position $i$ we want to have the occurrence position in text. If the suffix position $i$ was not sampled, we perform backward search to start from $i$ and go backward $k$ times till we find the sampled position $X = A[i]-k$. Then, $X+k$ is the answer. It is worth noting that the choice of number of samples (sampling steps) needs a tradeoff between space for the index and time to locate the occurrences. Also is worth noting that locating in all the data structures described can be handled in $\mathcal{O}(1)$. 
+
+So we can augment wavelet trees with some extra arrays, and convert them into a self-index that requires neither the text nor the suffix array. 
+
+\textbf{Burrows-Wheeler Transform} We can see from all the space complexity of the mentioned algorithms that they depend on the size of the text $n$. This means that we can benefit from text compressibility in reducing the space of the self-index data strucutres to the size which is closed to the compressed text.
+ 
+The Burrows-Wheeler Transform generates the permutation of $T$, by sorting the cyclic rotations of T, and keeping the last column, denoted by $L$ or $T^{BWT}$, of the $nxn$ sorted rotations matrix. To make the connection to what we have seen in the backward search, remember that the matrix is sorted and each row of the matrix contains the corresponding entry in the suffix array plus some additional characters (rest of characters of the cycle). Then the last column of the matrix becomes exactly the same extra column that holds the $T_{A[i]-1}$ character. 
+
+The resulting string $T^{BWT}$, is more compressible since all the symbols that share the same suffix fall next to each other. In order to produce $T^{BWT}$ from a given text $T$, there is no need to produce the $nxn$ matrix as it can be generated from the suffix array of $T$. The exciting point here is that from the $T^{BWT}$ we can reproduce the text in linear time, by recovering the first column of matrix by sorting the last column of the matrix. This can be done in the same fashion that backward search was done: for a given character ``c" we first find where it appears in the first column, $F$, which is effectively the similar mapping as before: $\mathcal{C}[c]+\mathcal{O}cc(c,i)$ which we know is equivalent to: $\mathcal{C}[c]+rank_b(T^{BWT},i)$ to find the position of character ``b" that can come before ``c" in F, and recursively retrieving the actual text. For simplicity, you can imagine to start from the end of file marker symbol $\$$ in $L$ and finding the character that comes before it in the text, and retrieving the full text in recursive fashion by jumping from column $L$ to $F$, and then from $F$ to $L$, and so on. 
+  
+Then we can do the search in the text using the compressed representation of Borrows-Wheeler Transform in the same fashion that backward search was done. We can generate the wavelet trees over the Burrows-Wheeler Transform representation (which is technically a compressed suffix array). This generates a class of self-index which are called \emph{FM-index}. A wavelet tree built over the $T^{BWT}$ using the k-th order entropy measure is $nH_k(T)+o(n\log \sigma)$ bits of space, where k is the number of sampled suffix array positions. \TODO{check:The search time for a string still is $\mathcal{O}(m\log\sigma)$ which matches the wavelet tree with sampling search time, while reducing the space consumption. }  
+
+\TODO{check: There has been a somes work on extending compressed suffix arrays to those of suffix trees~\citep{}. Roughly speaking the idea is to simulate suffix tree traversals by a compressed suffix array plus a parentheses representation of the tree itself.} In this section we only outlined the some of the key properties of suffix arrays, and wavelet trees and showed how they can be augmented to have more efficient search/space consumption. For a comprehensive study of these data structures see~\citep{navarro2007compressed}.
+
+\section{Implementation}
+For implementation of succinct indexes (and self-indexes) we make use of SDSL library~\citep{gog2014theory}. \TODO{Matthias: please add one/two paragraph explanation of the library}.
+
+stupidbackoff and Kneser-Ney implementation description, i.e. reverse order stupidbackoff trick, storing data structure twice for KN, and mKN.
+\subsection{Kneser-Ney Interpolation}
+Calculating the probability of the pattern $w^{1}_{3}$ via Kneser-Ney, assuming the 3-gram model, is straightforward. For the highest order ngram we use the following formula:
+\begin{align}\label{highestorder}
+ P_{KN}(w_3|w^{1}_{2}) &= \frac{\max\{c(w^{1}_{3}) - D,0\}}{c(w^{1}_{2})}\\\nonumber
+ &+ \frac{D*N_{1+}(w^{1}_{2}\LargerCdot)}{c(w^{1}_{2})}*P_{KN}(w_3|w_2)
+\end{align}
+Where for the lower order ngrams, i.e. $w^{2}_{3}$, the same formula is being used but this time instead of the actual counts we use the countinuation counts:
+\begin{align}\label{midorder}
+P_{KN}(w_3|w_2) &= \frac{\max\{N_{1+}(\LargerCdot w^{2}_{3}) - D,0\}}{N_{1+}(\LargerCdot w_2 \LargerCdot)} \\\nonumber
+&+ \frac{D*N_{1+}(w_2\LargerCdot)}{N_{1+}(\LargerCdot w_2 \LargerCdot)}*P_{KN}(w_3)
+\end{align}
+And for unigram, i.e. $w_3$, we use the similar formula:
+\begin{align}\label{lowestorder}
+P_{KN}(w_3) &= \frac{\max\{N_{1+}(\LargerCdot w_3) - D,0\}}{N_{1+}(\LargerCdot \LargerCdot)} \\\nonumber 
+&+ \frac{D*N_{1+}(\LargerCdot)}{N_{1+}(\LargerCdot\LargerCdot)}*P_{KN}^{0}
+\end{align}
+where the zeroth-rder distribution is a uniform distribution:
+\begin{align}\label{uniform}
+P_{KN}^{0} = \frac{1}{|Vocab|}
+\end{align}
+since $|Vocab| = N_{1+}(\LargerCdot)$ we can simplify Eq.\ref{lowestorder} as:
+\begin{align}\label{lowestordersimple}
+P_{KN}(w_3) = \frac{N_{1+}(\LargerCdot w_3)}{N_{1+}(\LargerCdot\LargerCdot)}
+\end{align}
+the discount parameter $D$ is calculated as $D=\frac{n_1}{n_1 + 2*n_2}$, where $n_1,\ n_2$ are the total number of n-grams (trigrams in this case) with exactly one and two counts in the training data, and $N_{1+}(w_2\LargerCdot)$ is the number of word-types that can appear after \emph{$w_2$}: $N_{1+}(w_2\LargerCdot) = |\{w_i: c(w_2w_i)>0\}|$.
+
+\subsection{Modified Kneser-Ney Interpolation}
+Goodman and Chen refined a version of Kneser-Ney which uses a similar formulation to Kneser-Ney, but adapts the discount parameter based on the count of the pattern in the question. So, instead of using a single discount $D$ it chooses from 4 options:
+
+\begin{equation}\label{disc}
+    D(c)=
+    \begin{cases}
+      0, & \text{if}\ c=0 \\
+      D_1, & \text{if}\ c=1 \\
+      D_2, & \text{if}\ c=2 \\
+      D_{+3}, & \text{if}\ c\geq2 \\
+    \end{cases}
+\end{equation}
+
+where $c$ is the actual count for of the pattern in question, and:
+\begin{align}\label{mkndiscounts1}
+&D_1 = 
+     \begin{cases}
+	1 - 2 Y \frac{n_2}{n_1}, & \text{if}\ n_1\neq 0 \\
+	0, & \text{o.w. } \\
+     \end{cases}\\
+&D_2 = \label{mkndiscounts2}
+     \begin{cases}
+	2 - 3 Y \frac{n_3}{n_2}, & \text{if}\ n_2\neq 0 \\
+	0, & \text{o.w. }\\
+     \end{cases}\\
+&D_{3+} = \label{mkndiscounts3+}
+\begin{cases}
+	3 - 4 Y \frac{n_4}{n_3}, & \text{if}\ n_3\neq 0 \\
+	0, & \text{o.w. } \\
+     \end{cases}\\
+&Y = \label{mkndiscounts}
+	\begin{cases}
+	0, & \text{if}\ n_1\neq 0 \text{ \&}\ n_2\neq 0  \\
+	\frac{n_1}{n_1+2n_2}, & \text{o.w. }\\
+	\end{cases}
+\end{align}
+and:
+\begin{align}\label{gamma}
+\gamma(w^{2}_{3}) &= D_1N_1(w^{2}_{3}\LargerCdot) + D_2N_2(w^{2}_{3}\LargerCdot) \\\nonumber
+&+ D_{3+}N_{3+}(w^{2}_{3}\LargerCdot)\\
+&N_{1}(w^{2}_{3}\LargerCdot) = |\{w_i: c(w^{2}_{3}w_i)=1\}|\\
+&N_{2}(w^{2}_{3}\LargerCdot) = |\{w_i: c(w^{2}_{3}w_i)=2\}|\\
+&N_{3+}(w^{2}_{3}\LargerCdot) = |\{w_i: c(w^{2}_{3}w_i)\geq3\}|
+\end{align}
+and $n_3$, and $n_4$ are analogous to $n_1$, and $n_2$. The formulation of the Kneser-Ney changes as follows: 
+
+For the highest order ngrams the formulation becomes:
+
+\begin{align}\label{highestordermkn}
+ P_{mKN}(w_3|w^{1}_{2}) &= \frac{\max\{c(w^{1}_{3}) - D(c(w^{1}_{3})),0\}}{c(w^{1}_{2})}\\\nonumber
+ &+ \frac{\gamma(w^{1}_{2})}{c(w^{1}_{2})}*P_{mKN}(w_3|w_2)
+\end{align}
+
+For the lower order ngrams, i.e. $w^{2}_{3}$, the formulation is:
+\begin{align}\label{midordermkn}
+\nonumber P_{mKN}(w_3|w_2) &= \frac{\max\{N_{1+}(\LargerCdot w^{2}_{3}) - D(c(w^{2}_{3})),0\}}{N_{1+}(\LargerCdot w_2 \LargerCdot)}\\ 
+&+ \frac{\gamma(w_2)}{N_{1+}(\LargerCdot w_2 \LargerCdot)}*P_{mKN}(w_3)
+\end{align}
+and the formulation for unigram is:
+\begin{align}\label{lowestordermkn}
+\nonumber P_{mKN}(w_3) &= \frac{\max\{N_{1+}(\LargerCdot w_3) - D(c(w_3)),0\}}{N_{1+}(\LargerCdot \LargerCdot)} \\
+&+ \frac{\gamma( )}{N_{1+}(\LargerCdot \LargerCdot)}*P_{mKN}^{0}
+\end{align}
+where the zeroth-order distribution is uniform (\ref{uniform}) as in Kneser-Ney ,and the $\gamma( )$ is computed as follows:
+\begin{align}\label{unigramgamma}
+\gamma() &= D_1N_1(\LargerCdot) + D_2N_2(\LargerCdot) + D_{3+}N_{3+}(\LargerCdot)
+\end{align}
+which can be precomputed in the beginning.
+\begin{algorithm*}\footnotesize
+\caption{Kneser-Ney Interpolative Language Model algorithm}
+\begin{algorithmic}[1]
+\Require test data path, n-gram size $n$, boolean ismkn
+\Ensure the int vectors of the training data in forward and reverse order were generated
+\Procedure{Main}{$data,n,ismkn$}\Comment{Starting point of the program}
+
+\Algphase{Phase 1 - Creating Compact Suffix Trees in both Order}
+\State $construct(cst, forward.sdsl)$
+\State $construct(cst^r, reverse.sdsl)$
+
+\Algphase{Phase 2 - Computing Discount Parameters}
+\State $pattern \gets null$
+\State $ncomputer(pattern,0)$\Comment{Computes $n_1,n_2,n_3,n_4,N_{1+}(\LargerCdot\LargerCdot),N_{3+}(\LargerCdot)$}
+\State $i\gets 1$
+\While{$i<=n$}\Comment{Computes the discount parameters $Y, D_1,D_2,D_{3+}$}
+\State $Y[i]=n_1[i]/(n_1[i]+2*n_2[i])$\Comment{Eq.\ref{mkndiscounts}}
+\If{$ismkn$}
+\State $D_1[i] = 1 - 2 * Y[i] * n_2[i]/n_1[i]$\Comment{Eq.\ref{mkndiscounts1}}
+\State $D_2[i] = 2 - 3 * Y[i] * n_3[i]/n_2[i]$\Comment{Eq.\ref{mkndiscounts2}}
+\State $D_{3+}[i] = 3 - 4 * Y[i] * n_4[i]/n_3[i]$\Comment{Eq.\ref{mkndiscounts3+}}
+\EndIf
+\EndWhile
+
+\Algphase{Phase 3 - Generating Patterns, Computing Probabilities via pkn, and Computing Perplexity}
+\State $perplexity \gets 0$
+\State $M\gets0$\Comment{Stores number of words and tags}
+\While $\ getline(data,line)$\Comment{reads the file line-by-line}
+	\State $sentenceprobability \gets 0$
+	\State $word\_vector \gets null$
+	\State $word\_vector.push\_back(\texttt{<s>})$
+	\While $\ getword(line,word)$\Comment{reads the line word-by-word}
+		\State $word\_vector.push\_back(word)$
+		\State $M\gets M+1$
+	\EndWhile
+	\State $word\_vector.push\_back(\texttt{</s>})$
+	\State $M\gets M+1$
+	\State $deque\gets null$
+	\State $i\gets 0$
+	\While $\ i<word\_vector.size()$
+		\State $word\gets word\_vector[i]$
+		\State $deque.push\_back(word)$
+		\If{$word=\texttt{<s>}$}
+			\State \texttt{continue}
+		\EndIf
+		\While $\ deque.size > n$
+			\State $deque.pop\_front()$
+		\EndWhile
+		\State $prob \gets pkn(deque)$\Comment{computes the probability of the pattern}
+		\State $sentenceprobability+=\log10(prob)$
+	\EndWhile
+	\State $perplexity+=sentenceprobability$
+\EndWhile
+\State $perplexity=10^{-perplexity/M}$
+\State \texttt{return} $perplexity$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm*}
+
+
+
+\begin{algorithm*}\footnotesize
+\caption{ncomputer}
+\begin{algorithmic}[1]
+\Require null pattern, size of the pattern
+\Procedure{ncomputer}{$pattern,size$}\Comment{Computes $n_1,n_2,n_3,n_4,N_{1+}(\LargerCdot\LargerCdot), N_{3+}(\LargerCdot)$}
+
+\Algphase{Phase 1 - Computing frequency of the pattern}
+\State $lb\gets 0$\Comment{left bound}
+\State $rb\gets cst.size()-1$\Comment{right bound}
+\State $lb,rb\gets backward\_search(cst,pattern)$\Comment{finding the corresponding interval in the suffix array}
+\State $freq\gets rb-lb+1$
+\Algphase{Phase 2 - Increamenting $n_1,n_2,n_3,n_4,N_{1+}(\LargerCdot\LargerCdot),N_{3+}(\LargerCdot)$}
+\If{$size\not = 0$}
+	\If{$pattern.size()=2\ \texttt{AND}\ freq>=1$}
+		\State $N_{1+}(\LargerCdot\LargerCdot)\gets N_{1+}(\LargerCdot\LargerCdot)+1$;
+	\EndIf
+	\If{$freq=1$}
+		\State $n_1[size]\gets n_1[size]+1$
+	\ElsIf{$freq=2$}
+		\State $n_2[size]\gets n_2[size]+1$
+	\ElsIf{$freq>=3$}
+		\If{$freq=3$}
+		    \State $n_3[size]\gets n_3[size]+1$
+	    \ElsIf{$freq=4$}
+		    \State $n_4[size]\gets n_4[size]+1$
+		\EndIf
+		\If{$size=1$}
+		    \State $N_{3+}(\LargerCdot)\gets N_{3+}(\LargerCdot)+1$
+		\EndIf
+	\EndIf
+\EndIf
+
+\Algphase{Phase 3 - Growing the pattern and calling ncomputer}
+\If{$size=0$}\Comment{If the pattern is null, then iterate over root's children and add them to the pattern}
+	\State $\ child\_index\gets 0$
+	\While $\ child\_index<degree(root)$\Comment{Iterates over all children of the root of the suffix tree}
+		\State $childnode\gets select\_child(root,child\_index)$
+		\State $symbol\gets edge(childnode,1)$\Comment{1st symbol of the edge starting from the root, ending at childnode}
+		\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}\Comment{If it is a symbol from the vocabulary}			
+			\State $pattern[1]\gets symbol$\Comment{grows the null pattern}
+			\State $ncomputer(pattern,size+1)$\Comment{calls ncomputer using the updated size and pattern parameter}
+		\EndIf
+		\State $child\_index\gets child\_index+1$
+	\EndWhile
+\Else
+	\If{$\ size+1<=n$}
+		\If{$\ freq>0$}
+			\State $node\gets node(lb,rb)$\Comment{returns the corresponding node to this interval}
+			\If{$\ pattern.size()=depth(node)$}\Comment{If the pattern in question ends at a node}
+				\State $child\_index\gets 0$
+				\While{$\ child\_index<degree(node)$}\Comment{Iterates over all children of the retrieved node}
+					\State $childnode\gets select\_child(node,child\_index)$\Comment{retrieves the corresponding child}
+					\State $symbol\gets edge(childnode,depth(node)+1)$\Comment{retrievs the symbol connecting node to its child}
+					\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+						\State $pattern.push\_back(symbol)$\Comment{grows the pattern}
+						\State $ncomputer(pattern,size+1)$
+						\State $pattern.pop\_back()$\Comment{removes the recently added symbol to the pattern}
+					\EndIf	
+					\State $child\_index\gets child\_index+1$				
+				\EndWhile
+			\Else\Comment{If the pattern in question is part of a longer edge(s) starting from the root}
+				\State $symbol\gets edge(node,pattern.size()+1)$\Comment{retrievs the symbol that comes after the pattern}
+				\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+					\State $pattern.push\_back(symbol)$
+					\State $ncomputer(pattern,size+1)$
+					\State $pattern.pop\_back()$
+				\EndIf	
+			\EndIf
+		\EndIf
+	\EndIf
+\EndIf
+
+\EndProcedure
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\caption{pkn}
+\begin{algorithmic}[1]
+\Require query pattern
+\Procedure{pkn}{$pattern$}\Comment{Computes probability of a pattern based on mKN or KN}
+\State $size\gets pattern.size()$
+\State $lbX\gets 0$
+\State $rbX\gets cst.size()-1$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Algphase{Section 1 - Highest Order n-gram or the n-gram starts with \texttt{<s>} - Eq.\ref{highestorder}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\If{$size=n\ \texttt{OR }pattern[0]=\texttt{<s>}$}
+	\State $lb\gets 0$
+	\State $rb\gets cst.size()-1$
+	\State $lb,rb\gets backward\_search(cst,pattern)$
+	\State $freq\gets rb-lb+1$
+	\Algphase{ Subsection 1.1 - Gets the corresponding discounts}
+	\State $D\gets 0$\Comment{holds the discount}
+	\If{$ismkn$}\Comment{applies modified-KN discounts}
+		\If{$freq=1$}
+			\State $D\gets D_1[n]$\Comment{Eq.\ref{mkndiscounts1}}
+		\ElsIf{$freq=2$}
+			\State $D\gets D_2[n]$\Comment{Eq.\ref{mkndiscounts2}}
+		\ElsIf{$freq>=3$}
+			\State $D\gets D_{+3}[n]$\Comment{Eq.\ref{mkndiscounts3+}}
+		\EndIf
+	\Else
+		\State $D\gets Y[n]$\Comment{Kneser-Ney discount - Eq.\ref{mkndiscounts}}
+	\EndIf
+	
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 1.2 - Computes the numerator}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\State $numerator\gets \max\{c-D,0\}$\Comment{numerator of the left term in Eq.\ref{highestorder}}
+    \Algphase{ Subsection 1.3 - Drops the last and first symbol of the pattern}
+    \State $pattern^{-}\gets droplast(pattern)$\Comment{the denominator pattern of Eq.\ref{highestorder}}
+	\State $^{-}pattern\gets dropfirst(pattern)$\Comment{the back-off pattern of Eq.\ref{highestorder}}
+	
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 1.4 - Computes the denominator}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\State $lb\gets 0$
+        \State $rb\gets cst.size()-1$
+        \State $lb,rb\gets backward\_search(cst,pattern^{-})$
+        \State $denominator\gets rb-lb+1$\Comment{the denominator of Eq.\ref{highestorder}}
+	\If{$denominator=0$}\Comment{backoff directly}
+		\State \texttt{return } $pkn(^{-}pattern)$
+	\EndIf
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 1.5 - Computes the $N_{1+}(pattern^{-}\LargerCdot)$ for KN, and $\gamma$ for modified KN}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \State $N_{1+}(pattern^{-}\LargerCdot)\gets 0$
+	\State $node\gets node(lb,rb)$\Comment{retrieves the node corresponding to $pattern^{-}$}
+        \State $N_1,N_2,N_{+3}\gets 0$
+	\If{$pattern.size=depth(node)$}\Comment{If the pattern in question ends at a node}
+		\State $index\gets 0$
+		\While{$index<degree(node)$}\Comment{Iterates over all children of node}
+			\State $childnode\gets select\_child(node,index)$\Comment{retrieves the index-th child of node}
+			\State $symbol\gets edge(childnode,pattern^{-}.size()+1)$
+			\If{$symbol\not=1\texttt{ AND }symbol\not=0$}
+				\State $N_{1+}(pattern^{-}\LargerCdot)\gets N_{1+}(pattern^{-}\LargerCdot)+1$
+		        \If{$ismkn$}    
+			        \State $pattern^{-}.push\_back(symbol)$                       			                               \State $lbX\gets 0$
+					\State $rbX\gets cst.size()-1$
+					\State $lbX, rbX\gets backward\_search(cst,pattern^{-})$
+					\State $freq\gets rbX-lbX+1$
+					\If{$freq=1$}
+					    \State $N_1\gets N_1 + 1$
+					\ElsIf{$freq=2$}
+					    \State $N_2\gets N_2 + 1$
+					\ElsIf{$freq>=3$}
+					     \State $N_{+3}\gets N_{+3} + 1$
+					\EndIf
+					\State $pattern^{-}.pop\_back()$
+       			\EndIf
+			\EndIf
+			\State $index\gets index+1$
+		\EndWhile
+	    \algstore{myalg}
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\begin{algorithmic}
+    \algrestore{myalg}
+
+	\Else
+	    \State $symbol\gets edge(node,pattern^{-}.size()+1)$
+		\If{$symbol\not=1\texttt{ AND }symbol\not=0$}
+            \State $N_{1+}(pattern^{-}\LargerCdot)\gets 1$
+            \If{$ismkn$}
+            	\State $pattern^{-}.push\_back(symbol)$                                                                           \State $lbX\gets 0$
+                \State $rbX\gets cst.size()-1$
+                \State $lbX, rbX\gets backward\_search(cst,pattern^{-})$
+                \State $freq\gets rbX-lbX+1$
+                \If{$freq=1$}
+                    \State $N_1\gets N_1 + 1$
+                \ElsIf{$freq=2$}
+                	\State $N_2\gets N_2 + 1$
+                \ElsIf{$freq>=3$}
+                    \State $N_{+3}\gets N_{+3} + 1$
+                \EndIf
+                \State $pattern^{-}.pop\_back()$
+            \EndIf
+        \EndIf
+	\EndIf
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 1.6 - Computes the probabilities based on KN or mKN}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\If{$ismkn$}
+		\State $\gamma\gets D_1[n]*N_1 + D_2[n]*N_2 + D_{+3}[n]*N_{+3}$\Comment{Eq.\ref{gamma}}
+		\State \texttt{return } $\frac{numerator}{denominator}+\frac{\gamma}{denominator}*pkn(^{-}pattern)$\Comment{computes Eq.\ref{highestordermkn}}
+	\Else
+		\State \texttt{return } $\frac{numerator}{denominator}+\frac{D*N_{1+}(pattern^{-}\LargerCdot)}{denominator}*pkn(^{-}pattern)$\Comment{computes Eq.\ref{highestorder}}
+	\EndIf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Algphase{Section 2 - Lower Order n-gram - Eq.\ref{midorder}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\ElsIf{$size<n \texttt{ AND } size\not=1$}
+    \State $pattern^{r}\gets reverse(pattern)$\Comment{reverses the pattern}
+    \State $lbrev\gets 0$
+    \State $rbrev\gets cst^{r}.size()-1$
+    \State $lbrev,rbrev\gets backward\_search(cst^{r},pattern^{r})$
+	\State $freq\gets rbrev-lbrev+1$
+	\State $N_{1+}(\LargerCdot pattern)\gets 0$\Comment{required for the numerator of the left term in Eq.\ref{midorder}}
+    \State $node\gets node(lbrev,rbrev)$
+    \If{$\ pattern^{r}.size()=depth(node)$}
+		\State $child\_index\gets 0$
+		\While{$\ child\_index<degree(node)$}
+			\State $childnode\gets select\_child(node,child\_index)$
+			\State $symbol\gets edge(childnode,depth(node)+1)$
+			\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+			    \State $N_{1+}(\LargerCdot pattern)\gets N_{1+}(\LargerCdot pattern)+1$
+			\EndIf	
+		    \State $child\_index\gets child\_index+1$				
+		\EndWhile
+	\Else
+		\State $symbol\gets edge(node,pattern^{r}.size()+1)$
+		\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+	   		\State $N_{1+}(\LargerCdot pattern)\gets 1$
+		\EndIf	
+	\EndIf
+	
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\Algphase{ Subsection 2.1 - Gets the corresponding discounts}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\State $D\gets 0$\Comment{holds the discount}
+	\If{$ismkn$}\Comment{applies modified-KN discounts}
+		\If{$freq=1$}
+			\State $D\gets D_1[size]$\Comment{Eq.\ref{mkndiscounts1}}
+		\ElsIf{$freq=2$}
+			\State $D\gets D_2[size]$\Comment{Eq.\ref{mkndiscounts2}}
+		\ElsIf{$freq>=3$}
+			\State $D\gets D_{+3}[size]$\Comment{Eq.\ref{mkndiscounts3+}}
+		\EndIf
+	\Else
+		\State $D\gets Y[n]$\Comment{Kneser-Ney discount - Eq.\ref{mkndiscounts}}
+	\EndIf
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\Algphase{ Subsection 2.2 - Computes the numerator}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\State $numerator\gets \max\{N_{1+}(\LargerCdot pattern)-D,0\}$\Comment{Computes the numerator of the left term in Eq.\ref{midorder}}
+	
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 2.3 - Drops the last and first symbol of the pattern}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \State $pattern^{-}\gets droplast(pattern)$\Comment{pattern required for the right term's numerator in Eq.\ref{midorder}}
+	\State $^{-}pattern\gets dropfirst(pattern)$\Comment{the back-off pattern}
+	
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 2.4 - Computes denominator : $N_{1+}(\LargerCdot^{-}pattern^{-}\LargerCdot)$}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \State $lb\gets 0$
+	\State $rb\gets cst.size()-1$
+	\State $lb,rb\gets backward\_search(cst,pattern^{-})$
+	\State $freq\gets rb-lb+1$
+	\State $node \gets node(lb,rb)$
+		\algstore{myalg}
+	
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\begin{algorithmic}
+    \algrestore{myalg}
+    \vspace{2mm}
+    \State $denominator\gets 0$
+    \If{$freq\not=1$}
+        \State $denominator\gets calculate\_denominator(pattern^{-})$\Comment{Computes the denominator in Eq.\ref{midorder}}
+    \ElsIf{$freq=1$}
+        \State $denominator \gets 1$
+    \EndIf
+	\If{$denominator=0$}\Comment{backoff directly}
+		\State \texttt{return } $pkn(^{-}pattern)$
+	\EndIf
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 2.6 - Computes the $\gamma$ and probability based on modified KN}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	\If{$ismkn$}
+	    \State $\gamma\gets 0$
+	    \State $N_1,N_2,N_{+3}\gets 0$
+	    \If{$pattern^{-}.size=depth(node)$}
+	        \State $index\gets 0$
+		    \While{$index<degree(node)$}
+			    \State $childnode\gets select\_child(node,index)$
+			    \State $symbol\gets edge(childnode,pattern^{-}.size()+1)$
+			    \If{$symbol\not=1\texttt{ AND }symbol\not=0$}
+				    \State $N_{1+}(pattern^{-}\LargerCdot)\gets N_{1+}(pattern^{-}\LargerCdot)+1$
+		            \If{$ismkn$}    
+			            \State $pattern^{-}.push\_back(symbol)$                       			                 					    \State $lbX, rbX\gets backward\_search(cst,pattern^{-})$\Comment{uses the $lb,rb$ from above}
+					    \State $freq\gets rbX-lbX+1$
+    				    \If{$freq=1$}
+					        \State $N_1\gets N_1 + 1$
+	    				\ElsIf{$freq=2$}
+		    			    \State $N_2\gets N_2 + 1$
+			    		\ElsIf{$freq>=3$}
+				    	     \State $N_{+3}\gets N_{+3} + 1$
+					    \EndIf
+					    \State $pattern^{-}.pop\_back()$
+       			    \EndIf
+				    \State $index\gets index+1$
+				\EndIf
+		    \EndWhile
+		\Else
+		    \State $symbol\gets edge(node,pattern^{-}.size()+1)$
+		    \If{$symbol\not=1\texttt{ AND }symbol\not=0$}
+                \State $N_{1+}(pattern^{-}\LargerCdot)\gets 1$
+                \If{$ismkn$}
+            	    \State $pattern^{-}.push\_back(symbol)$                                                       
+                    \State $lbX, rbX\gets backward\_search(cst,pattern^{-})$\Comment{uses the $lb,rb$ from above}
+                    \State $freq\gets rbX-lbX+1$
+                    \If{$freq=1$}
+                        \State $N_1\gets N_1 + 1$
+                    \ElsIf{$freq=2$}
+                    	\State $N_2\gets N_2 + 1$
+                    \ElsIf{$freq>=3$}
+                        \State $N_{+3}\gets N_{+3} + 1$
+                    \EndIf
+                    \State $pattern^{-}.pop\_back()$
+                \EndIf
+            \EndIf
+        \EndIf
+        \State $\gamma\gets D_1[size]*N_1 + D_2[size]*N_2 + D_{+3}[size]*N_{+3}$\Comment{Computes the $gamma$ - Eq.\ref{gamma}}
+        \vspace{2mm}
+		\State \texttt{return } $\frac{numerator}{denominator}+\frac{\gamma}{denominator}*pkn(^{-}pattern)$\Comment{Computes modified KN probability - Eq.\ref{midordermkn}}
+		\vspace{2mm}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 2.7 - Computes the $N_{1+}(pattern^{-}\LargerCdot)$ and probability based on KN}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\Else
+	    \State $N_{1+}(pattern^{-}\LargerCdot)\gets 0$\Comment{holds the value required for the numerator of the right term in Eq.\ref{midorder}}
+	    \If{$\ pattern^{-}.size()=depth(node)$}
+		    \State $child\_index\gets 0$
+		    \While{$\ child\_index<degree(node)$}
+			    \State $childnode\gets select\_child(node,child\_index)$
+			    \State $symbol\gets edge(childnode,pattern^{-}.size+1)$
+			    \If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+			        \State $N_{1+}(pattern^{-}\LargerCdot)\gets N_{1+}(pattern^{-}\LargerCdot)+1$
+    			\EndIf	
+	    	    \State $child\_index\gets child\_index+1$				
+		    \EndWhile
+	    \Else
+		    \State $symbol\gets edge(node,pattern^{-}.size()+1)$
+		    \If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+	   		    \State $N_{1+}(pattern^{-}\LargerCdot)\gets 1$
+		    \EndIf	
+	    \EndIf
+	    \State \texttt{return } $\frac{numerator}{denominator}+\frac{D* N_{1+}(pattern^{-}\LargerCdot)}{denominator}*pkn(^{-}pattern)$\Comment{Computes KN probability - Eq.\ref{midorder}}
+	\EndIf
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Algphase{Section 3 - Lowest Order n-gram - Eq.\ref{lowestorder}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\ElsIf{$size=1 \texttt{ OR } n=1$}
+
+	\algstore{myalg}
+
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\begin{algorithmic}
+    \algrestore{myalg}
+    \State $lbrev\gets 0$
+    \State $rbrev\gets cst^{r}.size()-1$
+    \State $lbrev,rbrev\gets backward\_search(cst^{r},pattern)$
+	\State $freq\gets rbrev-lbrev+1$
+	\State $N_{1+}(\LargerCdot pattern)\gets 0$\Comment{holds the value required for the numerator of the left term in Eq.\ref{lowestordersimple}}
+    \State $node\gets node(lbrev,rbrev)$
+    \If{$\ pattern.size()=depth(node)$}
+		\State $child\_index\gets 0$
+		\While{$\ child\_index<degree(node)$}
+			\State $childnode\gets select\_child(node,child\_index)$
+			\State $symbol\gets edge(childnode,depth(node)+1)$
+			\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+			    \State $N_{1+}(\LargerCdot pattern)\gets N_{1+}(\LargerCdot pattern)+1$
+			\EndIf	
+		    \State $child\_index\gets child\_index+1$				
+		\EndWhile
+	\Else
+		\State $symbol\gets edge(node,pattern.size()+1)$
+		\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+	   		\State $N_{1+}(\LargerCdot pattern)\gets 1$
+		\EndIf	
+	\EndIf
+	\State $denominator\gets N_{1+}(\LargerCdot\LargerCdot)$\Comment{precomputed in ncomputer}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \Algphase{ Subsection 3.1 - Computes the probability based on KN}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\If{$!ismkn$}
+	    \State \texttt{return } $\frac{N_{1+}(\LargerCdot pattern)}{denominator}$\Comment{Computes the KN probability in Eq.\ref{lowestordersimple}}
+	\Else
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\Algphase{ Subsection 3.2 - Gets the corresponding discounts}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	    \State $D\gets 0$\Comment{holds the discount}
+	    \If{$freq=1$}
+	        \State $D\gets D_1[size]$\Comment{Eq.\ref{mkndiscounts1}}
+	    \ElsIf{$freq=2$}
+	        \State $D\gets D_2[size]$\Comment{Eq.\ref{mkndiscounts2}}
+	    \ElsIf{$freq>=3$}
+	        \State $D\gets D_{+3}[size]$\Comment{Eq.\ref{mkndiscounts3+}}
+	    \EndIf
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\Algphase{ Subsection 3.3- Computes the numerator for modified Kneser-Ney, and the probability itself}
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	    \State $numerator\gets \max\{N_{1+}(\LargerCdot pattern)-D,0\}$\Comment{Computes the numerator of the left term in Eq.\ref{lowestordermkn}}
+        \State $\gamma\gets 0$
+	    \State $N_1\gets n_1[1]$
+	    \State $N_2\gets n_2[1]$
+	    \State $N_{+3}\gets N_{3+}(\LargerCdot)$
+	    \State $\gamma\gets D_1[size]*N_1 + D_2[size]*N_2 + D_{+3}[size]*N_{+3}$\Comment{Computes the $gamma$ in Eq.\ref{unigramgamma}}
+	    \vspace{2mm}
+        \State \texttt{return } $\frac{numerator}{denominator}+\frac{\gamma}{denominator}*(\frac{1}{N_{1+}(\LargerCdot)})$\Comment{Computes the modified KN - Eq.\ref{lowestordermkn}}
+        \vspace{1mm}
+	\EndIf
+\EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\caption{Calculate denominator}
+\begin{algorithmic}[1]
+\Require pattern, $lb,rb$
+\Procedure{$calculate\_denominator$}{$pattern,lb,rb$}\Comment{The pattern is already $pattern^{-}$, it grows the pattern from right, reverses it, and sends query to $calculate\_denominator\_rev$}
+\State $denominator\gets 0$
+\State $node=node(lb,rb)$
+\State $freq\gets rbrev-lbrev+1$
+\If{$\ pattern.size()=depth(node)$}
+	\State $child\_index\gets 0$
+	\While{$\ child\_index<degree(node)$}
+		\State $childnode\gets select\_child(node,child\_index)$
+		\State $symbol\gets edge(childnode,depth(node)+1)$
+		\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+			\State $pattern.push\_back(symbol)$\Comment{grows the pattern}
+			\State $pattern^{r}\gets reverse(pattern)$
+			\State $lbX\gets 0$
+			\State $rbX\gets cst^{r}.size()-1$
+			\State $lbX,rbX\gets backward\_search(cst^{r},pattern)$
+			\State $denominator\gets denominator + calculate\_denominator\_rev(pattern,lbX,rbX)$
+			\State $pattern.pop\_back()$\Comment{removes the recently added symbol to the pattern}
+		\EndIf	
+		\State $child\_index\gets child\_index+1$				
+	\EndWhile
+\Else\
+    \State $pattern^{r}\gets reverse(pattern)$
+	\State $lbX\gets 0$
+	\State $rbX\gets cst^{r}.size()-1$
+	\State $lbX,rbX\gets backward\_search(cst^{r},pattern)$
+	\State $denominator\gets denominator + calculate\_denominator\_rev(pattern,lbX,rbX)$
+\EndIf
+\State \texttt{return } $denominator$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}\footnotesize
+\caption{Calculate the reverse denominator}
+\begin{algorithmic}[1]
+\Require pattern, $lb,rb$
+\Procedure{$calculate\_denominator\_rev$}{$pattern,lb,rb$}\Comment{takes the grown pattern sent by $calculate\_denominator$, and computes $N_{1+}(\LargerCdot pattern)$}
+\State $denominator\gets 0$
+\State $node=node(lb,rb)$
+\If{$\ pattern.size()=depth(node)$}
+	\State $child\_index\gets 0$
+	\While{$\ child\_index<degree(node)$}
+		\State $childnode\gets select\_child(node,child\_index)$
+		\State $symbol\gets edge(childnode,depth(node)+1)$
+		\If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}			
+			\State $denominator\gets denominator + 1$
+		\EndIf	
+		\State $child\_index\gets child\_index+1$				
+	\EndWhile
+\Else\
+    \State $symbol\gets edge(node,pattern.size()+1)$
+    \If{$\ symbol\not=1\ \texttt{AND} symbol\not=0$}
+        \State $denominator\gets denominator + 1$
+    \EndIf
+\EndIf
+\State \texttt{return } $denominator$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm*}
+
+
+\section{Experiment}
+\begin{table}\footnotesize
+\centering
+\resizebox{1\columnwidth}{!}{
+\begin{tabular}{ll|cc|cc}
+Language&&Size(MB)&Tokens&Training(Sen)&Test(Sen)\\
+\toprule 
+Bulgarian&BG&36.11&114930&329308&82327\\
+Czech&CS&53.48&174592&534916&133729\\
+German&DE&171.80&399354&1785153&446289\\
+English&EN&179.15&124233&1815123&453781\\
+Finnish&FI&145.32&721389&1737304&434327\\
+French&FR&197.68&147058&1791739&447935\\
+Hungarian&HU&52.53&318882&527061&131766\\
+Italian&IT&186.67&178259&1703367&425842\\
+Portuguese&PT&187.20&183633&1736676&434170\\
+\end{tabular}}
+\caption{Data was tokenized and sentence-split using tools provided on WMT2010, and the xml tags where removed using sed.}
+\end{table}
+\subsection{Language Modeling}
+\begin{table*}\footnotesize
+\centering
+\resizebox{2\columnwidth}{!}{
+\begin{tabular}{llllllll|ll|llllllll}
+\toprule 
+    & & \multicolumn{6}{c}{\TODO{KenLM - ModifiedKN}} & \multicolumn{2}{c}{\TODO{SRILM - ModifiedKN}} & \multicolumn{8}{c}{\TODO{SuccinctLM- StupidBackoff}}\\
+& & \multicolumn{2}{c}{probing}& \multicolumn{2}{c}{trie}& \multicolumn{2}{c}{compact trie} & \multicolumn{2}{c}{default} & \multicolumn{2}{c}{1}& \multicolumn{2}{c}{2}& \multicolumn{2}{c}{3}& \multicolumn{2}{c}{4}\\
+      \midrule
+&&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec\\
+      \midrule
+ \multirow{3}{*}{BG} 
+ & n=2 &28.48& 2.09&11.61 & 2.56&7.62&2.48& 12.37&1.15&24.34&5.6&20.80&24.66&22.15&11.97&29.19&4.78\\
+ & n=3 &100.35&2.82 & 42.16& 4.83& 21.48& 5.81& 47.30&2.54&-&7.02&-&33.81&-&13.64&-&6.64\\
+ & n=4 &215.98&4.50&97.91&52.40&44.71 &4.42 & 116.04&4.35&-&7.14&-&34.76&-&16.15&-&6.06\\
+ & n=5 &358.79&3.08 &171.10 &3.41 &74.0 & 4.34& 212.01&6.73&-&7.22&-&32.94&-&15.01&-&6.94\\\hline
+ 
+ \multirow{3}{*}{CS} 
+ & n=2 &55.40&3.38 & 22.07&4.36 & 14.08&3.84 &23.19 &1.80&37.29&10.8&32.60&71.78&34.73&34.02&44.88&12.93\\
+ & n=3 &185.05&4.27 & 79.62& 5.16& 40.08&5.32 &89.14 &4.24&-&21.56&-&86.13&-&42.23&-&15.65\\
+ & n=4 &374.42& 4.49& 175.18& 5.44& 79.52& 5.81&207.56 &7.38&-&20.71&-&85.61&-&42.10&-&14.84\\
+ & n=5 &592.82&4.45 & 291.28& 6.54&125.74 & 7.71&359.37 &10.82&-&21.34&-&86.20&-&41.52&-&15.10\\\hline
+ 
+ \multirow{3}{*}{DE}
+ & n=2 &112.95&13.34 &46.59 &14.65 & 30.54&14.66 & 48.86&5.65 &107.26&61.53&89.35&244.58&97.30&122.26&132.06&51.15\\
+ & n=3 &431.21&15.48 & 184.54& 20.6& 95.39 &20.96& 201.79&13.77 &-&79.41&-&322.418&-&173.24&-&64.91\\
+ & n=4 &994.10&14.80 & 459.75&20.90 &214.07 &25.68 & 527.72&26.95 &-&80.84&-&331.009&-&176.50&-&72.11\\
+ & n=5 &1723.68&19.01 & 844.15&22.41 &371.10 &29.54 & 1009&38.45 &-&83.44&-&348.71&-&175.12&-&66.15\\\hline
+ 
+ \multirow{3}{*}{EN} 
+ & n=2 &55.19&11.99&20.69 &16.84 & 12.49&15.85 & 21.63&5.45 &82.63&63.25&62.34&239.79&70.64&134.96&107.77&49.63\\
+ & n=3 &288.56&16.83&112.76&19.46&56.11 &21.72 & 122.19&11.86 &-&81.76&-&325.79&-&180.49&-&68.91\\
+ & n=4 &789.69&17.93 &341.37 & 24.24& 154.61& 28.25& 389.82&22.30 &-&85.44&-&338.38&-&182.51&-&70.19\\
+ & n=5 &1510.74&22.44 &706.86 &24.24 &300.69 & 32.96& 841.67&35.08 &-&84.66&-&354.33&-&172.509&-&70.77\\\hline
+ 
+ \multirow{3}{*}{FI}
+ & n=2 &185.88&9.75 & 79.05& 11.49&52.97 &14.67 & 84.39&6.55 &129.60&54.79&116.16&211.53&122.95&106.38&151.68&41.82\\
+ & n=3 &561.84&10.78 &133.60 &16.69 & 1079.51& 12.44& 289.0&14.27 &-&61.80&-&256.46&-&117.52&-&50.96\\
+ & n=4 &1079.518&12.44&530.21&14.81 & 247.53& 19.244 & 626.22&23.59 &-&63.53&-&254.91&-&129.42&-&50.45\\
+ & n=5 &1660.16&14.585 & 849.89& 16.24& 376.82& 21.24& 1040&34.29 &-&63.53&-&255.80&-&140.13&-&49.62\\\hline
+ 
+ \multirow{3}{*}{FR}
+ & n=2 &56.75&14.21 & 22.01&16.45 &13.67 &15.64 & 22.97&5.12 &92.60&71.56&66.83&254.98&76.46&147.18&120.60&63.24\\
+ & n=3 &281.48& 16.26& 112.87& 20.01&57.26 &21.89 & 121.63&11.74 &-&86.57&-&333.15&-&189.17&-&72.59\\
+ & n=4 &775.46&18.64 &339.51 &24.09 & 157.05& 30.75& 383.31&21.50 &-&90.73&-&351.86&-&188.77&-&55.41\\
+ & n=5 &1512.42&22.46 & 713.22& 27.61 &309.99 & 36.78& 838.84&35.94 &-&87.09&-&360.50&-&189.88&-&50.31\\\hline
+ 
+ \multirow{3}{*}{HU}
+ & n=2 &69.16&32.90 &29.88 &39.76 & 20.42&37.16 & 31.86&2.06 &50.90&16.09&46.37&63.22&48.57&30.07&58.45&11.57\\
+ & n=3 &203.21&37.23 & 92.20& 49.45&48.41 & 50.97& 103.98&4.55 &-&19.32&-&77.90&-&35.81&-&13.36\\
+ & n=4 &389.82&39.12 &188.22 & 51.14 &88.40 &58.94 & 222.92&7.66 &-&18.50&-&81.07&-&37.06&-&13.87\\
+ & n=5 &602.21&40.75 & 302.52&52.13 & 134.51& 66.14& 372.45&10.91 &-&18.66&-&81.28&-&35.21&-&13.47\\\hline
+ 
+ \multirow{3}{*}{IT}
+ & n=2 &70.73& 12.45&27.36 & 14.71&16.94 &13.96 & 28.41&5.07 &90.85&66.41&69.07&256.12&77.75&140.81&117.32&53.22\\
+ & n=3 &343.26& 14.27& 138.06&18.90 & 69.89& 19.80& 148.97& 11.97&-&81.57&-&326.17&-&183.03&-&72.53\\
+ & n=4 &894.37&16.18 &396.42 & 25.16&181.93 & 34.17& 451.08&22.21 &-&87.98&-&335.36&-&185.07&-&79.90\\
+ & n=5 &1654.83&23.17 &790.46 &  25.31 & 340.75& 38.34& 938.66&36.30 &-&85.79&-&349.10&-&178.05&-&70.07\\\hline
+ 
+ \multirow{3}{*}{PT}
+ & n=2 &68.44&16.15 & 26.68& 15.58&16.65 & 14.26& 27.95&5.21 &90.84&66.34&69.49&257.73&78.02&149.05&117.02&61.34\\
+ & n=3 &327.43&14.60 &132.10 & 19.90& 67.01&21.29 & 142.88&11.90 &-&85.77&-&348.29&-&185.73&-&79.32\\
+ & n=4 &858.64&16.96 &380.09 & 24.51 &174.88 & 31.08& 432.72&22.83 &-&89.38&-&364.57&-&190.77&-&71.61\\
+ & n=5 &1606.83& 21.98& 765.43&27.53 &330.85 & 36.05& 908.13&36.36 &-&87.58&-&375.43&-&185.10&-&53.60\\
+
+    \bottomrule
+\end{tabular}}
+\caption{Europarl dataset}
+\end{table*}
+\TODO{Mention that SRILM/KenLM do backoff in the test time and use precomputed quantities while we do interpolation and the computation happens in the test time.}
+
+\subsection{Re-ranking}
+re-ranking task to compare with the best performed system.
+
+\section{Conclusion}
+\bibliographystyle{abbrvnat}
+\bibliography{Bibliography}
+\end{document}

@@ -1,16 +1,33 @@
 
 \subsection{Suffix Arrays and Suffix Trees}
 
-
-\begin{figure}
+\begin{figure*}[phbt]
+\begin{subfigure}[t]{0.5\textwidth}
 \centering
 %\scalebox{0.9}{
 \input{figures/fig-suffix-tree.tex}
 %}
-\caption{Word-based Suffix Tree and Suffix Array (below) for a sample the 
-text.}
+\caption{Word-based Suffix Tree.}
 \label{fig-suffix-tree}
-\end{figure}
+\end{subfigure}
+\quad
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\input{figures/fig-wt-bwt.tex}
+\caption{Wavelet tree and \rankop$(\colbwt,17,'t')=5$.}
+\label{fig-wt-bwt}
+\end{subfigure}
+\begin{subfigure}[b]{1\textwidth}
+\centering
+\input{figures/fig-sa-bwt.tex}
+\label{fig-sa-bwt}
+\end{subfigure}
+\vspace{-0.8cm}
+\caption{Data structures for our running example with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
+{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
+{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
+\label{fig-example}
+\end{figure*}
 
 Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
 size {\alphabetsize}. Let {$\col[i..n-1]$} be a {\it suffix} of {\col}.
@@ -26,7 +43,7 @@ the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{m}
 Figure~\ref{fig-suffix-tree} shows a suffix tree over {\col=``\#the old night keeper 
 keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}''. 
 The sample text is drawn from the word alphabet 
-{\alphabet=\{the,old,night,keeper,keeps,keep,in,town,\#\}}. A suffix tree requires $\Order{n}$ space 
+{\alphabet=\{the, old, night, keeper, keeps, keep, in, town, \#\}}. A suffix tree requires $\Order{n}$ space 
 and can be constructed in $\Order{n}$ time~\cite{u-algo95}. The children
 of each node in the suffix tree are lexicographically ordered by their edge labels.
 The $i$-th smallest suffix in {\col} corresponds to the path-label of the $i$-th 
@@ -68,7 +85,7 @@ For a more comprehensive overview on succinct text indexes, we refer to the
 excellent survey of~\newcite{fgnv-jea08}.
 
 The FM-Index relies on the duality between the suffix array and the BWT~\cite{bw-dec94}, 
-a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$. Searching for
+a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$ (see Figure~\ref{fig-example}). Searching for
 a pattern using the FM-Index is performed in reverse order by performing  
 {\rankop$(\colbwt,i,c)$} operations $\Order{m}$ times. Here, {\rankop$(\colbwt,i,c)$}  
 counts the number of times symbol $c$ occurs in $\colbwt[0\ldots i-1]$. 
@@ -87,31 +104,23 @@ of $\alphabetsize \log \collen$ bits.
 Thus, the new interval is computed as $l_{i-1} = C_c + $\rankop$(\colbwt,l_i,c)$ 
 and $r_{i-1} = C_c + $\rankop$(\colbwt,r_i+1,c)$.
 
-\begin{figure}[tb]
-\centering
-\input{figures/fig-wt-bwt.tex}
-\caption{Wavelet tree of \colbwt\ with alphabet mappings and code words {\tt \$=0000}, {\tt \#=0001}, 
-{\tt i=in=001}, {\tt p=keep=010}, {\tt r=keeper=011}, {\tt s=keeps=1000}, 
-{\tt o=old=101}, {\tt t=the=110}, {\tt n=night=1001} and {\tt T=town=111}.}
-\label{fig-wt-bwt}
-\end{figure}
-
 
 The time and space complexity of the FM-index thus depends on the cost of storing
 and pre-processing \colbwt\ to answer \rankop\ efficiently. A {\it wavelet tree}
 can be used to answer \rankop\ over $\colbwt$ in $\Order{\log \alphabetsize}$ time.
 The wavelet tree reduces \rankop\ over an alphabet $\alphabet$ into multiple
 \rankop\ operations over a binary alphabet which can be answered 
-in $\Order{1}$ time and $o(n)$ bits extra space~\cite{m-fsttcs96}. The alphabet is
+in $\Order{1}$ time and $o(n)$ bits extra space by periodically storing absolute
+and relative \rankop\ counts~\cite{m-fsttcs96}. The alphabet is
 reduced by recursively splitting symbols based on their code words into subgroups to 
 form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
 \rankop$(\colbwt,i,c)$, the tree is traversed based on the code word of $c$, performing
-binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`the`)$ translates
-to performing \rankop$(WT_{lvl-0},17,1)=11$ on the top level of the wavelet 
+binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`t`)$ translates
+to performing \rankop$(WT_{root},17,1)=12$ on the top level of the wavelet 
 tree, as {\tt t=the=110}. We recurse to the right subtree of the root node and
-compute \rankop$(WT_{lvl-1-1},11,1)$ as there were $11$ ones in the root node and
+compute \rankop$(WT_{1},12,1)$ as there were $12$ ones in the root node and
 the next bit in the codeword of `the' is also one. This process continues until 
-the correct leaf node is reached to answer \rankop$(\colbwt,17,`the`)=5$ in 
+the correct leaf node is reached to answer \rankop$(\colbwt,17,`t`)=5$ in 
 $\Order{\log \alphabetsize}$ time. The space usage of a regular wavelet tree is
 $\collen \log \alphabetsize + o(\collen \log \alphabetsize)$ bits which roughly
 matches the size of the text. However, if code-words for each symbol are chosen
