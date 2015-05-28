@@ -98,7 +98,8 @@ Calling \emph{depth} is constant time for internal nodes, but costly for leaf no
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
 This leads to an overall time complexity of $\Order{1}$ for \nlplusname and $\Order{F m \log\sigma}$ for \nlplusfrontbackname, where $F$ is the number of following symbols, $\sigma=|\Sigma|$ the vocabulary size, and $m=|\alpha|$ is the pattern length.
 
-\subsection{Dual \CST Algorithm} 
+\section{Dual \CST Algorithm} 
+\label{sec-dual-cst}
 
 Using the methods above for computing the frequency and occurrence
 counts, we now have the ingredients necessary to compute \ngram language model
