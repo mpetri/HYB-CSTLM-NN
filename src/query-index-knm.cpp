@@ -29,6 +29,8 @@ typedef struct cmdargs {
     bool isreranking;
 } cmdargs_t;
 
+std::vector<uint32_t> ngram_occurrences;
+
 void print_usage(const char* program)
 {
     fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
@@ -270,6 +272,8 @@ int main(int argc, const char* argv[])
         else
             run_queries(idx, patterns, args.ngramsize, true);
     }
+
+    LOG(INFO) << "ngram_occs: " << ngram_occurrences;
 
     return EXIT_SUCCESS;
 }

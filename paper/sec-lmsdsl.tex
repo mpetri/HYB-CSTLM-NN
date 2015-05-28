@@ -1,11 +1,17 @@
 %Computing counts, N1+ of several flavours of different sized n-grams.
 
-The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying how many different contexts the \ngram has occurred.%
-\footnote{The need such counts is not specific to Kneser Ney, indeed
-  many other smoothing variants for \ngram LMs impose similar
-  requirements and could be computed straightforwardly using the algorithms below.}
+The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying how many different contexts the \ngram has occurred.
 Figure~\ref{fig-counts-example} (right) illustrates the numbers needed in calculating the probability of an example 4-gram.
 In electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queries into the suffix tree.
+
+\begin{figure*}[tpb]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/kn_dual_cst}
+\vspace{-3ex}
+\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. See Algorithm~\ref{alg:pkn} for details.}
+\label{fig-counts-example}
+\end{figure*}
+
 
 The raw frequency counts are the simplest to compute. First we
 identify the locus node $v$ in the suffix tree for the query
@@ -58,8 +64,9 @@ For each symbol, line 9 searches for an extended pattern incorporating the new s
 Line 5 deals with the special case where the pattern does not match a complete edge, in which case there is only only unique right context and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
 
 \begin{algorithm}[t]
-  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
+  \caption{Two-sided occ., $\nlplus{\dotpatdot}$ 
     \label{alg:n1plusfb}}
+\footnotesize
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
     \Require{$\nf$ in reverse \CST $\tr$ matches $\alpha$}
@@ -72,9 +79,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
         \Else
            \For{$\chf \gets \children{\tf}{\nf}$} 
               \Let{$s$}{$\edge{\tf}{\chf}{d+1}$} %\Comment{find the first symbol on the edge label}
-              \Let{$\chr$}{}
-% line wrapping
-                  \Statex \hfill $\backwardsearch{\tr}{\lb{\nr}}{\rb{\nr}}{s}$ %\Comment{find child node in reverse \CST}
+              \Let{$\chr$}{$\backwardsearchnode{\tr}{\nr}{s}$} %\Comment{find child node in reverse \CST}
 %              \Statex    %\Comment{$\ar$ is the \CSA component of $\tr$}
               \Let{$o$}{$o + \nlplusfunc{\tr}{\chr}{\dotpat s}$}
             \EndFor
@@ -85,28 +90,25 @@ Line 5 deals with the special case where the pattern does not match a complete e
 \label{alg-occ-two-sided}
 \end{algorithm}
 
-\textsc{N1Plus} and \textsc{N1PlusFrontBack} can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
+\nlplusname and \nlplusfrontbackname can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
 The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as the search time to match the pattern in both \CSTs. 
 We show in Section \ref{sec-single-cst}  how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
-Beyond the need for twin suffix trees, the non-constant complexity operations are the calls to \emph{depth}, \emph{edge} and \emph{backward-search}.
-Calling \emph{depth} is constant time for internal nodes, but costly for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
+Beyond the need for twin suffix trees, the highest time complexity calls are \emph{string-depth}, \emph{edge} and \emph{backward-search}.
+Calling \emph{string-depth} is constant time for internal nodes, but $\Order{n\log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
-This leads to an overall time complexity of $\Order{1}$ for \textsc{N1Plus} and $\Order{F m \log\sigma}$ for \textsc{N1PlusFrontBack}, where $F$ is the number of following symbols, $\sigma=|\Sigma|$ the vocabulary size, and $m=|\alpha|$ is the pattern length.
+This leads to an overall time complexity of $\Order{1}$ for \nlplusname and $\Order{F m \log\sigma}$ for \nlplusfrontbackname, where $F$ is the number of following symbols, $\sigma=|\Sigma|$ the vocabulary size, and $m=|\alpha|$ is the pattern length.
 
-\subsection{Dual \CST Algorithm} 
+\section{Dual \CST Algorithm} 
+\label{sec-dual-cst}
 
 Using the methods above for computing the frequency and occurrence
 counts, we now have the ingredients necessary to compute \ngram language model
-probabilities. The remaining question is to determine which patterns we need to search for
-in the forward and reverse \CST structures in order to support the
-various frequency queries and $N^{1+}$ computations.
+probabilities. This leaves the algorithmic problem of efficiently ordering the search 
+operations in forward and reverse \CST structures.
 
-As this paper considers an interpolated Kneser Ney model formulation, in which
+This paper considers an interpolated LM formulation, in which
 probabilities from higher order contexts are interpolated with lower
-order estimates following a simple recursion (as do several other LMs). 
-Equivalently, this iteration can be considered in reverse, starting from unigram
-estimates and successively growing to large \ngrams, which better
-suits our \CST data-structures.
+order estimates.
 % Our approach starts by querying the target word unigram $w_k$ and
 % empty context $\emptyset$, from which the unigram probability can be computed
 % Both patterns are extended to the left with symbol $w_{k-1}$, to form
@@ -114,49 +116,44 @@ suits our \CST data-structures.
 % In each step the probability is computed before extending the pattern,
 % stopping after a fixed number of steps, $n$, or on encountering an
 % unseen context.
-This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which
-shows the quantities required for probability scoring for an example \ngram.
-Structuring the search in order of the \ngram length means that each step involves adding a new symbol to the left of the pattern.
-This kind of incremental search is well suited to \CSTs, which can be searched efficiently by refining an existing search result.
+This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which shows the quantities required for probability scoring for an example \ngram.
+Equivalently, the iteration can be considered in reverse, starting from unigram estimates and successively growing to large \ngrams, in each stage adding a single new symbol to left of the pattern. 
+This suits incremental search in a \CST in which search bounds are iteratively refined, which has a substantially lower time complexity compared to searching over the full range.
 %This fits well with cheaply searching a \CST one symbol at a time.  
 
-\begin{figure*}[p]
-\includegraphics[width=\textwidth]{figures/kn_dual_cst}
-\vspace{-3ex}
-\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. The algorithm is described below in Alg~\ref{alg:pkn}.}
-\label{fig-counts-example}
-\end{figure*}
 
-\begin{algorithm*}[p]
-  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$
+\begin{algorithm}[tpb]
+  \caption{KN probability $P\big(w_k | w^{k-1}_{k-(m-1)}\big)$
     \label{alg:pkn}}
+\footnotesize
   \begin{algorithmic}[1]
-    \Function{ProbKneserNey}{$\tf, \tr, \ws, n$} 
-        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for context $w^{k-1}_{k-i}$}
-        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for $w^{k}_{k-i}$}
+    \Function{ProbKneserNey}{$\tf, \tr, \ws, m$} 
+        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for suffix of $w^{k-1}_{k-(m-1)}$}
+        \Let{$\nr$}{$\rooot{\tr}$} \Comment{match for suffix of $w^{k-1}_{k-(m-1)}$}
+        \Let{$\nrfull$}{$\rooot{\tr}$} \Comment{match for suffix of $w^{k}_{k-(m-1)}$}
         \Let{$p$}{$1$}
-        \For{$i \gets 1 \text{ to } $}
-          \Let{$\nrfull$}{$\forwardsearch{\tr}{\lb{\nrfull}}{\rb{\nrfull}}{w_{k-i+1}}$} \Comment{update matches in \textsc{Cst}s}
+        \For{$i \gets 1 \text{ to } m$}
+          \Let{$\nrfull$}{$\forwardsearchnode{\tr}{\nrfull}{w_{k-i+1}}$} %\Comment{update matches in \textsc{Cst}s}
           \If{$i > 1$}
-             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$} %\Comment{update context match in fwd \CST}
+             \Let{$\nf$}{$\backwardsearchnode{\tf}{\nf}{w_{k-i+1}}$} %\Comment{update context match in fwd \CST}
               \If{$i < m$}
-             \Let{$\nr$}{$\forwardsearch{\tr}{\lb{\nr}}{\rb{\nr}}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
+             \Let{$\nr$}{$\forwardsearchnode{\tr}{\nr}{w_{k-i+1}}$} %\Comment{update context match in rev \CST}
           \EndIf
           \EndIf
-          \Let{$D$}{lookup discount parameter for \ngram}
+          \Let{$D_i$}{lookup discount for $i$gram}
           \If{$i = m$} % or if s == '<s>' 
-                 \Comment{compute frequency count and denominator}
+%                 \Comment{compute frequency count and denominator}
              \Let{$c$}{$\size{\tr}{\nrfull}$} 
              \Let{$d$}{$\size{\tf}{\nf}$}
-          \Else  \Comment{compute occurrence count and denominator}
+          \Else  %\Comment{compute occurrence count and denominator}
              \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k}_{k-i+1}}$} 
-             \Let{$d$}{$\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{precompute $\nlplus{\Bigcdot\Bigcdot}$}
+             \Let{$d$}{}
+             \Statex \hfill $\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$ %\Comment{precompute $\nlplus{\Bigcdot\Bigcdot}$}
            \EndIf
            \If{$i > 1$}
-             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
+             \If{$\nf$ is valid} %\Comment{compute backoff probability, or backoff for unseen contexts}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}  %\Comment{defined as $0$ for $i=1$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$} 
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D_i, 0)  + D_i  q  p \right)$} 
                \EndIf
           \ElsIf{$i = 1$}
               \Let{$p$}{$c  / \nlplus{\Bigcdot\Bigcdot}$}
@@ -166,11 +163,11 @@ This kind of incremental search is well suited to \CSTs, which can be searched e
     \EndFunction
   \end{algorithmic}
 \label{alg-kn-slow}
-\end{algorithm*}
+\end{algorithm}
 
 
 
-\afterpage{\clearpage}
+%\afterpage{\clearpage}
 
 Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
 This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $(i-1)$gram context ($\nf, \nr$), $i=1 \ldots m$.
@@ -194,19 +191,32 @@ These approximate discounts are typically within $10^{-2}$ of the correct values
 \label{sec-single-cst}
 
 The above dual \CST algorithm provides an elegant means of computing LM probabilities of arbitrary order and with a limited space complexity ($\Order{n}$, or roughly $n$ in practice).
-However the time complexity is problematic, stemming from the expensive method for computing \textsc{N1PlusFrontBack} and repeated searches over the \CST, particularly \emph{forward-search}.
+However the time complexity is problematic, stemming from the expensive method for computing \nlplusfrontbackname and repeated searches over the \CST, particularly \emph{forward-search}.
 Now we outline a method for speeding up the algorithm by doing away with the reverse \CST.
 Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are computed directly from a single forward \CST. 
 This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
 
-\begin{algorithm}[htpb]
-  \caption{Compute two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
+
+The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
+Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
+The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
+The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
+For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
+These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
+These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
+In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
+
+
+\begin{algorithm}[t]
+  \caption{%Two-sided occ, 
+$\nlplus{\dotpatdot}$, using forward \CST 
     \label{alg:n1plusfb_wt}}
 \footnotesize
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
 %    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
-    \Function{N1PlusFrontBack1}{$\tf, \nf, \alpha$} 
+    \Function{\nlplusfrontbacklname}{$\tf, \nf, \alpha$} 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
         \If{$\depth{\tf}{\nf} > |\alpha|$}   
@@ -223,18 +233,8 @@ This confers the benefit of using only backward search and avoiding redundant se
   \end{algorithmic}
 \end{algorithm}
 
-The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
-Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
-This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
-For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
-These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
-These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
-In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
-
-\textsc{N1PlusBack1} is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
-Overall the time complexity of inference for both \textsc{N1PlusBack1} and \textsc{N1PlusFrontBack1} is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \textsc{N1PlusFrontBack} using the forward and reverse \CSTs.
+\nlplusbacklname is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
+Overall the time complexity of inference for both \nlplusbacklname and \nlplusfrontbacklname is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \nlplusfrontbackname using the forward and reverse \CSTs.
 Overall this leads to considerably faster computation of \ngram probabilities compared to the two \CST approach, and although still slower than highly optimised LM toolkits like \textsc{Srilm}, it is fast enough to support large scale experiments, and has considerably better scaling performance with the Markov order $m$ (even allowing unlimited order), as we will now demonstrate.
 
 

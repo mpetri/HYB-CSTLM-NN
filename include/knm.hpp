@@ -179,6 +179,8 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
     return probability;
 }
 
+extern std::vector<uint32_t> ngram_occurrences;
+
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
 // predicted given the previous values in the pattern.
@@ -194,7 +196,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
 
-    LOG(INFO) << "PKN: pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
+    //LOG(INFO) << "PKN: pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -217,17 +219,20 @@ double prob_kneser_ney_forward(const t_idx& idx,
             else // which is the special case of n<ngramsize that starts with <s>
                 D = idx.discount(i, true);
             double numerator = (!unk && c - D > 0) ? (c - D) : 0;
-            LOG(INFO) << "\tsize " << i << " (top): numer=" << numerator;
+            //LOG(INFO) << "\tsize " << i << " (top): numer=" << numerator;
 
             if (backward_search_wrapper(idx.m_cst, node_excl, *start) > 0) {
                 auto denominator = idx.m_cst.size(node_excl);
                 double N1plus_front = idx.N1PlusFront(node_excl, start, pattern_end - 1);
                 probability = (numerator / denominator) + (D * N1plus_front / denominator) * probability;
-                LOG(INFO) << "\tsize " << i << " (top): " << probability;
-                LOG(INFO) << "\tsize " << i << " (top): N1+f=" << N1plus_front << " D=" << D << " denom=" << denominator;
+                //LOG(INFO) << "\tsize " << i << " (top): " << probability;
+                //LOG(INFO) << "\tsize " << i << " (top): N1+f=" << N1plus_front << " D=" << D << " denom=" << denominator;
+                if (ngram_occurrences.size() <= i)
+                    ngram_occurrences.resize(i+1);
+                ngram_occurrences[i] += 1;
             } else {
                 // just use backoff probability 
-                LOG(INFO) << "\tsize " << i << " (top): fall-through";
+                //LOG(INFO) << "\tsize " << i << " (top): fall-through";
             }
         } else if (i < ngramsize && i != 1) {
             auto timer = lm_bench::bench(timer_type::lowerorder);
@@ -247,11 +252,14 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 auto N1plus_front = idx.N1PlusFront(node_excl, start, pattern_end - 1);
                 auto back_N1plus_front = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
                 probability = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * probability;
-                LOG(INFO) << "\tsize " << i << " (mid): " << probability;
-                LOG(INFO) << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front;
+                //LOG(INFO) << "\tsize " << i << " (mid): " << probability;
+                //LOG(INFO) << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front;
+                if (ngram_occurrences.size() <= i)
+                    ngram_occurrences.resize(i+1);
+                ngram_occurrences[i] += 1;
             } else {
                 // just use backoff probability 
-                LOG(INFO) << "\tsize " << i << " (mid): fall-through";
+                //LOG(INFO) << "\tsize " << i << " (mid): fall-through";
                 break;
             }
         } else if (i == 1 || ngramsize == 1) {
@@ -263,20 +271,23 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 t_pat_iter start = pattern_end-1;
                 backward_search_wrapper(idx.m_cst, node_incl, *start);
                 numerator = idx.N1PlusBack_from_forward(node_incl, start, pattern_end); 
-                LOG(INFO) << "\t\tunigram, not UNK numer: " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]";
+                //LOG(INFO) << "\t\tunigram, not UNK numer: " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]";
+                if (ngram_occurrences.size() <= i)
+                    ngram_occurrences.resize(i+1);
+                ngram_occurrences[i] += 1;
             } else {
                 // TODO: will the node_incl be invalid? shouldn't we still do forward_search?
                 // seems values are ignored all the way up
                 numerator = idx.discount(1, true);
-                LOG(INFO) << "\t\tunigram, UNK numer: " << numerator;
+                //LOG(INFO) << "\t\tunigram, UNK numer: " << numerator;
             }
             probability = numerator / idx.m_precomputed.N1plus_dotdot;
-            LOG(INFO) << "\tsize 1: " << probability;
+            //LOG(INFO) << "\tsize 1: " << probability;
         } else {
             assert(false);
         }
     }
 
-    LOG(INFO) << "PKN: returning " << probability;
+    //LOG(INFO) << "PKN: returning " << probability;
     return probability;
 }
