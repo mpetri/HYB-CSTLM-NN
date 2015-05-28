@@ -5,9 +5,10 @@ Figure~\ref{fig-counts-example} (right) illustrates the numbers needed in calcul
 In electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queries into the suffix tree.
 
 \begin{figure*}[tpb]
-\includegraphics[width=\textwidth]{figures/kn_dual_cst}
+\centering
+\includegraphics[width=0.85\textwidth]{figures/kn_dual_cst}
 \vspace{-3ex}
-\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. The algorithm is described below in Alg~\ref{alg:pkn}.}
+\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. See Algorithm~\ref{alg:pkn} for details.}
 \label{fig-counts-example}
 \end{figure*}
 
@@ -63,8 +64,9 @@ For each symbol, line 9 searches for an extended pattern incorporating the new s
 Line 5 deals with the special case where the pattern does not match a complete edge, in which case there is only only unique right context and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
 
 \begin{algorithm}[t]
-  \caption{Two-sided occurrence counts, $\nlplus{\dotpatdot}$ 
+  \caption{Two-sided occ., $\nlplus{\dotpatdot}$ 
     \label{alg:n1plusfb}}
+\footnotesize
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
     \Require{$\nf$ in reverse \CST $\tr$ matches $\alpha$}
@@ -198,8 +200,21 @@ Now we outline a method for speeding up the algorithm by doing away with the rev
 Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are computed directly from a single forward \CST. 
 This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
 
-\begin{algorithm}[htpb]
-  \caption{Two-sided occurrence counts, $\nlplus{\dotpatdot}$, using only forward \CST 
+
+The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
+Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
+The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
+The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
+For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
+These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
+These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
+In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
+
+
+\begin{algorithm}[t]
+  \caption{%Two-sided occ, 
+$\nlplus{\dotpatdot}$, using forward \CST 
     \label{alg:n1plusfb_wt}}
 \footnotesize
   \begin{algorithmic}[1]
@@ -221,16 +236,6 @@ This confers the benefit of using only backward search and avoiding redundant se
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
-
-The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
-Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
-This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
-For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
-These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
-These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
-In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
 
 \nlplusbacklname is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
 Overall the time complexity of inference for both \nlplusbacklname and \nlplusfrontbacklname is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \nlplusfrontbackname using the forward and reverse \CSTs.
