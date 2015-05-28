@@ -44,20 +44,9 @@
 \end{abstract}
 
 \section{Introduction}
+\label{sec-intro}
+\input{sec-intro.tex}
 
-LMs important, critical aspects are speed and scale. One avenue of better LMs using NN; another
-better count based LMs to harness more data (e.g., stupid backoff). 
-
-We're the latter, but marrying large scale with KN smoothing (better method). Crux is how to compute
-the quantities (counts, occ counts). 
-
-Suffix trees / arrays / tries etc used in the past. Either precomputed (KLM/SRI) or on the fly (slow
-LREC paper). But doesn't scale. We propose compressed SA/ST methods, which scale to massive datasets.
-
-Brief outline of how the method works; using one or two suffix trees. Forward/backward search.
-
-Pata on experiments: pplx good; can scale to large n and massive corpora; adequate runtime
-performance, around 100x slower than SRILM. Reranking gains? Can we run with INFINITE order?
 
 \section{Suffix-based Indexing}
 \label{sec-suffix}
