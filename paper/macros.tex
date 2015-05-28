@@ -16,17 +16,17 @@
 \newcommand{\ngrams}{$m$grams\xspace}
 
 \newcommand{\rooot}[1]{\text{root}(#1)}
-\newcommand{\leaf}[2]{\text{leaf}(#1, #2)}
-\newcommand{\size}[2]{\text{size}(#1, #2)}
-\newcommand{\depth}[2]{\text{depth}(#1, #2)}
-\newcommand{\degree}[2]{\text{degree}(#1, #2)}
-\newcommand{\edge}[3]{\text{edge}(#1, #2, #3)}
-\newcommand{\children}[2]{\text{children}(#1, #2)}
-\newcommand{\parent}[2]{\text{parent}(#1, #2)}
-\newcommand{\backwardsearch}[4]{\text{backward-search}(#1, [#2,#3], #4)}
-\newcommand{\forwardsearch}[4]{\text{forward-search}(#1, [#2,#3], #4)} % I've abbreviated away depth, char_pos
+\newcommand{\leaf}[2]{\text{leaf}(#2)}
+\newcommand{\size}[2]{\text{size}(#2)}
+\newcommand{\depth}[2]{\text{depth}(#2)}
+\newcommand{\degree}[2]{\text{degree}(#2)}
+\newcommand{\edge}[3]{\text{edge}(#2, #3)}
+\newcommand{\children}[2]{\text{children}(#2)}
+\newcommand{\parent}[2]{\text{parent}(#2)}
+\newcommand{\backwardsearch}[4]{\text{backward-search}([#2,#3], #4)}
+\newcommand{\forwardsearch}[4]{\text{forward-search}([#2,#3], #4)} % I've abbreviated away depth, char_pos
 \newcommand{\intervalsymbols}[3]{\text{interval-symbols}(#1, [#2,#3])}
-\newcommand{\pathlabel}[2]{\text{label}(#1, #2)}
+\newcommand{\pathlabel}[2]{\text{label}(#2)}
 
 \DeclareMathOperator*{\Bigcdot}{\scalerel*{\cdot}{\bigodot}}
 
