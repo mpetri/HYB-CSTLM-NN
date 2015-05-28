@@ -27,9 +27,6 @@ or \emph{loss-less}  not-small LMs [SRI], where compression [Germann 2009], Suff
 % 
 However, none of the aforementioned works scale up to high-order  $n$gram LMs for web scale corpora. 
 
-We make use of recent advances in \emph{compact suffix arrays} (CSAs) [REF] and
-\emph{compact suffix trees} (CSTs) [REF] to build small-storage indices  with reasonable query time for high-order $n$gram LMs on web scale corpora.
-%
 In $n$gram LMs, the probability of a sequence of words is decomposed based on the chain rule 
 and approximated using the Markov assumption 
 $P(w_1,\ldots,w_{\ell}) \approx \prod_{i=1}^{\ell} P(w_i|w_{i-n+1}^{i-1})$. 
@@ -38,18 +35,41 @@ $P(w_1,\ldots,w_{\ell}) \approx \prod_{i=1}^{\ell} P(w_i|w_{i-n+1}^{i-1})$.
 %(which translates to more robust parameter estimation and smaller storage) 
 %at the cost of probabililty approximation due to strong independence assumptions. 
 %
-Our approach weakens the strong independence assumptions inherent in $n$gram LMs 
-by making the space requirements  and query time of high-order LMs reasonable. 
+Making the space requirements  and query time of high-order LMs reasonable,
+our approach leads to weakening the strong independence assumptions inherent in $n$gram LMs.
 %
-It is well known that, due to power-law nature of natural language, maximum likelihood 
-parameters estimator significantly overfits the training corpora. 
+It is well known that, due to power-law nature of natural language [Zipf], maximum likelihood 
+estimator significantly overfits the training corpora. 
 %
-Therefore, our indices store raw frequency counts needed to compute 
-\emph{smoothed} $n$gram probabilities based on Kneser-Kney (KN) smoothing, 
-a powerful smoothing technique with elegant statistical properties\footnote{Although 
-we focus on KN-smoothing in this paper, our approach can be used for indexing counts needed 
-in other smoothing techniques as well [chen and goodman].} [kneser kney].  
+Therefore, we build the indices to efficiently retrieve the counts 
+%our indices store raw frequency counts 
+needed to compute \emph{smoothed} $n$gram probabilities using Kneser-Kney (KN) smoothing, 
+a powerful technique with elegant statistical properties\footnote{Although 
+we focus on KN-smoothing in this paper, our approach can be used to index and retrieve 
+counts needed in other smoothing techniques as well [chen and goodman].} [kneser kney].  
+ 
+We make use of recent advances in \emph{compressed suffix arrays} (CSAs)  and
+\emph{compressed suffix trees} (CSTs) [REF]  to build compact indices  
+with reasonable query time for high-order KN language models on web scale corpora (S2).
+%
+The key quantities for computing probability under a KN 
+language model are raw frequencies of $n$grams 
+and occurrence counts, i.e. the number of different contexts in which an $n$gram has occurred.
+%
+The raw frequency counts are simple to compute, but occurrence counts 
+are challenging. 
+%
+Our first proposal consists of two CSTs and efficient algorithms to answer count queries 
+in KN language model (S3). 
 % 
+We further show how to leverage count queries for shorter contexts in longer contexts 
+to speed up the computtion of KN-smoothed probabilities (S4).
+%
+Our second proposal consists of only one \emph{augmented} CST together with efficient 
+algorithms, which improves both the space and query time requirements of the 
+KN language model (S5). 
+% 
+Experiments ....
 
 %The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
 
