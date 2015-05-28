@@ -54,20 +54,20 @@ with reasonable query time for high-order KN language models on web scale corpor
 %
 The key quantities for computing probability under a KN 
 language model are raw frequencies of $n$grams 
-and occurrence counts, i.e. the number of different contexts in which an $n$gram has occurred.
+and occurrence counts, i.e. the number of different contexts in which an $n$gram has 
+occurred which are challenging to compute.
 %
-The raw frequency counts are simple to compute, but occurrence counts 
-are challenging. 
+%The raw frequency counts are simple to compute, but occurrence counts 
+%are challenging. 
 %
 Our first proposal consists of two CSTs and efficient algorithms to answer count queries 
 in KN language model (S3). 
 % 
-We further show how to leverage count queries for shorter contexts in longer contexts 
-to speed up the computtion of KN-smoothed probabilities (S4).
+We further show how to leverage count queries for shorter contexts in queries for 
+longer contexts to speed up the computation of KN-smoothed probabilities (S4).
 %
-Our second proposal consists of only one \emph{augmented} CST together with efficient 
-algorithms, which improves both the space and query time requirements of the 
-KN language model (S5). 
+Our second proposal consists of only one \emph{augmented} CST, which 
+further improves both the space and query time requirements of our first proposal (S5). 
 % 
 Experiments ....
 
