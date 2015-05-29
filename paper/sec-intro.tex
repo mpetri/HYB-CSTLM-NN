@@ -1,16 +1,20 @@
 %Language modelling is the task of estimating the probability of sequences of words in a language.
-Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation \cite{koehn2010book} 
+Language models (LMs) are one of the major and large components in many modern NLP systems, 
+e.g. machine translation \cite{koehn2010book} 
 and automatic speech recognition \cite{rab93book}.
 %
-One approach for accurate language modeling is neural \cite{Bengio:2003:NPL:944919.944966,DBLP:conf/interspeech/MikolovKBCK10}, but another is  count-based to harness the power of more data.
+One approach for accurate language modeling is neural 
+\cite{Bengio:2003:NPL,DBLP:conf/interspeech/MikolovKBCK10}, but another is  count-based 
+\cite{chen1996empirical} to harness the power of more data.
 %
 %The predominant approach to count-based language modelling is the $n$gram model,
 %where a typical LM can contain as many as several hundred billions of $n$grams XX.
 %
-To be useful, LMs not only need to be accurate but they also need to be fast and compact.
+To be useful, LMs need to be not only accurate but also fast and compact.
 %
-In this paper, we build  fast and compact \ngram LMs, the predominant approach in 
-count-based language modeling, on web-scale corpora using modern succinct data structures.
+In this paper, we build  fast and compact high-order \ngram LMs
+%, the predominant approach in count-based language modeling, 
+using modern succinct data structures.
 
 %where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
 %A typical count-based LM can contain as many as several hundred billions of $n$grams
@@ -29,13 +33,25 @@ so storage and query time become challenge.
 %
 As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
 \cite{Chazelle:2004:BFE:982792.982797,guthrie2010storing},
-or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm}, where compression \cite{Germann:2009:TPT:1621947.1621952},  tries \cite{heafield2011kenlm}, 
-suffix trees \cite{kennington2012suffix}, and LODUS tree \cite{sall11,DBLP:conf/acl/WatanabeTI09}  
+or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm} where compression and tries 
+\cite{Germann:2009:TPT:1621947.1621952,heafield2011kenlm,pauls2011faster}, 
+suffix trees \cite{kennington2012suffix}, and LODUS trees 
+\cite{sall11,DBLP:conf/acl/WatanabeTI09}  
 have been used to further reduce the storage.
 % Trevor: sentence needed on LREC paper -- the approach most similar to ours
 % Trevor: and also SRI/Ken
 However, none of these papers scale up to high-order  
-\ngram LMs on web scale corpora. 
+\ngram LMs on large corpora due to their  memory footprints.
+%
+%However, none of the state-of-the-art LM toolkits provides the opportunity of
+%investigating the behaviour of high-order LMs  
+% 
+Being able to work with high-order  LMs and investigate their behaviour 
+with different smoothing techniques on large corpora is important, but none of the
+state-of-the-art toolkits provides this opportunity\footnote{
+Indeed, there is clearly evidence that training high-order \ngram
+LMs with the right amount of data and smoothing technique is beneficial \cite{wood2011sequence}.
+}. 
 
 %In $n$gram LMs, the probability of a sequence of words is decomposed based on the chain rule 
 %and approximated using the Markov assumption 
@@ -59,28 +75,34 @@ However, none of these papers scale up to high-order
 %counts needed in other smoothing techniques as well [chen and goodman].} [kneser kney].  
  
 We make use of recent advances in 
-\emph{compressed suffix trees} (CSTs) [REF] (S2) to build compact indices  
-with reasonable query time for $n$gram LMs with Kneser-Kney (KN) smoothing,  
+\emph{compressed suffix trees} (\CSTs) \cite{nv-csurv07} 
+to build compact indices  
+with reasonable query-time (\S\ref{sec-suffix}) 
+for high-order  LMs and investigate their behaviour 
+with Kneser-Kney (KN) smoothing,  
 a powerful technique with elegant statistical properties\footnote{Although
-we focus on KN-smoothing in this paper, our approach can be used to index and retrieve
-counts needed in other smoothing techniques as well [chen and goodman].}  [kneser kney].
-%
+we focus on KN-smoothing, our approach can be used to index and compute
+counts needed in other smoothing techniques as well \cite{chen1996empirical}.}  
+\cite{kneser1995improved}.
+% 
 The key quantities for computing probability under KN-LMs
-are raw frequencies of $n$grams 
-and occurrence counts, i.e. the number of different contexts in which an $n$gram has 
+are raw frequencies of \ngrams 
+and occurrence counts, i.e. the number of different contexts 
+in which an \ngram has 
 occurred which is challenging to compute.
 %
 %The raw frequency counts are simple to compute, but occurrence counts 
 %are challenging. 
 %
-Our first proposal consists of two CSTs to compute count queries 
-in KN language model (S3). 
+Our first proposal consists of two \CSTs to compute count queries 
+in KN-LM (\S\ref{sec-lmsdsl}). 
 % 
 We further show how to leverage count queries for shorter contexts in queries for 
-longer contexts to speed up the computation of KN-smoothed probabilities (S4).
+longer contexts to speed up the computation of KN-smoothed probabilities on the fly 
+(\S\ref{sec-dual-cst}).
 %
-Our second proposal consists of only one \emph{augmented} CST, which 
-further improves both the space and query time requirements of our first proposal (S5). 
+Our second proposal consists of only one \emph{augmented} \CST, which 
+further improves both the space and query-time of our first proposal (\S\ref{sec-single-cst}). 
 % 
 
 Experiments ....
