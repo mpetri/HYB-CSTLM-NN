@@ -19,7 +19,6 @@ Portuguese&PT&187.20&49.03&1737\\
 \end{tabular}}
 \caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
 \end{table}
-Figure~\ref{fig:germanpattern} is showing XXX.
 
 \paragraph{Perplexity}
 We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{fig:pplx}.
@@ -31,7 +30,7 @@ We leave further exploration of richer discounting techniques such as Modified K
 
 
 \paragraph{Time-Memory}
-Figure~\ref{fig:spacetime} ($\log10-\log10$) compares our timing and memory usage with \SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both \SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform \SRILM compact after bigram, and \SRILM default for $m$grams of $3$ and higher orders. In query time, our memory footprint is constant and much lower that \SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to \SRILM for $2$-gram, but this gap gets reduced to $12x$ for $10$-gram.  Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
+Figure~\ref{fig:spacetime} ($\log-\log$) compares our timing and memory usage with \SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both \SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform \SRILM compact after bigram, and \SRILM default for $m$grams of $3$ and higher orders. In query time, our memory footprint is constant and much lower that \SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to \SRILM for $2$-gram, but this gap gets reduced to $12x$ for $10$-gram.  Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
 \begin{figure}[tb]
 \input{figures/fig-europarl-pplx-ngram}
@@ -44,9 +43,6 @@ Figure~\ref{fig:spacetime} ($\log10-\log10$) compares our timing and memory usag
 \caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
 \label{fig:germanpattern}
 \end{figure}
-
-\paragraph{Runtime Requirements}
-Figure~\ref{fig:space-time} shows the time and memory usage during training and querying with \SRILM default (optimized for time), and compact (optimized for space). 
 
 \begin{figure}[tb]
 \input{figures/fig-eu-de-space-time}
