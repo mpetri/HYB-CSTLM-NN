@@ -1,14 +1,16 @@
 %Language modelling is the task of estimating the probability of sequences of words in a language.
-Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation XX and automatic speech recognition XX.
+Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation \cite{koehn2010book} 
+and automatic speech recognition \cite{rab93book}.
 %
-One approach for accurate language modeling is neural XX, but another is  count-based to harness the power of more data.
+One approach for accurate language modeling is neural \cite{Bengio:2003:NPL:944919.944966,DBLP:conf/interspeech/MikolovKBCK10}, but another is  count-based to harness the power of more data.
 %
 %The predominant approach to count-based language modelling is the $n$gram model,
 %where a typical LM can contain as many as several hundred billions of $n$grams XX.
 %
 To be useful, LMs not only need to be accurate but they also need to be fast and compact.
 %
-In this paper, we build  fast and compact $n$gram LMs, the predominant approach in count-based language modeling, on web-scale corpora using modern succinct data structures.
+In this paper, we build  fast and compact \ngram LMs, the predominant approach in 
+count-based language modeling, on web-scale corpora using modern succinct data structures.
 
 %where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
 %A typical count-based LM can contain as many as several hundred billions of $n$grams
@@ -21,14 +23,17 @@ In this paper, we build  fast and compact $n$gram LMs, the predominant approach 
 
 
 
-Depending on the order $n$ and the training corpus size, a typical $n$gram LM may contain as many as several hundred billions of $n$grams [Brants et al 2007],
+Depending on the order and the training corpus size, a typical \ngram LM may contain as many as several hundred billions of \ngrams \cite{brants2007large},
 so storage and query time become challenge.
 %
-As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs [Chazelle et al., 2004;BRANTS],
-or \emph{loss-less}  not-small LMs [SRI], where compression [Germann 2009], Suffix arrays [KenLM], suffix tries [KenLM], suffix trees [LREC], and LODUS tree [alluzen, watanabe]  have been used to further reduce the storage [cite google stupid backoff].
+As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
+\cite{Chazelle:2004:BFE:982792.982797,guthrie2010storing},
+or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm}, where compression \cite{Germann:2009:TPT:1621947.1621952},  tries \cite{heafield2011kenlm}, 
+suffix trees \cite{kennington2012suffix}, and LODUS tree \cite{sall11,DBLP:conf/acl/WatanabeTI09}  
+have been used to further reduce the storage.
 % 
 However, none of these papers scale up to high-order  
-$n$gram LMs on web scale corpora. 
+\ngram LMs on web scale corpora. 
 
 %In $n$gram LMs, the probability of a sequence of words is decomposed based on the chain rule 
 %and approximated using the Markov assumption 
