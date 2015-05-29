@@ -54,7 +54,7 @@ theme_complete_bw <- function(base_size = 12, base_family = "") {
     strip.text.y =       element_text(colour = "black", size = base_size * 0.8, angle = -90),
     plot.background =    element_rect(colour = NA, fill = "white"),
     plot.title =         element_text(size = base_size * 1.2),
-    plot.margin=         unit(c(0,0,0,0),"mm"),
+    plot.margin=         unit(c(1,0,0,0),"mm"),
     complete = TRUE
   )
 }
@@ -66,10 +66,13 @@ plot <- ggplot(d,aes(type,y=relpplx,x=factor(ngram),group=factor(language),linet
 plot <- plot + geom_line(size=1)
 plot <- plot + geom_point(size=1)
 plot <- plot + theme_complete_bw()
-plot <- plot + scale_y_log10(name="Perplexity [Relative to $\\infty$-gram]",breaks=c(1,2,10,20,75),labels=c("100\\%","102\\%","110\\%","120\\%","175\\%"))
+plot <- plot + scale_y_log10(name="Perplexity [Relative to $\\infty$-gram]",
+breaks=c(1,2,5,10,20,50,100),labels=c("100\\%","102\\%","105\\%","110\\%","120\\%","150\\%","200\\%")
+	)
 plot <- plot + scale_x_discrete(name="\\ngram size",labels=c("2","3","4","5","6","7","8","9","10","15","20","$\\infty$"))
 plot <- plot+ guides(colour = guide_legend(ncol = 3))
 plot <- plot + scale_colour_brewer(palette="Set1")
+plot <- plot + annotation_logticks(sides = "l")
 
 tikz(outfile,width = 3, height = 2)
 print(plot)
