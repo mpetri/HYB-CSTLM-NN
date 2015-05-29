@@ -20,10 +20,6 @@ Portuguese&PT&187.20&49.03&1737\\
 \caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
 \end{table}
 Figure~\ref{fig:data} is showing XXX.
-\begin{figure}
-\includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
-\caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
-\end{figure}\label{fig:germanpattern}
 
 \paragraph{Perplexity}
 We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{figure:pplx}.
@@ -38,7 +34,7 @@ Figure~\ref{figure:time-space} ($\log10-\log10$) compares our timing and memory 
 
 In query time, our memory footprint is constant and much lower that SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to SRILM, but reduces the speed gap to $12x$.  
 
-Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
+Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
 %\subsection{Perplexity Evaluation}
 \begin{figure}
