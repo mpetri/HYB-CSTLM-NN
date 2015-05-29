@@ -25,31 +25,35 @@ Figure~\ref{fig:data} is showing XXX.
 \caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
 \end{figure}\label{fig:germanpattern}
 
-subsection{Perplexity Evaluation}
-We evaluated the perplexity across different languages and using different order $m$-grams varying from $2$ to $\infty=99999$. While matching SRILM in perplexity we compared our time and memory usage during the training and query time with SRILM default (optimized for time), and compact(optimized for space). Figure~\ref{figure:pplx} shows the gain in perplexity with respect to $m$. 
+\paragraph{Perplexity}
+We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{figure:pplx}.
+Our results matched the perplexity results from \SRILM (for smaller values of $m$ in which \SRILM training was feasible, $m \le 10$).
+Note that perplexity drops dramatically from $m=2\ldots5$ however the gains thereafter are modest for most languages.
+Despite this, several large \ngram matches were found as illustrated in Figure~\ref{fig:germanpattern}, ranging in size up to a 34-gram match.
+We speculate that the perplexity plateau is due to the simplistic Kneser-Ney discounting formula which is not designed for higher order \ngram LMs and appear to discount large \ngrams too aggressively. 
+We leave further exploration of richer discounting techniques such as Modified Kneser-Ney \cite{chen_goodman} or the Sequence Memoizer \cite{wood_teh} to our future work.
+
+%\subsection{Perplexity Evaluation}
 \begin{figure}
 \input{figures/fig-europarl-pplx-ngram}
-\caption{All 8 languages pplx results with m=2..10,15,20,infinity(=99999).}
-\end{figure}\label{figure:pplx}
-We speculate that the drop in higher order perplexity gain is due using to Kneser-Ney discounting which is not designed for higher order $m$-gram language models and starts to heavily discount after $5-gram$. We leave further exploration of richer techniques such as Modified Kneser-Ney, or Sequence Memoizer to our future work. 
-\subsection{Time-Memory}
-Figure~\ref{figure:time-space} ($\log10-\log10$) compares our timing and memory usage with SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform SRILM compact after bigram, and SRILM default for $m$grams of $3$ and higher orders.
+\caption{Perplexity results on several Europarl languages for different \ngram sizes, $m=2\ldots10,15,20,\infty$.}
+\label{figure:pplx}
+\end{figure}
 
-In query time, our memory footprint is constant and much lower that SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to SRILM, but reduces the speed gap to $12x$.  
+\begin{figure}
+\includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
+\caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
+\label{fig:germanpattern}
+\end{figure}
 
-Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
+\paragraph{Runtime Requirements}
+Figure~\ref{figure:space-time} shows the time and memory usage during training and querying with \SRILM default (optimized for time), and compact (optimized for space). 
 
 \begin{figure}
 \includegraphics[width=\columnwidth]{figures/Time-Space.pdf}
-\caption{On German, showing the size in MB (y axis) and time (x axis) for 4 methods: CST single, CST dual, SRILM, SRILM compact.}
-\end{figure}\label{figure:time-space}
-%\missingfigure[figwidth=\columnwidth]{Wikipedia pplx (right axis), and time (left axis) for the single CST on characters vs words as a function of \ngram size.}
-
-%\missingfigure[figwidth=\columnwidth]{Wikipedia histogram over \ngram size, perhaps as a figure or table?}
-
-%\missingfigure[figwidth=\columnwidth]{Wikipedia plot (stacked bar?) of time spent in each method (n1+ x 3; backward search etc) as a function of n.}
-
-
+\caption{Time versus space tradeoffs measured on Europarl German (de) dataset, showing memory and time requirements for the four methods: CST single, CST dual, \SRILM, and \SRILM compact. Times were measured using a 10k sentence test set.}
+\label{figure:space-time}
+\end{figure}
 
 
 
@@ -58,3 +62,4 @@ Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{
 %%% mode: latex
 %%% TeX-master: "cstlm"
 %%% End: 
+
