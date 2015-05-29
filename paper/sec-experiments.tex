@@ -1,24 +1,24 @@
 
 \subsection{Datasets}
-We used Europarl dataset and the data was numberized after tokenizing, splitting, and excluding xml markups. The first $10K$ sentences were used as the test data, and the last 80\% as the training data (See Table~\ref{fig:data}).
+We used Europarl dataset and the data was numberized after tokenizing, splitting, and excluding xml markups. The first $10K$ sentences were used as the test data, and the last 80\% as the training data. %(See Table~\ref{fig:data})
 
-\begin{table}
-\resizebox{1\columnwidth}{!}{
-\begin{tabular}{ll|cc|c}
-Language&&Size (MB)&Tokens (M)& Sentences (K)\\
-\toprule 
-Bulgarian&BG&36.11&8.53&329\\
-Czech&CS&53.48&12.25&535\\
-German&DE&171.80&44.07&1785 \\
-English&EN&179.15&49.32&1815\\
-Finnish&FI&145.32&32.85&1737\\
-French&FR&197.68&53.82&1792\\
-Hungarian&HU&52.53&12.02&527\\
-Italian&IT&186.67&48.08&1703\\
-Portuguese&PT&187.20&49.03&1737\\
-\end{tabular}}
-\caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
-\end{table}
+%\begin{table}
+%\resizebox{1\columnwidth}{!}{
+%\begin{tabular}{ll|cc|c}
+%Language&&Size (MB)&Tokens (M)& Sentences (K)\\
+%\toprule 
+%Bulgarian&BG&36.11&8.53&329\\
+%Czech&CS&53.48&12.25&535\\
+%German&DE&171.80&44.07&1785 \\
+%English&EN&179.15&49.32&1815\\
+%Finnish&FI&145.32&32.85&1737\\
+%French&FR&197.68&53.82&1792\\
+%Hungarian&HU&52.53&12.02&527\\
+%Italian&IT&186.67&48.08&1703\\
+%Portuguese&PT&187.20&49.03&1737\\
+%\end{tabular}}
+%\caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
+%\end{table}
 
 \paragraph{Perplexity}
 We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{fig:pplx}.
