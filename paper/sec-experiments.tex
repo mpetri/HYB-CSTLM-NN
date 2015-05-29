@@ -26,22 +26,22 @@ Figure~\ref{fig:data} is showing XXX.
 \end{figure}\label{fig:germanpattern}
 
 \subsection{Perplexity Evaluation}
-We evaluated the perplexity across different languages and using different order $m$-grams varying from $2$ to $\infty=99999$. While matching SRILM in perplexity we compared our time and memory usage during the training and query time. Figure~\ref{figure:pplx} shows the gain in perplexity with respect to $m$. 
+We evaluated the perplexity across different languages and using different order $m$-grams varying from $2$ to $\infty=99999$. While matching SRILM in perplexity we compared our time and memory usage during the training and query time with SRILM default (optimized for time), and compact(optimized for space). Figure~\ref{figure:pplx} shows the gain in perplexity with respect to $m$. 
 \begin{figure}
 \input{figures/fig-europarl-pplx-ngram}
 \caption{All 8 languages pplx results with m=2..10,15,20,infinity(=99999).}
 \end{figure}\label{figure:pplx}
-
+We speculate that the drop in higher order perplexity gain is due using to Kneser-Ney discounting which is not designed for higher order $m$-gram language models and starts to heavily discount after $5-gram$. We leave further exploration of richer techniques such as Modified Kneser-Ney, or Sequence Memoizer to our future work. 
 \begin{figure}
 \includegraphics[width=\columnwidth]{figures/Time-Space.pdf}
 \caption{On German, showing the size in MB (y axis) and time (x axis) for 4 methods: CST single, CST dual, SRILM, SRILM compact.}
 \end{figure}
 
-\missingfigure[figwidth=\columnwidth]{Wikipedia pplx (right axis), and time (left axis) for the single CST on characters vs words as a function of \ngram size.}
+%\missingfigure[figwidth=\columnwidth]{Wikipedia pplx (right axis), and time (left axis) for the single CST on characters vs words as a function of \ngram size.}
 
-\missingfigure[figwidth=\columnwidth]{Wikipedia histogram over \ngram size, perhaps as a figure or table?}
+%\missingfigure[figwidth=\columnwidth]{Wikipedia histogram over \ngram size, perhaps as a figure or table?}
 
-\missingfigure[figwidth=\columnwidth]{Wikipedia plot (stacked bar?) of time spent in each method (n1+ x 3; backward search etc) as a function of n.}
+%\missingfigure[figwidth=\columnwidth]{Wikipedia plot (stacked bar?) of time spent in each method (n1+ x 3; backward search etc) as a function of n.}
 
 
 
