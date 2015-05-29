@@ -1,66 +1,77 @@
 %Language modelling is the task of estimating the probability of sequences of words in a language.
-Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation XX and automatic speech recognition XX.
+Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation \cite{koehn2010book} 
+and automatic speech recognition \cite{rab93book}.
 %
-One approach for accurate language modeling is neural XX, but another is  count-based to harness the power of more data.
+One approach for accurate language modeling is neural \cite{Bengio:2003:NPL:944919.944966,DBLP:conf/interspeech/MikolovKBCK10}, but another is  count-based to harness the power of more data.
 %
 %The predominant approach to count-based language modelling is the $n$gram model,
 %where a typical LM can contain as many as several hundred billions of $n$grams XX.
 %
 To be useful, LMs not only need to be accurate but they also need to be fast and compact.
 %
+In this paper, we build  fast and compact \ngram LMs, the predominant approach in 
+count-based language modeling, on web-scale corpora using modern succinct data structures.
+
 %where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
 %A typical count-based LM can contain as many as several hundred billions of $n$grams
-In this paper, we build  fast and compact $n$gram LMs, the predominant approach in count-based language modeling, on web-scale corpora using modern succinct data structures.
+%In this paper, we build  fast and compact $n$gram LMs, the predominant approach in count-based language modeling, on web-scale corpora using modern succinct data structures.
 %
-We show how to compactly index the text statistics needed by $n$gram language models, so that they can be queried efficiently to make the probabilities on the fly.       
+%We show how to compactly index the text statistics needed by $n$gram language models, so that they can be queried efficiently to make the probabilities on the fly.       
 %
-Importantly, the stored index and text statistics are kept intact for $n$gram LMs with different orders (i.e. the context size), hence allow to relax the
-Markov assumption made in these LMs by considering very large contexts.
+%Importantly, the stored index and text statistics are kept intact for $n$gram LMs with different orders (i.e. the context size), hence allow to relax the
+%Markov assumption made in these LMs by considering very large contexts.
 
 
 
-Depending on the order $n$ and the training corpus size, a typical $n$gram LM may contain as many as several hundred billions of $n$grams [Brants et al 2007],
+Depending on the order and the training corpus size, a typical \ngram LM may contain as many as several hundred billions of \ngrams \cite{brants2007large},
 so storage and query time become challenge.
 %
-As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs [Chazelle et al., 2004;BRANTS],
-or \emph{loss-less}  not-small LMs [SRI], where compression [Germann 2009], Suffix arrays [KenLM], suffix tries [KenLM], and suffix trees [LREC]  have been used to further reduce the storage.
+As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
+\cite{Chazelle:2004:BFE:982792.982797,guthrie2010storing},
+or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm}, where compression \cite{Germann:2009:TPT:1621947.1621952},  tries \cite{heafield2011kenlm}, 
+suffix trees \cite{kennington2012suffix}, and LODUS tree \cite{sall11,DBLP:conf/acl/WatanabeTI09}  
+have been used to further reduce the storage.
 % 
-However, none of the aforementioned works scale up to high-order  $n$gram LMs for web scale corpora. 
+However, none of these papers scale up to high-order  
+\ngram LMs on web scale corpora. 
 
-In $n$gram LMs, the probability of a sequence of words is decomposed based on the chain rule 
-and approximated using the Markov assumption 
-$P(w_1,\ldots,w_{\ell}) \approx \prod_{i=1}^{\ell} P(w_i|w_{i-n+1}^{i-1})$. 
+%In $n$gram LMs, the probability of a sequence of words is decomposed based on the chain rule 
+%and approximated using the Markov assumption 
+%$P(w_1,\ldots,w_{\ell}) \approx \prod_{i=1}^{\ell} P(w_i|w_{i-n+1}^{i-1})$. 
 %
 %The Markov assumption reduces the number of model parameters 
 %(which translates to more robust parameter estimation and smaller storage) 
 %at the cost of probabililty approximation due to strong independence assumptions. 
 %
-Making the space requirements  and query time of high-order LMs reasonable,
-our approach leads to weakening the strong independence assumptions inherent in $n$gram LMs.
+%Making the space requirements  and query time of high-order LMs reasonable,
+%our approach leads to weakening the strong independence assumptions inherent in $n$gram LMs.
 %
-It is well known that, due to power-law nature of natural language [Zipf], maximum likelihood 
-estimator significantly overfits the training corpora. 
+%It is well known that, due to power-law nature of natural language [Zipf], maximum likelihood 
+%estimator significantly overfits the training corpora. 
 %
-Therefore, we build the indices to efficiently retrieve the counts 
+%Therefore, we build the indices to efficiently retrieve the counts 
 %our indices store raw frequency counts 
-needed to compute \emph{smoothed} $n$gram probabilities using Kneser-Kney (KN) smoothing, 
-a powerful technique with elegant statistical properties\footnote{Although 
-we focus on KN-smoothing in this paper, our approach can be used to index and retrieve 
-counts needed in other smoothing techniques as well [chen and goodman].} [kneser kney].  
+%needed to compute \emph{smoothed} $n$gram probabilities using Kneser-Kney (KN) smoothing, 
+%a powerful technique with elegant statistical properties\footnote{Although 
+%we focus on KN-smoothing in this paper, our approach can be used to index and retrieve 
+%counts needed in other smoothing techniques as well [chen and goodman].} [kneser kney].  
  
-We make use of recent advances in \emph{compressed suffix arrays} (CSAs)  and
-\emph{compressed suffix trees} (CSTs) [REF]  to build compact indices  
-with reasonable query time for high-order KN language models on web scale corpora (S2).
+We make use of recent advances in 
+\emph{compressed suffix trees} (CSTs) [REF] (S2) to build compact indices  
+with reasonable query time for $n$gram LMs with Kneser-Kney (KN) smoothing,  
+a powerful technique with elegant statistical properties\footnote{Although
+we focus on KN-smoothing in this paper, our approach can be used to index and retrieve
+counts needed in other smoothing techniques as well [chen and goodman].}  [kneser kney].
 %
-The key quantities for computing probability under a KN 
-language model are raw frequencies of $n$grams 
+The key quantities for computing probability under KN-LMs
+are raw frequencies of $n$grams 
 and occurrence counts, i.e. the number of different contexts in which an $n$gram has 
-occurred which are challenging to compute.
+occurred which is challenging to compute.
 %
 %The raw frequency counts are simple to compute, but occurrence counts 
 %are challenging. 
 %
-Our first proposal consists of two CSTs and efficient algorithms to answer count queries 
+Our first proposal consists of two CSTs to compute count queries 
 in KN language model (S3). 
 % 
 We further show how to leverage count queries for shorter contexts in queries for 
@@ -69,6 +80,7 @@ longer contexts to speed up the computation of KN-smoothed probabilities (S4).
 Our second proposal consists of only one \emph{augmented} CST, which 
 further improves both the space and query time requirements of our first proposal (S5). 
 % 
+
 Experiments ....
 
 %The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.

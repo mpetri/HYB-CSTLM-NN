@@ -1,46 +1,54 @@
 
 \subsection{Datasets}
-\begin{table}
-\resizebox{1\columnwidth}{!}{
-\begin{tabular}{ll|cc|c}
-Language&&Size (MB)&Tokens (M)& Sentences (K)\\
-\toprule 
-Bulgarian&BG&36.11&8.53&329\\
-Czech&CS&53.48&12.25&535\\
-German&DE&171.80&44.07&1785 \\
-English&EN&179.15&49.32&1815\\
-Finnish&FI&145.32&32.85&1737\\
-French&FR&197.68&53.82&1792\\
-Hungarian&HU&52.53&12.02&527\\
-Italian&IT&186.67&48.08&1703\\
-Portuguese&PT&187.20&49.03&1737\\
-\end{tabular}}
-\caption{Data statistics after tokenizing, sentence-splitting, and removing markups, and numberizing. Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}
-\end{table}
+We used Europarl dataset and the data was numberized after tokenizing, splitting, and excluding xml markups. The first $10K$ sentences were used as the test data, and the last 80\% as the training data. %(See Table~\ref{fig:data})
 
-\begin{figure}
+%\begin{table}
+%\resizebox{1\columnwidth}{!}{
+%\begin{tabular}{ll|cc|c}
+%Language&&Size (MB)&Tokens (M)& Sentences (K)\\
+%\toprule 
+%Bulgarian&BG&36.11&8.53&329\\
+%Czech&CS&53.48&12.25&535\\
+%German&DE&171.80&44.07&1785 \\
+%English&EN&179.15&49.32&1815\\
+%Finnish&FI&145.32&32.85&1737\\
+%French&FR&197.68&53.82&1792\\
+%Hungarian&HU&52.53&12.02&527\\
+%Italian&IT&186.67&48.08&1703\\
+%Portuguese&PT&187.20&49.03&1737\\
+%\end{tabular}}
+%\caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
+%\end{table}
+
+\paragraph{Perplexity}
+We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{fig:pplx}.
+Our results matched the perplexity results from \SRILM (for smaller values of $m$ in which \SRILM training was feasible, $m \le 10$).
+Note that perplexity drops dramatically from $m=2\ldots5$ however the gains thereafter are modest for most languages.
+Despite this, several large \ngram matches were found as illustrated in Figure~\ref{fig:germanpattern}, ranging in size up to a 34-gram match.
+We speculate that the perplexity plateau is due to the simplistic Kneser-Ney discounting formula which is not designed for higher order \ngram LMs and appear to discount large \ngrams too aggressively. 
+We leave further exploration of richer discounting techniques such as Modified Kneser-Ney \cite{chen_goodman} or the Sequence Memoizer \cite{wood_teh} to our future work.
+
+
+\paragraph{Time-Memory}
+Figure~\ref{fig:spacetime} ($\log-\log$) compares our timing and memory usage with \SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both \SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform \SRILM compact after bigram, and \SRILM default for $m$grams of $3$ and higher orders. In query time, our memory footprint is constant and much lower that \SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to \SRILM for $2$-gram, but this gap gets reduced to $12x$ for $10$-gram.  Another observation is the computational cost of computing $\nlplus{\Bigcdot \alpha \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
+
+\begin{figure}[tb]
+\input{figures/fig-europarl-pplx-ngram}
+\caption{Perplexity results on several Europarl languages for different \ngram sizes, $m=2\ldots10,15,20,\infty$.}
+\label{fig:pplx}
+\end{figure}
+
+\begin{figure}[tb]
 \includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
 \caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
+\label{fig:germanpattern}
 \end{figure}
 
-\begin{figure}
-\includegraphics[width=\columnwidth]{figures/Perplexity-n.pdf}
-\caption{All 9 languages pplx results with m=2..10,15,20,infinity.}
+\begin{figure}[tb]
+\input{figures/fig-eu-de-space-time}
+\caption{Time versus space tradeoffs measured on Europarl German (de) dataset, showing memory and time requirements for the four methods: CST single, CST dual, \SRILM, and \SRILM compact. Times were measured using a 10k sentence test set.}
+\label{fig:spacetime}
 \end{figure}
-
-\begin{figure}
-\includegraphics[width=\columnwidth]{figures/Time-Space.pdf}
-\caption{On German, showing the size in MB (y axis) and time (x axis) for 4 methods: CST single, CST dual, SRILM, SRILM compact. Each method is a 'line' connecting m=2,3,4,... Only CST single will go beyond m=6.}
-\end{figure}
-
-\missingfigure[figwidth=\columnwidth]{Wikipedia pplx (right axis), and time (left axis) for the single CST on characters vs words as a function of \ngram size.}
-
-\missingfigure[figwidth=\columnwidth]{Wikipedia histogram over \ngram size, perhaps as a figure or table?}
-
-\missingfigure[figwidth=\columnwidth]{Wikipedia plot (stacked bar?) of time spent in each method (n1+ x 3; backward search etc) as a function of n.}
-
-
-\subsection{Perplexity Evaluation}
 
 
 
@@ -49,3 +57,4 @@ Portuguese&PT&187.20&49.03&1737\\
 %%% mode: latex
 %%% TeX-master: "cstlm"
 %%% End: 
+
