@@ -36,12 +36,12 @@ suffix trees \cite{kennington2012suffix}, and LODUS tree \cite{sall11,DBLP:conf/
 have been used to further reduce the storage.
 % 
 However, none of these papers scale up to high-order  
-\ngram LMs on medium to web-scale corpora due to their large memory footprints.
+\ngram LMs on medium to web-scale corpora due to their large  memory footprints.
 %
 %However, none of the state-of-the-art LM toolkits provides the opportunity of
 %investigating the behaviour of high-order LMs  
 % 
-Being able to work with high-order \ngram LMs and investigate their behaviour 
+Being able to work with high-order  LMs and investigate their behaviour 
 with different smoothing techniques on large corpora is clearly beneficial, but none of the
 state-of-the-art toolkits provides this opportunity\footnote{
 Indeed, there is clearly evidence that training high-order \ngram
@@ -70,8 +70,9 @@ LMs with the right amount of data and smoothing technique is beneficial \cite{wo
 %counts needed in other smoothing techniques as well [chen and goodman].} [kneser kney].  
  
 We make use of recent advances in 
-\emph{compressed suffix trees} (CSTs) [REF] (S2) to build compact indices  
-with reasonable query time for high-order \ngram LMs and investigate their behaviour 
+\emph{compressed suffix trees} (CSTs) \cite{nv-csurv07} (\S\ref{sec-suffix}) 
+to build compact indices  
+with reasonable query-time for high-order  LMs and investigate their behaviour 
 with Kneser-Kney (KN) smoothing,  
 a powerful technique with elegant statistical properties\footnote{Although
 we focus on KN-smoothing, our approach can be used to index and compute
@@ -88,13 +89,14 @@ occurred which is challenging to compute.
 %are challenging. 
 %
 Our first proposal consists of two CSTs to compute count queries 
-in KN-LM (S3). 
+in KN-LM (\S\ref{sec-lmsdsl}). 
 % 
 We further show how to leverage count queries for shorter contexts in queries for 
-longer contexts to speed up the computation of KN-smoothed probabilities on the fly (S4).
+longer contexts to speed up the computation of KN-smoothed probabilities on the fly 
+(\S\ref{sec-dual-cst}).
 %
 Our second proposal consists of only one \emph{augmented} CST, which 
-further improves both the space and query-time of our first proposal (S5). 
+further improves both the space and query-time of our first proposal (\S\ref{sec-single-cst}). 
 % 
 
 Experiments ....
