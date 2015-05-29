@@ -33,7 +33,11 @@ We evaluated the perplexity across different languages and using different order
 \end{figure}\label{figure:pplx}
 We speculate that the drop in higher order perplexity gain is due using to Kneser-Ney discounting which is not designed for higher order $m$-gram language models and starts to heavily discount after $5-gram$. We leave further exploration of richer techniques such as Modified Kneser-Ney, or Sequence Memoizer to our future work. 
 \subsection{Time-Memory}
-Figure~\ref{figure:time-space} compares our timing and memory usage with SRILM on German part of the Europarl dataset. 
+Figure~\ref{figure:time-space} ($\log10-\log10$) compares our timing and memory usage with SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform SRILM compact after bigram, and SRILM default for $m$grams of $3$ and higher orders.
+
+In query time, our memory footprint is constant and much lower that SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to SRILM, but reduces the speed gap to $12x$.  
+
+Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
 \begin{figure}
 \includegraphics[width=\columnwidth]{figures/Time-Space.pdf}
