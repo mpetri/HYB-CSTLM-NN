@@ -66,7 +66,7 @@ plot <- ggplot(d,aes(type,y=relpplx,x=factor(ngram),group=factor(language),linet
 plot <- plot + geom_line(size=1)
 plot <- plot + geom_point(size=1)
 plot <- plot + theme_complete_bw()
-plot <- plot + scale_y_log10(name="Perplexity [Relative to $\\infty$-gram]",breaks=c(1,2,10,20,75),labels=c("0\\%","2\\%","10\\%","20\\%","75\\%"))
+plot <- plot + scale_y_log10(name="Perplexity [Relative to $\\infty$-gram]",breaks=c(1,2,10,20,75),labels=c("100\\%","102\\%","110\\%","120\\%","175\\%"))
 plot <- plot + scale_x_discrete(name="\\ngram size",labels=c("2","3","4","5","6","7","8","9","10","15","20","$\\infty$"))
 plot <- plot+ guides(colour = guide_legend(ncol = 3))
 plot <- plot + scale_colour_brewer(palette="Set1")
