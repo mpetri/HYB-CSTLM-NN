@@ -38,7 +38,7 @@ Figure~\ref{figure:time-space} ($\log10-\log10$) compares our timing and memory 
 
 In query time, our memory footprint is constant and much lower that SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to SRILM, but reduces the speed gap to $12x$.  
 
-Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
+Another observation is the computational cost of computing $\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
 %\subsection{Perplexity Evaluation}
 \begin{figure}
