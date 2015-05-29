@@ -25,13 +25,15 @@ count-based language modeling, on web-scale corpora using modern succinct data s
 
 Depending on the order and the training corpus size, a typical \ngram LM may contain as many as several hundred billions of \ngrams \cite{brants2007large},
 so storage and query time become challenge.
+% Trevor: raising important algorithmic questions regarding efficient storage and retreival
 %
 As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
 \cite{Chazelle:2004:BFE:982792.982797,guthrie2010storing},
 or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm}, where compression \cite{Germann:2009:TPT:1621947.1621952},  tries \cite{heafield2011kenlm}, 
 suffix trees \cite{kennington2012suffix}, and LODUS tree \cite{sall11,DBLP:conf/acl/WatanabeTI09}  
 have been used to further reduce the storage.
-% 
+% Trevor: sentence needed on LREC paper -- the approach most similar to ours
+% Trevor: and also SRI/Ken
 However, none of these papers scale up to high-order  
 \ngram LMs on web scale corpora. 
 
@@ -82,6 +84,10 @@ further improves both the space and query time requirements of our first proposa
 % 
 
 Experiments ....
+% Trevor: the experiments show that this approach matches the results of SRILM, while consuming a static memory footprint and construction cost irrespective of the \ngram order
+% Trevor: futher, this allows us to run with unlimited markov order, which while slower than optimised low order models like \SRILM augurs well for future developments.
+% Trevor: illustrate the scaling benefits of the model by building a character level LM over wikipedia, in only a few hours and modest memory footprint of a few GB
+% Trevor: this work serves as a proof of concept, namely that high order language modelling is possible, and suitable for further optimisation to yield transformative tools for natural language processing.
 
 %The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
 
