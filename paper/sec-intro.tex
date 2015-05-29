@@ -1,5 +1,6 @@
 %Language modelling is the task of estimating the probability of sequences of words in a language.
-Language models (LMs) are one of the major and large components in many modern NLP systems, including machine translation \cite{koehn2010book} 
+Language models (LMs) are one of the major and large components in many modern NLP systems, 
+e.g. machine translation \cite{koehn2010book} 
 and automatic speech recognition \cite{rab93book}.
 %
 One approach for accurate language modeling is neural 
@@ -9,10 +10,11 @@ One approach for accurate language modeling is neural
 %The predominant approach to count-based language modelling is the $n$gram model,
 %where a typical LM can contain as many as several hundred billions of $n$grams XX.
 %
-To be useful, LMs not only need to be accurate but they also need to be fast and compact.
+To be useful, LMs need to be not only accurate but also fast and compact.
 %
-In this paper, we build  fast and compact high-order \ngram LMs, the predominant approach in 
-count-based language modeling, using modern succinct data structures.
+In this paper, we build  fast and compact high-order \ngram LMs
+%, the predominant approach in count-based language modeling, 
+using modern succinct data structures.
 
 %where the probability of a sequence of words is decomposed based on the chain rule ad approximatedusing the Markov assumption XX. 
 %A typical count-based LM can contain as many as several hundred billions of $n$grams
