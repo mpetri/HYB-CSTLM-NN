@@ -1,5 +1,7 @@
 
 \subsection{Datasets}
+We used Europarl dataset and the data was numberized after tokenizing, splitting, and excluding xml markups. The first $10K$ sentences were used as the test data, and the last 80\% as the training data (See Table~\ref{fig:data}).
+
 \begin{table}
 \resizebox{1\columnwidth}{!}{
 \begin{tabular}{ll|cc|c}
@@ -15,18 +17,20 @@ Hungarian&HU&52.53&12.02&527\\
 Italian&IT&186.67&48.08&1703\\
 Portuguese&PT&187.20&49.03&1737\\
 \end{tabular}}
-\caption{Data statistics after tokenizing, sentence-splitting, and removing markups, and numberizing. Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}
+\caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
 \end{table}
-
+Figure~\ref{fig:data} is showing XXX.
 \begin{figure}
 \includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
 \caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
-\end{figure}
+\end{figure}\label{fig:germanpattern}
 
+\subsection{Perplexity Evaluation}
+We evaluated the perplexity across different languages and using different order $m$-grams varying from $2$ to $\infty=99999$. While matching SRILM in perplexity we compared our time and memory usage during the training and query time. Figure~\ref{figure:pplx} shows the gain in perplexity with respect to $m$. 
 \begin{figure}
 \input{figures/fig-europarl-pplx-ngram}
 \caption{All 8 languages pplx results with m=2..10,15,20,infinity(=99999).}
-\end{figure}
+\end{figure}\label{figure:pplx}
 
 \begin{figure}
 \includegraphics[width=\columnwidth]{figures/Time-Space.pdf}
@@ -40,7 +44,6 @@ Portuguese&PT&187.20&49.03&1737\\
 \missingfigure[figwidth=\columnwidth]{Wikipedia plot (stacked bar?) of time spent in each method (n1+ x 3; backward search etc) as a function of n.}
 
 
-\subsection{Perplexity Evaluation}
 
 
 
