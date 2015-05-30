@@ -179,18 +179,22 @@ Compact, Efficient and Unlimited Capacity:
 
 \begin{table*}[htpb]
 \footnotesize
-\begin{tabular}{p{0.27\textwidth}p{0.53\textwidth}p{0.15\textwidth}}
+\begin{tabular}{p{0.2\textwidth}p{0.53\textwidth}p{0.2\textwidth}}
 \toprule
-Function & Description & Complexity \\
+Function/Constant & Description & Complexity \\
 \midrule
+$\SASAMPLE$ & sample rate of the suffix array. determines the number of jumps in \colbwt\ required before a suffix array value can be accessed & $8$ (in our exp.) \\
+$\SA[i]$ & access the $i$-th element of the suffix array & $\Order{\SASAMPLE \log \alphabetsize}$ \\
 $\leaf{t}{n}$ & tests if node $n$ is a leaf of the  $t$ & $\Order{1}$ \\
-$\depth{t}{n}$ & pattern length for the path from root to $n$ (inclusive) & $\Order{1} \text{~non-leaf;}$ $\Order{\cdots} \text{~leaf}$\\
-$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label from root for node $n$ &  $\Order{\cdots}$ \\
-$\degree{t}{n}$ &  number of child nodes under parent $n$  &  $\Order{\cdots}$ \\
-$\children{t}{n}$ & list of child nodes under $n$  &  $\Order{\cdots}$ \\
-$\backwardsearch{a}{l}{r}{s}$ & finds the node in the  $a$ matching the pattern $s \alpha$, returning $[l',r']$ pair  &  $\Order{\cdots}$ \\
-%\forwardsearch}
-$\intervalsymbols{a}{l}{r}$ & finds the set of symbols preceeding pattern $\alpha$ matched by $[l, r]$; returns a list of tuples describing the bounds and the precedding symbol $\langle l, r, s\rangle$  &  $\Order{\cdots}$ \\
+$\depth{t}{n}$ & pattern length for the path from root to $n$ (inclusive). Requires $\SA[i]$ access if leaf & $\Order{1} \text{~non-leaf;}$ $\Order{\SASAMPLE \log \alphabetsize} \text{~leaf}$\\
+$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label from root for node $n$. Requires $\SA[i]$ access &  $\Order{\SASAMPLE \log \alphabetsize}$ \\
+$\degree{t}{n}$ &  number of child nodes under parent $n$  &  $\Order{\sigma / 64}$ \\
+$\children{t}{n}$ & list of all $d$ child nodes under $n$  &  $\Order{ \sigma / 64 + d}$ \\
+$\backwardsearch{a}{l}{r}{s}$ & finds the node $v=[l',r']$ from parent node $\alpha=v'=[l,r]$ matching the pattern $s \alpha$. Requires $2$ \rankop\ operations on the wavelet tree  &  $\Order{\log \alphabetsize}$ \\
+$\forwardsearch{a}{l}{r}{s}$ & finds the node $v=[l',r']$ from parent node $\alpha=v'=[l,r]$ matching the pattern $\alpha s$. 
+Requires $\log \alphabetsize$ accesses to $\SA$ and one LCP access &  
+$\Order{\SASAMPLE \log^2 \alphabetsize + LCP_C}$ \\
+$\intervalsymbols{a}{l}{r}$ & finds the set of symbols $P(\alpha)$ preceeding pattern $\alpha$ matched by $[l, r]$; returns a list of tuples describing the bounds and the precedding symbol $\langle l, r, s\rangle$  &  $\Order{|P(\alpha)| \log \alphabetsize}$ \\
 \bottomrule
 \end{tabular}
 \caption{Summary of \CSA and \CST functions used and their time complexity of inference. The above assumes that $n$ or (equivalently) $[l, r]$ matches $\alpha$ in the \CSA $a$ and/or \CST $t$.}
