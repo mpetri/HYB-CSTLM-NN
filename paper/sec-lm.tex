@@ -21,7 +21,7 @@ where lower-order smoothed probabilities are defined recuresively (for $1<k<m$) 
 \begin{align}
 \! \bar{P}(w_i |& w_{i-k+1}^{i-1})
  = \frac{\max\left[\nlplus{\Bigcdot w_{i-k+1}^{i}} - D_k,0\right]}{\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}} \nonumber \\
-&+ \frac{D_k \nlplus{w_{i-k+1}^{i-1}\Bigcdot}}{\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}} \bar{P}(w_i | w_{i-k+2}^{i-1}) \, , \! \label{eq:mid}
+&+ \frac{D_k \nlplus{w_{i-k+1}^{i-1}\Bigcdot}}{\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}} \bar{P}(w_i | w_{i-k+2}^{i-1}) \,  . \! \label{eq:mid}
 \end{align}
 In the above formula, $D_k$ is the $k$gram-specific discount parameter, and 
 the \emph{occurrence count} 
