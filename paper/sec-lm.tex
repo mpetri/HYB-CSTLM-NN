@@ -17,7 +17,7 @@ P(w_i |& w_{i-m+1}^{i-1})=\frac{\max\left[c(w^{i}_{i-m+1}) - D_m,0\right]}{c(w^{
 \bar{P}(w_i | w_{i-m+2}^{i-1}) ,  
 \label{eq:high}
 \end{align}
-where lower-order smoothed probabilities are defined recuresively (for $1<k<m$) as: 
+where lower-order smoothed probabilities are defined recuresively (for $1<k<m$) as 
 \begin{align}
 \! \bar{P}(w_i |& w_{i-k+1}^{i-1})
  = \frac{\max\left[\nlplus{\Bigcdot w_{i-k+1}^{i}} - D_k,0\right]}{\nlplus{\Bigcdot w_{i-k+1}^{i-1} \Bigcdot}} \nonumber \\
