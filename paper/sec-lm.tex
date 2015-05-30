@@ -32,11 +32,11 @@ are defined accordingly.
 %The highest order probability estimate in (\ref{eq:high}) interpolates a discounted frequency estimate with a $m-1$ order probability, defined as 
 %Note the difference between (\ref{eq:mid})~and~(\ref{eq:high}), in that the frequency counts are redefined as occurrence counts. 
 %The above equation is self-recursive, where each step shrinks the conditioning context by the least recent symbol. 
-The unigram probabilities are defined as:
+The unigram probabilities are defined as
 %\begin{align*}
 %\label{eq:low}
 %
-$ P(w_i) = \nlplus{\Bigcdot w_i} / \nlplus{\Bigcdot\Bigcdot}$.
+$ \bar{P}(w_i) = \nlplus{\Bigcdot w_i} / \nlplus{\Bigcdot\Bigcdot}$.
 
 %\end{align*}
 %\newcite{chen1996empirical} report maximum likelihood estimates for the discount parameters, as simple functions of the corpus statistics for \ngrams occuring 1--4 times or occuring in 1--4 unique left contents. 
