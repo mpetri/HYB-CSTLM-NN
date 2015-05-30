@@ -102,7 +102,7 @@ Beyond the need for twin suffix trees, the highest time complexity calls are \em
 Calling \emph{string-depth} is constant time for internal nodes, but $\Order{\SASAMPLE \log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
 This leads to an overall time complexity of $\Order{1}$ for \nlplusname\ and $\Order{F(\alpha) \times \SASAMPLE \times \log\sigma}$ for \nlplusfrontbackname, where $F(\alpha)$ is the number of following symbols and \SASAMPLE is the suffix array value sample rate described
-in Section~\ref{sec-css}.
+in Section~\ref{sec-suffix}.
 
 \section{Dual \CST Algorithm} 
 \label{sec-dual-cst}
@@ -220,11 +220,17 @@ The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, whic
 This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the BWT as describes
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
-For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
-These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
-These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
-In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
+The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol its range of occurrences in the \SA.
+Using the same process as backward search, described in Section~\ref{sec-cst}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely deterimines the corresponding suffix tree node.
+To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
+From the BWT we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in the BWT) and $s=$``the'' (4$^{th}$ and $5^{th}$);
+from which we can compute the suffix tree nodes, namely
+$[15,15]$ and $[16+(4-1),16+(5-1)] = [19,20]$ for ``old'' and ``the'' respectively.\footnote{Using the offsets into the \SA for each symbol, $C_{\text{old}} = 15$ and $C_{\text{the}} = 16$, while $-1$ adjusts for counting from 1.}
+%$C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
+%For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
+%These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
+%These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
+%In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
 
 
 \begin{algorithm}[t]
