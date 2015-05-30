@@ -187,7 +187,8 @@ extern std::vector<uint32_t> ngram_occurrences;
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
 double prob_kneser_ney_forward(const t_idx& idx, 
-        t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize)
+        t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize,
+        int cache_limit=0)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double probability = 1.0;
@@ -196,12 +197,37 @@ double prob_kneser_ney_forward(const t_idx& idx,
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
 
+    // simple cache which saves all expensive calls bar a single 'backward_search' each iteration
+    typedef typename t_idx::cst_type::size_type size_type;
+    typedef std::pair<double, t_node> cache_type;
+    static std::unordered_map<size_type, cache_type> ngram_cache;
+    static uint64_t cache_hits = 0, cache_misses = 0;
+
+    LOG_EVERY_N(1000, INFO) << "PKN cache stats: " << cache_hits << " hits and " << cache_misses << " misses";
+
     //LOG(INFO) << "PKN: pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
         if (i > 1 && *start == UNKNOWN_SYM) 
             break;
+
+        bool incl_pattern_found = false;
+        if (!unk && backward_search_wrapper(idx.m_cst, node_incl, *start) > 0) {
+            incl_pattern_found = true;
+            // check cache 
+            if (i <= cache_limit) {
+                auto it = ngram_cache.find(idx.m_cst.id(node_incl));
+                if (it != ngram_cache.end()) {
+                    probability = it->second.first;
+                    node_excl = it->second.second;
+                    cache_hits += 1;
+                    continue;
+                } else {
+                    cache_misses += 1;
+                }
+            }
+        }
     
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
             auto timer = lm_bench::bench(timer_type::highestorder);
@@ -209,7 +235,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
             // counts as in the subsequent versions. Applied to ngrams of
             // maximum length, or to ngrams starting with <s>.
             uint64_t c = 0;
-            if (!unk && backward_search_wrapper(idx.m_cst, node_incl, *start) > 0) 
+            if (incl_pattern_found)
                 c = idx.m_cst.size(node_incl);
 
             // compute discount, numerator
@@ -239,7 +265,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
             // Mid-level for 2 ... n-1 grams which uses continuation counts in 
             // the KN scoring formala.
             uint64_t c = 0;
-            if (!unk && backward_search_wrapper(idx.m_cst, node_incl, *start) > 0) 
+            if (incl_pattern_found)
                 c = idx.N1PlusBack_from_forward(node_incl, start, pattern_end);
             
             // compute discount
@@ -269,7 +295,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
             double numerator;
             if (!unk) {
                 t_pat_iter start = pattern_end-1;
-                backward_search_wrapper(idx.m_cst, node_incl, *start);
+                assert(incl_pattern_found);
                 numerator = idx.N1PlusBack_from_forward(node_incl, start, pattern_end); 
                 //LOG(INFO) << "\t\tunigram, not UNK numer: " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]";
                 if (ngram_occurrences.size() <= i)
@@ -285,6 +311,11 @@ double prob_kneser_ney_forward(const t_idx& idx,
             //LOG(INFO) << "\tsize 1: " << probability;
         } else {
             assert(false);
+        }
+
+        // update the cache
+        if (!unk && i <= cache_limit) {
+            ngram_cache[idx.m_cst.id(node_incl)] = std::make_pair(probability, node_excl);
         }
     }
 

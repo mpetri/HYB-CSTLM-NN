@@ -29,6 +29,7 @@ using modern succinct data structures.
 
 Depending on the order and the training corpus size, a typical \ngram LM may contain as many as several hundred billions of \ngrams \cite{brants2007large},
 so storage and query time become challenge.
+% Trevor: raising important algorithmic questions regarding efficient storage and retreival
 %
 As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
 \cite{Chazelle:2004:BFE:982792.982797,guthrie2010storing},
@@ -37,16 +38,18 @@ or \emph{loss-less}  not-small LMs \cite{stolcke2011srilm} where compression and
 suffix trees \cite{kennington2012suffix}, and LODUS trees 
 \cite{sall11,DBLP:conf/acl/WatanabeTI09}  
 have been used to further reduce the storage.
-% 
+% Trevor: sentence needed on LREC paper -- the approach most similar to ours
+% Trevor: and also SRI/Ken
 However, none of these papers scale up to high-order  
-\ngram LMs on large corpora due to their  memory footprints.
+\ngram LMs on large corpora due to their  memory and time constrints when learning the models.
 %
 %However, none of the state-of-the-art LM toolkits provides the opportunity of
 %investigating the behaviour of high-order LMs  
 % 
 Being able to work with high-order  LMs and investigate their behaviour 
-with different smoothing techniques on large corpora is important, but none of the
-state-of-the-art toolkits provides this opportunity\footnote{
+with different smoothing techniques on large corpora is important, but 
+infeasible with current state-of-the-art LM toolkits\footnote{ 
+%none of the state-of-the-art toolkits provides this opportunity\footnote{
 Indeed, there is clearly evidence that training high-order \ngram
 LMs with the right amount of data and smoothing technique is beneficial \cite{wood2011sequence}.
 }. 
@@ -83,11 +86,11 @@ we focus on KN-smoothing, our approach can be used to index and compute
 counts needed in other smoothing techniques as well \cite{chen1996empirical}.}  
 \cite{kneser1995improved}.
 % 
-The key quantities for computing probability under KN-LMs
+The key quantities for computing probabilities under KN-LMs
 are raw frequencies of \ngrams 
 and occurrence counts, i.e. the number of different contexts 
 in which an \ngram has 
-occurred which is challenging to compute.
+occurred whose efficient computation is challenging. 
 %
 %The raw frequency counts are simple to compute, but occurrence counts 
 %are challenging. 
@@ -99,11 +102,16 @@ We further show how to leverage count queries for shorter contexts in queries fo
 longer contexts to speed up the computation of KN-smoothed probabilities on the fly 
 (\S\ref{sec-dual-cst}).
 %
-Our second proposal consists of only one \emph{augmented} \CST, which 
-further improves both the space and query-time of our first proposal (\S\ref{sec-single-cst}). 
+Our second proposal consists of only one % \emph{augmented} 
+\CST, which further improves both the space and query-time requirements
+of our first proposal (\S\ref{sec-single-cst}). 
 % 
 
 Experiments ....
+% Trevor: the experiments show that this approach matches the results of SRILM, while consuming a static memory footprint and construction cost irrespective of the \ngram order
+% Trevor: futher, this allows us to run with unlimited markov order, which while slower than optimised low order models like \SRILM augurs well for future developments.
+% Trevor: illustrate the scaling benefits of the model by building a character level LM over wikipedia, in only a few hours and modest memory footprint of a few GB
+% Trevor: this work serves as a proof of concept, namely that high order language modelling is possible, and suitable for further optimisation to yield transformative tools for natural language processing.
 
 %The predominant approach to count-based language modelling is the $n$gram model, where a typical LM can contain as many as several hundred billions of $n$grams XX.
 
