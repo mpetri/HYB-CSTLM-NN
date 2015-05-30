@@ -39,14 +39,15 @@ suffix trees \cite{kennington2012suffix}, and LODUS trees
 have been used to further reduce the storage.
 % 
 However, none of these papers scale up to high-order  
-\ngram LMs on large corpora due to their  memory footprints.
+\ngram LMs on large corpora due to their  memory and time constrints when learning the models.
 %
 %However, none of the state-of-the-art LM toolkits provides the opportunity of
 %investigating the behaviour of high-order LMs  
 % 
 Being able to work with high-order  LMs and investigate their behaviour 
-with different smoothing techniques on large corpora is important, but none of the
-state-of-the-art toolkits provides this opportunity\footnote{
+with different smoothing techniques on large corpora is important, but 
+infeasible with current state-of-the-art LM toolkits\footnote{ 
+%none of the state-of-the-art toolkits provides this opportunity\footnote{
 Indeed, there is clearly evidence that training high-order \ngram
 LMs with the right amount of data and smoothing technique is beneficial \cite{wood2011sequence}.
 }. 
