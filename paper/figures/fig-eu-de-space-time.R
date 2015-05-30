@@ -70,16 +70,39 @@ mf_labeller <- function(var, value){
 
 d <- read.csv(csvFile,sep=";")
 d$space <- d$space * 1024*1024
+d$timepersentence <- d$time / 10000
 
-plot <- ggplot(d,aes(type,y=time,x=space,group=factor(method),colour=factor(method)))
-plot <- plot + geom_point(size=2)
+srlmdef <- subset(d,d$method %in% c("srilm-default"))
+srlmc <- subset(d,d$method %in% c("srilm-compact"))
+dualcst <- subset(d,d$method %in% c("dual-CST"))
+dualcsttwo <- subset(dualcst,dualcst$ngram == 2)
+dualcstrest <- subset(dualcst,dualcst$ngram != 2)
+singlecst <- subset(d,d$method %in% c("single-CST"))
+singlecsttwo <- subset(singlecst,singlecst$ngram == 2)
+singlecstrest <- subset(singlecst,singlecst$ngram != 2)
+
+plot <- ggplot(d,aes(type,y=time,x=space,group=factor(method),colour=factor(method),shape=factor(method)))
+plot <- plot + annotation_logticks(sides = "lb",short = unit(.5,"mm"), mid = unit(1,"mm"), long = unit(1.7,"mm"))
+plot <- plot + geom_point(size=1.5)
 plot <- plot + facet_grid(~ process,labeller=mf_labeller)
 plot <- plot + scale_x_log10(name="Space Usage [bytes]",labels=f2si)
 plot <- plot + scale_y_log10(breaks=c(10,100,1000,10000),name="Time [sec]",labels=f2si)
-plot <- plot + annotation_logticks(sides = "lb")
-
 plot <- plot + theme_complete_bw()
+#plot <- plot + geom_text(size=1.5,hjust=1.7,aes(x=space, y=time, label=lab, group=NULL),data=subset(d,d$method %in% c("dual-CST")))
+#plot <- plot + geom_text(size=1.5,vjust=-1.2,aes(x=space, y=time, label=lab, group=NULL),data=subset(d,d$method %in% c("dual-CST","srilm-compact")))
+plot <- plot + geom_text(size=1.5,hjust=-0.7,vjust=1.7,aes(x=space, y=time, label=lab, group=NULL),data=subset(srlmdef,srlmdef$process=="construction"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,vjust=-1.2,aes(x=space, y=time, label=lab, group=NULL),data=subset(srlmc,srlmc$process=="construction"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,hjust=1,vjust=-1.2,aes(x=space, y=time, label=lab, group=NULL),data=subset(dualcst,dualcst$process=="construction"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,vjust=1.2,aes(x=space, y=time, label=lab, group=NULL),data=subset(singlecst,singlecst$process=="construction"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,hjust=-1,aes(x=space, y=time, label=lab, group=NULL),data=subset(dualcsttwo,dualcsttwo$process=="query"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,hjust=-0.4,aes(x=space, y=time, label=lab, group=NULL),data=subset(dualcstrest,dualcstrest$process=="query"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,hjust=-1.1,aes(x=space, y=time, label=lab, group=NULL),data=subset(singlecsttwo,singlecsttwo$process=="query"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,hjust=-0.4,aes(x=space, y=time, label=lab, group=NULL),data=subset(singlecstrest,singlecstrest$process=="query"),show_guide  = FALSE)
+
+plot <- plot + geom_text(size=1.5,vjust=-1.4,aes(x=space, y=time, label=lab, group=NULL),data=subset(srlmdef,srlmdef$process=="query"),show_guide  = FALSE)
+plot <- plot + geom_text(size=1.5,vjust=1.8,aes(x=space, y=time, label=lab, group=NULL),data=subset(srlmc,srlmc$process=="query"),show_guide  = FALSE)
 plot <- plot+ guides(colour = guide_legend(ncol = 4))
+#plot <- plot + geom_text(size=1.5,vjust=2,aes(x=space, y=time, label=lab, group=NULL),data=subset(d,d$method %in% c("single-CST")))
 
 tikz(outfile,width = 3, height = 2)
 print(plot)
