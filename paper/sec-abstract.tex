@@ -1,9 +1,15 @@
-Efficient means for storing and querying langugage models are critical for scaling  to large text corpora and high Markov orders.
-While most previous work has focussed on efficient means of indexing \ngrams using a fixed, low Markov order,
-in this paper we develop techniques that allow modelling of extremely large corpora without imposing a Markov condition.
-Our technique leverages succinct indexes in the form of compressed suffix trees which provide near optimal compression while still allowing efficient search.
-We present algorithms for on-the-fly computation of probabilities under an infinite order Kneser-Ney language model.
-Our technique is \emph{exact} and although slower than leading LM toolkits, such as \SRILM, shows promising scaling properties, which we demonstrate through $\infty$ order modelling over the full Wikipedia collection. 
+Efficient methods for storing and querying langugage models are critical for scaling to large corpora and high Markov orders.
+%While most previous work has focussed on efficient means of indexing \ngrams using a fixed, low Markov order,
+In this paper we propose methods for modelling large corpora without
+imposing a Markov condition.
+At its core, our approach uses a succinct index --- a \emph{compressed suffix tree} backed by a \emph{FM index} -- which provides near optimal compression while supporting efficient search.
+We present algorithms for on-the-fly computation of probabilities under a
+%n infinite order
+Kneser-Ney language model.
+Our technique is \emph{exact} and although slower than leading LM
+toolkits, it shows promising scaling properties.
+Notably, it allows for $\infty$ order modelling of the full Wikipedia collection
+with only a modest memory footprint. 
 
 %In this paper, we build  fast and compact high-order \ngram language models (LMs) using modern succinct data structures.
 %
@@ -18,3 +24,8 @@ Our technique is \emph{exact} and although slower than leading LM toolkits, such
 %Our comprehensive experiments show that the memory footprint of our high-order KN-LMs, which are infeasible to build using 
 %state-of-the-art LM toolkits due to memory constraints, is the same as that for low-order LMs while maintaining 
 %a reasonable query-time. 
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cstlm"
+%%% End: 

@@ -1,10 +1,12 @@
 
-\subsection{Kneser Ney Language Modelling}
+\paragraph{Kneser Ney Language Modelling}
+%\section{Kneser Ney Language Modelling}
 \label{sec-lm}
 
 %Background, mathematical formulation.
 
-This paper presents an efficient \ngram language model (LM) using succinct indexes to encode the model's sufficient statistics. % in such a way that they can be stored using only a small memory footprint and accessed efficiently. 
+Recall our problem of efficient \ngram language modeling backed by a
+corpus encoded in a succinct index. % in such a way that they can be stored using only a small memory footprint and accessed efficiently. 
 Although our method is generally applicable to many LM variants, we focus on the Kneser-Ney LM~\cite{kneser1995improved}, specifically the interpolated variant described in \newcite{chen1996empirical}, which has been shown to outperform other $n$gram LMs and has become the de-facto standard.
 
 Interpolated Kneser-Ney describes the conditional probability of a word $w_i$ conditioned on the context of $m-1$ preceeding words, $w_{i-m+1}^{i-1}$, as 
@@ -27,12 +29,14 @@ The recursion stops with unigram probabilities,
 %\begin{align*}
 %\label{eq:low}
 %
-$ P(w_i) = \nlplus{\Bigcdot w_i} / \nlplus{\Bigcdot\Bigcdot}$.
+$ P(w_i) = \nlplus{\Bigcdot w_i} / \nlplus{\Bigcdot\Bigcdot}$.%
 %\end{align*}
 %\newcite{chen1996empirical} report maximum likelihood estimates for the discount parameters, as simple functions of the corpus statistics for \ngrams occuring 1--4 times or occuring in 1--4 unique left contents. 
 % Note that many other LM methods are defined in a similar manner to interpolated Kneser-Ney, using similar counts and occurrence counts for \ngram patterns.
-Modified Kneser-Ney, proposed by~\newcite{chen1996empirical}, typically outperforms interpolated Kneser-Ney by using context specific discount parameters.
-The implementation of this with our data structures is straightforward in principle, but brings a few added complexities in terms of dynamic computing other types of occurrence counts, which we leave for future work.
+\footnote{Modified Kneser-Ney, proposed
+  by~\newcite{chen1996empirical}, typically outperforms interpolated
+  Kneser-Ney through its use of context-specific discount parameters.
+The implementation of this with our data structures is straightforward in principle, but brings a few added complexities in terms of dynamic computing other types of occurrence counts, which we leave for future work.}
 
 
 %%% Local Variables: 

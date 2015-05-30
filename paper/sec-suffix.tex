@@ -1,5 +1,6 @@
 
-\subsection{Suffix Arrays and Suffix Trees}
+\paragraph{Suffix Arrays and Suffix Trees}
+\label{sec-suffix}
 
 \begin{figure*}[phbt]
 \begin{subfigure}[t]{0.5\textwidth}
@@ -60,14 +61,14 @@ in {\col} or the $i$-th leaf in the suffix tree of {\col}. The suffix array requ
 $\collen \log \collen$ bits of space and can also be constructed in $\Order{\collen}$ time~\cite{ksb-jacm06}.
 Using only the suffix array and the text, pattern search can be performed using binary search
 in $\Order{\plen \log \collen}$ time. For example, the pattern ``the night'' is found by performing
-binary search using \SA\ and \col\ to determine \SA$[18,19]$, the interval in 
+binary search using \SA\ and \col\ to determine $\SA[18,19]$, the interval in 
 \SA\ corresponding the the suffixes in \col\ prefixed by the pattern.
 In practice, suffix arrays use $4-8\collen$ bytes of space whereas the most efficient
 suffix tree implementations require at least $20\collen$ bytes of space~\cite{k-spe99} which
 are both much larger than {\col} and prohibit the use of these structures for all but
 small data sets.
 
-\subsection{Compressed Suffix Structures}
+\paragraph{Compressed Suffix Structures}
 \label{sec-css}
 
 Reducing the space usage of suffix based index structure has recently become an 
@@ -81,7 +82,7 @@ functionality of a suffix array over $\col$ using $\collen H_k(\col)+o(\collen \
 bits of space where $H_k$ refers to the $k$-th order entropy of the text~\cite{fmmn-talg07}.
 In practice, the FM-Index of $\col$ uses roughly space equivalent to
 the compressed representation of $\col$ using a standard compressor such as {\tt bzip2}.
-For a more comprehensive overview on succinct text indexes, we refer to the
+For a more comprehensive overview on succinct text indexes, see the
 excellent survey of~\newcite{fgnv-jea08}.
 
 The FM-Index relies on the duality between the suffix array and the BWT~\cite{bw-dec94}, 
@@ -89,16 +90,16 @@ a permutation of the text such that $\colbwt[i] = \col[\SA[i]-1]$ (see Figure~\r
 a pattern using the FM-Index is performed in reverse order by performing  
 {\rankop$(\colbwt,i,c)$} operations $\Order{\plen}$ times. Here, {\rankop$(\colbwt,i,c)$}  
 counts the number of times symbol $c$ occurs in $\colbwt[0\ldots i-1]$. 
-This process is usually referred to as {\it backward search}. Let \SA$[l_i,r_i]$ be
+This process is usually referred to as {\it backward search}. Let $\SA[l_i,r_i]$ be
 the interval corresponding to the suffixes in \col\ matching \pattern$[i\ldots \plen-1]$.
 By definition of the BWT, $\colbwt[l_i,r_i]$ corresponds to the symbols in \col\
 preceding \pattern$[i\ldots \plen-1]$ in \col. Due to the lexicographical ordering
-of all suffixes in \SA, the interval \SA$[l_{i-1},r_{i-1}]$ corresponding to all
+of all suffixes in \SA, the interval $\SA[l_{i-1},r_{i-1}]$ corresponding to all
 occurrences of \pattern$[i-1\ldots \plen-1]$ can be determined by computing the rank
 of all occurrences of $c=\pattern[i-1]$ in $\colbwt[l_i,r_i]$. Thus, we compute
 \rankop$(\colbwt,l_i,c)$, the number of times symbol $c$ occurs before
 $l_i$ and \rankop$(\colbwt,r_i+1,c)$, the number of occurrences of $c$ in $\colbwt[0,r_i]$.
-To determine \SA$[l_{i-1},r_{i-1}]$, we additionally store the starting positions $C_{s}$
+To determine $\SA[l_{i-1},r_{i-1}]$, we additionally store the starting positions $C_{s}$
 of all suffixes for each symbol $s$ in $\alphabet$ at a negligible cost 
 of $\alphabetsize \log \collen$ bits.
 Thus, the new interval is computed as $l_{i-1} = C_c + $\rankop$(\colbwt,l_i,c)$ 
@@ -115,12 +116,12 @@ and relative \rankop\ counts~\cite{m-fsttcs96}. The alphabet is
 reduced by recursively splitting symbols based on their code words into subgroups to 
 form a binary tree as shown in Figure~\ref{fig-wt-bwt} for $\colbwt$. To answer
 \rankop$(\colbwt,i,c)$, the tree is traversed based on the code word of $c$, performing
-binary \rankop\ at each level. For example, \rankop$(\colbwt,17,`t`)$ translates
+binary \rankop\ at each level. For example, \rankop$(\colbwt,17,\text{`t'})$ translates
 to performing \rankop$(WT_{root},17,1)=12$ on the top level of the wavelet 
 tree, as {\tt t=the=110}. We recurse to the right subtree of the root node and
 compute \rankop$(WT_{1},12,1)$ as there were $12$ ones in the root node and
 the next bit in the codeword of `the' is also one. This process continues until 
-the correct leaf node is reached to answer \rankop$(\colbwt,17,`t`)=5$ in 
+the correct leaf node is reached to answer \rankop$(\colbwt,17,\text{`t'})=5$ in 
 $\Order{\log \alphabetsize}$ time. The space usage of a regular wavelet tree is
 $\collen \log \alphabetsize + o(\collen \log \alphabetsize)$ bits which roughly
 matches the size of the text.\footnote{However, if code-words for each symbol are chosen
@@ -150,8 +151,11 @@ operations such as \depth{}{$v$}, \parent{}{$v$} or
 accessing the $i$-th leaf can be answered in constant time.
 To support more advanced operations such as accessing path-labels,
 the underlying \CSA or a compressed version of the LCP array are required
-which can be more expensive.~\footnote{See \supp for an overview of the complexities
-of the functionality of the \CST that is used in our experiments} 
+which can be more expensive.\footnote{See \supp for an overview of the complexities
+of the functionality of the \CST that is used in our experiments.} 
 In practice, a \CST requires roughly $4-6\collen$ bits in addition to the
-cost of storing the \CSA. For a more extensive overview of \CSTs we refer
-the reader to~\newcite{rno-talg11}.
+cost of storing the \CSA. For a more extensive overview of \CSTs see~\newcite{rno-talg11}.
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cstlm"
+%%% End: 

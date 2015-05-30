@@ -1,14 +1,15 @@
 %Computing counts, N1+ of several flavours of different sized n-grams.
 
 The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying how many different contexts the \ngram has occurred.
-Figure~\ref{fig-counts-example} (right) illustrates the numbers needed in calculating the probability of an example 4-gram.
+Figure~\ref{fig-counts-example} (right) illustrates the requisite
+counts for calculating the probability of an example 4-gram.
 In electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queries into the suffix tree.
 
 \begin{figure*}[tpb]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/kn_dual_cst}
 \vspace{-3ex}
-\caption{Counts required for computing $P(\text{town} | \text{keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. See Algorithm~\ref{alg:pkn} for details.}
+\caption{Counts required for computing $P(\text{\em town} | \text{\em keep in the})$ (right) and the suffix tree nodes required for computing each value (left). The two left-most columns correspond to $\nrfull$ and $\nr$ and are updated using \emph{forward-search} in the reverse \CST, while the righter-most column correspond to $\nf$ and is updated using \emph{backward-search} in the forward \CST. See Algorithm~\ref{alg:pkn} for details.}
 \label{fig-counts-example}
 \end{figure*}
 
@@ -17,13 +18,12 @@ The raw frequency counts are the simplest to compute. First we
 identify the locus node $v$ in the suffix tree for the query
 \ngram; the frequency corresponds to the node's \emph{size}, an $\Order{1}$ 
 operation which returns the number of descendents of $v$. To illustrate, consider
-searching for \emph{the night} in  Figure~\ref{fig-suffix-tree}, which
-matches a node with two descendents (labelled 19 and 12), and thus the
-\ngram has count 2. 
+searching for $c(\text{\emph{the night}})$ in  Figure~\ref{fig-suffix-tree}, which
+matches a node with two descendents (labelled 19 and 12), and thus $c=2$. 
 
 More problematic are the occurrence counts, which come in several
-flavours: with the dot to the right of the pattern, $\nlplus{\patdot}$,
-to the left,  $\nlplus{\dotpat}$, and on both sides
+flavours: right contexts, $\nlplus{\patdot}$,
+left contexts,  $\nlplus{\dotpat}$, and contexts to both sides of the pattern,
 $\nlplus{\dotpatdot}$. 
 The first of these can be handled easily, as 
 \begin{equation*}
@@ -36,9 +36,9 @@ The first of these can be handled easily, as
 where $t$ is the \CST, $v$ is the node matching $\alpha$, and 
 $\pathlabel{t}{v}$ denotes the label of the path from the root to $v$.%
 \footnote{See the \supp for the explicit algorithm, but note there are some corner cases involving sentinels \#
-  and \$, which shouldn't be counted when computing occurrence counts.
+  and \$, which must be excluded when computing occurrence counts.
   Such tests have been omitted from the presentation for clarity. On publication the
-  source code will be released with the complete implementation (roughly 1000 lines of C++).}
+  source code will be released with the complete implementation (totalling 1k lines of C++).}
 For example, \emph{keep in} has two child nodes in  Figure~\ref{fig-suffix-tree},
 and thus there are two unique contexts in which it can occur, $\nlplus{\emph{keep in~}\Bigcdot}=2$,
 while \emph{the keep} partially matches an edge in the forward suffix tree in
@@ -50,15 +50,20 @@ A similar line of reasoning applies to computing $\nlplus{\dotpat}$.
 Assuming we also have a second suffix tree representing the \emph{reversed corpus}, we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$). 
 
 The final component of the Kneser-Ney LM computation is
-$\nlplus{\dotpatdot}$, the number of unique contexts consider symbols
-on both sides of the pattern. 
+$\nlplus{\dotpatdot}$, the number of unique contexts considering
+symbols on both sides of the pattern. 
 Unfortunately this does not map to a simple suffix tree operation,
 but instead requires enumeration,
 $\nlplus{\dotpatdot} = \sum_{s \in F(\alpha)} \nlplus{\dotpat s}$, 
 where $F(\alpha)$ is the set of symbols that can follow $\alpha$.
 %\end{equation*}
 Algorithm~\ref{alg-occ-two-sided} shows how this is computed, with lines 7 and 8 enumerating $s \in F(\alpha)$ using the \emph{edge} labels of the children of $v$.
-For each symbol, line 9 searches for an extended pattern incorporating the new symbol $s$ in the reverse \CSA (part of the reverse \CST), by refining the existing match $\nr$ using a single backward search operation after which we can compute $\nlplus{\patdot s}$.\footnote{Backward search in the reverse tree corresponds to extending the patttern to the right.}
+For each symbol, line 9 searches for an extended pattern incorporating
+the new symbol $s$ in the reverse \CSA (part of the reverse \CST), by
+refining the existing match $\nr$ using a single backward search
+operation after which we can compute $\nlplus{\patdot
+  s}$.\footnote{Backward search in the reverse tree corresponds to
+  searching for the reversed pattern appended with one symbol.}
 % Finally we can query the unique left contexts for the node (line 10),
 % which we accumulate to yield the return value.
 Line 5 deals with the special case where the pattern does not match a complete edge, in which case there is only only unique right context and therefore $\nlplus{\dotpatdot} = \nlplus{\dotpat}$.
@@ -97,13 +102,13 @@ Beyond the need for twin suffix trees, the highest time complexity calls are \em
 Calling \emph{string-depth} is constant time for internal nodes, but $\Order{\SASAMPLE \log\sigma}$ for leaf nodes; fortunately we can avoid this call for leaves, which by definition extend to the end of the corpus and consequently extend further than our pattern.\footnote{We assume search patterns do not extend beyond a single sentence, and thus will always be shorter than the edge labels.}
 The costly calls to \emph{edge} and \emph{backward-search} however cannot be avoided.
 This leads to an overall time complexity of $\Order{1}$ for \nlplusname\ and $\Order{F(\alpha) \times \SASAMPLE \times \log\sigma}$ for \nlplusfrontbackname, where $F(\alpha)$ is the number of following symbols and \SASAMPLE is the suffix array value sample rate described
-in section~\ref{sec-css}.
+in Section~\ref{sec-css}.
 
 \section{Dual \CST Algorithm} 
 \label{sec-dual-cst}
 
-Using the methods above for computing the frequency and occurrence
-counts, we now have the ingredients necessary to compute \ngram language model
+The methods above for computing the frequency and occurrence
+counts provide the ingredients necessary for computing \ngram language model
 probabilities. This leaves the algorithmic problem of efficiently ordering the search 
 operations in forward and reverse \CST structures.
 
@@ -119,7 +124,9 @@ order estimates.
 % unseen context.
 This iterative process is apparent in Figure~\ref{fig-counts-example} (right) which shows the quantities required for probability scoring for an example \ngram.
 Equivalently, the iteration can be considered in reverse, starting from unigram estimates and successively growing to large \ngrams, in each stage adding a single new symbol to left of the pattern. 
-This suits incremental search in a \CST in which search bounds are iteratively refined, which has a substantially lower time complexity compared to searching over the full range.
+This suits incremental search in a \CST in which search bounds are
+iteratively refined, which has a substantially lower time complexity
+compared to searching over the full index in each step.
 %This fits well with cheaply searching a \CST one symbol at a time.  
 
 
@@ -172,7 +179,7 @@ This suits incremental search in a \CST in which search bounds are iteratively r
 
 Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
 This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $(i-1)$gram context ($\nf, \nr$), $i=1 \ldots m$.
-The need to maintain three concurrent searches arises from the calls to size, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14, 15; 17; 21; and 18, respectively).
+The need to maintain three concurrent searches arises from the calls to \emph{size}, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14, 15; 17; 21; and 18, respectively).
 These calls impose conditions on the direction of the suffix tree, e.g., such that the edge 
 labels and node degree can be used to compute the number of left or right contexts in which a pattern appears. 
 The matching process is illustrated in Figure~\ref{fig-counts-example} where the three search nodes are shown on the left, considered bottom to top, and their corresponding count operations are shown to the right.
@@ -182,11 +189,20 @@ Because of the mix of forward and reverse \CSTs, coupled with search patterns th
 In the forward \CST, we perform \emph{backward search} to extend the search pattern to the left, which can be computed very efficiently from the BWT in the \CSA.\footnote{See \supp Table~1 for the time complexities of this and other \CSA and \CST methods.}
 Conversely in the reverse \CST, we must use \emph{forward search} as we are effectively extending the reversed pattern to the right; this operation is considerably more costly.
 
-The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and $\nlplus{\Bigcdot\Bigcdot}$ (line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
-The full algorithm is provided in Algorithm~8 in the \supp, which operates by traversing the nodes of the reverse \CST and at each stage computing the number of \ngrams that occur 1--4 times and $\nlplus{\dotpat}$ equal to 1--4, for various lengths of \ngrams.
-These quantities are used to compute the discount parameters, which are then stored for use in estimation.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
-Note that the \textsc{PrecomputeDiscounts} algorithm can be slow, although it is significantly faster if we remove the \emph{edge} calls and simply include in our counts all \ngrams finishing a sentence or spanning more than one sentence. 
-These approximate discounts are typically within $10^{-2}$ of the correct values.
+The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
+$\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
+The precomputation algorithm is provided in Algorithm~8 in the \supp,
+and operates by traversing the nodes of the reverse \CST and at each
+stage computing the number of \ngrams that occur 1--4 times or with
+$\nlplus{\dotpat} \in [1,4]$, for various lengths of \ngrams.
+These quantities are used to compute the discount parameters, which
+are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
+Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
+although it is significantly faster if we remove the \emph{edge} calls
+and simply include in our counts all \ngrams finishing a sentence or
+spanning more than one sentence.
+This has a neglibile (often beneficial) effect on perplexity.
+%These approximate discounts are typically within $10^{-2}$ of the correct values.
 
 \section{Improved Single \CST Approach}
 \label{sec-single-cst}
@@ -200,13 +216,15 @@ This confers the benefit of using only backward search and avoiding redundant se
 
 The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
 Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key different from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
-This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the \emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses rank and select bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
+The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the BWT as describes
+in section~\ref{sec-css}.
+%\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
+The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol the range of occurrences this corresponds to in the \SA.
 For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
 These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
 These occurence bounds can then be used to calculate the range in the \SA by adding to $C_s$, the precomputed offset of the first pattern beginning with $s$, exploiting the property that the \SA is lexicographically sorted.
-In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is therefore $[16+(4-1),16+(5-1)] = [19,20]$ (the $-1$ adjusts for counting from 1 in the above exposition, rather than 0).
+In the example above, $C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
 
 
 \begin{algorithm}[t]

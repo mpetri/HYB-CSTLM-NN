@@ -1,0 +1,9 @@
+This paper has demonstrated the massive potential that succinct indexes have for language modelling, by developing efficient algorithms for on-the-fly computing of \ngram counts and language model probabilities.
+Although we only considered a Kneser-Ney LM, our approach is portable to many other LM smoothing methods, which are formulated using similar types of count statistics.
+Our complexity analysis and experimental results show favourable scaling properties with corpus size and Markov order, albeit running between 1-2 orders of magnitude slower than competitive count-based benchark LMs.
+Our ongoing work seeks to close this gap: preliminary experiments suggest that with careful tuning of the succinct index parameters and precomputation, we can match or improve over the query time of \SRILM on large corpora with $m\ge6$.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "cstlm"
+%%% End: 
