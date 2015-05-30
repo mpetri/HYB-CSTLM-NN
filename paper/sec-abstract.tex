@@ -1,29 +1,15 @@
 Efficient methods for storing and querying langugage models are critical for scaling to large corpora and high Markov orders.
 %While most previous work has focussed on efficient means of indexing \ngrams using a fixed, low Markov order,
-In this paper we propose methods for modelling large corpora without
+In this paper we propose methods for modelling extremely large corpora without
 imposing a Markov condition.
 At its core, our approach uses a succinct index --- a \emph{compressed suffix tree} backed by a \emph{FM index} -- which provides near optimal compression while supporting efficient search.
 We present algorithms for on-the-fly computation of probabilities under a
 %n infinite order
 Kneser-Ney language model.
 Our technique is \emph{exact} and although slower than leading LM
-toolkits, it shows promising scaling properties.
-Notably, it allows for $\infty$ order modelling of the full Wikipedia collection
-with only a modest memory footprint. 
+toolkits, it shows promising scaling properties,
+which we demonstrate through $\infty$-order modelling over the full Wikipedia collection. 
 
-%In this paper, we build  fast and compact high-order \ngram language models (LMs) using modern succinct data structures.
-%
-%We show how to compactly index the text statistics needed by Kneser-Kney (KN) LMs 
-%to efficiently make the smoothed probabilities on the fly.
-%
-%Importantly, the stored index for text statistics is kept intact for \ngram LMs with different orders, 
-%which allows to relax the Markov assumption made in these LMs by considering very large contexts.
-%
-%At the core, the stored index makes use of compressed suffix structures including FM-index and wavelet trees.
-%
-%Our comprehensive experiments show that the memory footprint of our high-order KN-LMs, which are infeasible to build using 
-%state-of-the-art LM toolkits due to memory constraints, is the same as that for low-order LMs while maintaining 
-%a reasonable query-time. 
 
 %%% Local Variables: 
 %%% mode: latex

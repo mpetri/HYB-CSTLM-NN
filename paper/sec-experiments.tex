@@ -1,25 +1,17 @@
 
-\paragraph{Datasets}
-We used Europarl dataset and the data was numberized after tokenizing, splitting, and excluding xml markups. The first $10K$ sentences were used as the test data, and the last 80\% as the training data, giving rise to training corpora of between 8M and 50M tokens and binary encoding of word integers of up to 200MB (see \supp Table~4).
-\trevor{Sentence on wikipedia}
-
-%\begin{table}
-%\resizebox{1\columnwidth}{!}{
-%\begin{tabular}{ll|cc|c}
-%Language&&Size (MB)&Tokens (M)& Sentences (K)\\
-%\toprule 
-%Bulgarian&BG&36.11&8.53&329\\
-%Czech&CS&53.48&12.25&535\\
-%German&DE&171.80&44.07&1785 \\
-%English&EN&179.15&49.32&1815\\
-%Finnish&FI&145.32&32.85&1737\\
-%French&FR&197.68&53.82&1792\\
-%Hungarian&HU&52.53&12.02&527\\
-%Italian&IT&186.67&48.08&1703\\
-%Portuguese&PT&187.20&49.03&1737\\
-%\end{tabular}}
-%\caption{Tokens and sentence counts refer to the training partition. \trevor{Move to \supp}}\label{fig:data}
-%\end{table}
+%\paragraph{Datasets and Software}
+We used Europarl dataset and the data was numberized after tokenizing, 
+splitting, and excluding XML markup. The first $10k$ sentences were used as 
+the test data, and the last 80\% as the training data, giving rise to
+training corpora of between 8M and 50M tokens and uncompressed size of
+up to \mb{200} (see \supp Table~4 for detailed corpus statistics). 
+We also processed 
+the full \gb{52} uncompressed ``20150205'' English Wikipedia articles dump to 
+create a character level language model consisting of $72M$ sentences. We
+excluded $10k$ random sentences from the collection as test data.
+We use the {\method{sdsl}} library~\cite{gbmp2014sea} to implement all our 
+structures and compare our indexes to \SRILM~\cite{stolcke2002srilm}. We
+refer to our dual-\CST approach as \dualCST, and the single-\CST as \singleCST.
 
 \begin{figure}[tb]
 \input{figures/fig-europarl-pplx-ngram}
@@ -27,40 +19,74 @@ We used Europarl dataset and the data was numberized after tokenizing, splitting
 \label{fig:pplx}
 \end{figure}
 
-
-\paragraph{Perplexity}
-We evaluated the perplexity across different languages and using \ngrams of varying order from $m\in[2,\infty)$ (unbounded), as shown on Figure~\ref{fig:pplx}.
+%\paragraph{Perplexity}
+We evaluated the perplexity across different languages and using \ngrams of varying order from $m=2$ to $\infty$ (unbounded), as shown on Figure~\ref{fig:pplx}.
 Our results matched the perplexity results from \SRILM (for smaller values of $m$ in which \SRILM training was feasible, $m \le 10$).
 Note that perplexity drops dramatically from $m=2\ldots5$ however the gains thereafter are modest for most languages.
-Despite this, several large \ngram matches were found as illustrated in Figure~\ref{fig:germanpattern}, ranging in size up to a 34-gram match.
-We propose that the perplexity plateau is due to the simplistic Kneser-Ney discounting formula which is not designed for higher order \ngram LMs and appear to discount large \ngrams too aggressively. 
-%We leave further exploration of richer discounting techniques such as Modified Kneser-Ney \cite{chen_goodman} or the Sequence Memoizer \cite{wood_teh} to our future work.
-Richer discounting techniques such as Modified Kneser-Ney \cite{chen1996empirical} or the Sequence Memoizer \cite{wood2011sequence} would be able to better exploit these large contexts.
+Despite this, several large \ngram matches were found
+ %as illustrated                               in Figure~\ref{fig:germanpattern}, 
+ranging in size up to a $34$-gram match.
+We speculate that the perplexity plateau is due to the simplistic Kneser-Ney discounting formula which is not designed for higher order \ngram LMs and appear to discount large \ngrams too aggressively. 
+We leave further exploration of richer discounting techniques such as Modified Kneser-Ney \cite{chen1996empirical} or the Sequence Memoizer \cite{wood2011sequence} to our future work.
 
 
-\begin{figure}[tb]
-\includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
-\caption{Number of \ngrams of different sizes in both training and test sets for Europarl German}
-%\caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
-\label{fig:germanpattern}
-\end{figure}
+
+
+
+% \begin{figure}[tb]
+% \includegraphics[width=\columnwidth]{figures/german_pattern_size.pdf}
+% \caption{Number of \ngrams of different sizes in both training and test sets for Europarl German}
+% %\caption{Number of successful queries across different pattern sizes from KN computation over the German test set, with unbounded $m$.}
+% \label{fig:germanpattern}
+% \end{figure}
+
+
+%\paragraph{Time vs.\ Space}
+Figure~\ref{fig:spacetime} compares space and time of our indexes with \SRILM on the German part of Europarl.
+The construction cost of our indexes in terms of both space and time is comparable to that of 
+a $3/4$-gram \SRILM\ index. The space usage of \dualCST\ index is comparable to
+a compact $3$-gram \SRILM\ index. Our \singleCST\ index uses only \mb{177} RAM
+at query time, which is comparable to the size of the collection (\mb{172}).
+However, query processing is significantly slower for both our structures.
+For $2$-grams, \dualCST\ is $3$ times slower than a $2$-gram \SRILM\ index as
+the expensive $\nlplus{\dotpatdot}$ is not computed. However, for large \ngrams,
+our indexes are much slower than \SRILM. For $m>2$, 
+the \dualCST\ index is roughly six times slower than \singleCST. Our fastest
+index, is $10$ times slower than the slowest \SRILM $10$-gram index. However,
+our run-time is independent of $\plen$. Thus, as $m$ increases, our index
+will become more competitive to \SRILM\ while using a constant amount of space.
+
 
 \begin{figure}[tb]
 \input{figures/fig-eu-de-space-time}
-\caption{Time versus space tradeoffs measured on Europarl German (de) dataset, showing memory and time requirements for the four methods: CST single, CST dual, \SRILM, and \SRILM compact. Times were measured using a 10k sentence test set.}
+\caption{Time versus space tradeoffs measured on Europarl German (de) dataset, 
+showing memory and time requirements.}
 \label{fig:spacetime}
 \end{figure}
 
-\paragraph{Time-Memory}
-Figure~\ref{fig:spacetime} ($\log-\log$) compares our timing and memory usage with \SRILM on German part of the Europarl dataset and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both \SRILM methods in terms of memory for orders $m \ge 5$. 
-In terms of time, we outperform \SRILM compact beyond bigrams, and \SRILM default for $m \ge 3$. 
-For querying, our memory footprint is constant and much lower that \SRILM compact and \SRILM default after $m=3$, and $m=2$ respectively. 
-The results are less impressive for query times, in which the single CST method is $300x$ slower compared to \SRILM for $2$-gram, but shows better scaling, with the gap reducing to $12x$ worse by $10$-grams.  
-Also observe the high the computational cost of computing $\nlplus{\Bigcdot \alpha \Bigcdot}$, which is apparent when moving from $m=2$ to $m=3$, the first point where this method is called. 
-This is an obvious candidate for optimisation, which could radically improve query times.
-%\footnote{Preliminary results show that query times can be reduced dramatically, to roughly match \SRILM. For space reasons we defer this for future work.} 
-%As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
+\begin{figure}[!tb]
+\input{figures/fig-wiki-breakdown}
+\caption{Runtime breakdown of a single pattern averaged over all patterns for both methods over the Wikipedia collection.}
+\label{fig:wikitime}
+\end{figure}
+
+%\paragraph{`Big' data}
+Next we analyze the performance of our index on the large Wikipedia dataset.
+The \singleCST, character level index for the data set requires \gb{22} RAM
+at query time whereas the \dualCST\ requires \gb{43}. Figure~\ref{fig:wikitime}
+shows the run-time performance of both indexes for different \ngrams, broken
+down by the different components of the computation. As discussed above,
+$2$-gram performance is much faster. For both indexes, most time is spent
+computing \nlplusfrontbackname (i.e., $\nlplus{\dotpatdot}$) for all $m>2$. However,
+the wavelet tree traversal used in \singleCST\ roughly reduces the running time
+by a factor of three. The complexity of \nlplusfrontbackname depends on the
+number of contexts, which is likely small for larger \ngrams, but can be large
+for small \ngrams, which suggest partial precomputation could significantly
+increase the query performance of our indexes.
+
+
+%and highlights the merits of our method both in construction and query time. In construction time, while both of our approaches are independent of the order of $m$gram, our fixed construction time outperforms both \SRILM methods in terms of memory for $m$grams of $5$ and higher orders. In terms of the timing, we outperform \SRILM compact after bigram, and \SRILM default for $m$grams of $3$ and higher orders. In query time, our memory footprint is constant and much lower that \SRILM compact, and default after $3$, and $2$ respectively. While in terms of timing, the single CST method is $300x$ slower compared to \SRILM for $2$-gram, this gap decreases to $12x$ for $10$-gram.  Another observation is the computational cost of computing $\nlplus{\Bigcdot \alpha \Bigcdot}$ when moving from $2$-gram, to $3$-gram which affects the timing. As mentioned earlier, this quantity is not required unless we move to $3$ or higher order $m$grams.
 
 
 

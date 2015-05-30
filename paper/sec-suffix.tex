@@ -42,6 +42,7 @@ of ancestors in the tree, whereas the {\it string depth} corresponds to the
 length of the path-label. Searching for a pattern {\pattern} of 
 size {\plen} in {\col} translates to finding the {\it locus} node $v$ closest to
 the root such that {\pattern} is a prefix of the path-label of $v$ in $\Order{\plen}$ time.
+We refer to this approach as {\it forward search}.
 Figure~\ref{fig-suffix-tree} shows a suffix tree over a sample text. 
 A suffix tree requires $\Order{\collen}$ space 
 and can be constructed in $\Order{\collen}$ time~\cite{u-algo95}. The children

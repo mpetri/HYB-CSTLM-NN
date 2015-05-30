@@ -3,6 +3,8 @@
 \newcommand{\ehsan}[1]{{\color{Cerulean}{\bf{Ehsan says:}} \emph{#1}}}
 \newcommand{\reza}[1]{{\color{Blue}{\bf{Reza says:}} \emph{#1}}}
 
+\newcommand*\uu{{\mathbf{u}}}
+
 \newcommand{\supp}{\emph{Supplementary Materials}\xspace}
 
 \newcommand*\SRILM{\textsc{SriLm}\xspace}
@@ -32,6 +34,8 @@
 %\newcommand{\forwardsearchnode}[3]{\text{search}_{\rightarrow}([\text{lb}(#2),\text{rb}(#2)], #3)}
 \newcommand{\forwardsearchnode}[3]{\text{forw-search}(#2, #3)}
 \newcommand{\forwardsearch}[4]{\text{fw-search}([#2,#3], #4)} % I've abbreviated away depth, char_pos
+\newcommand{\forwardsearchname}{\text{fw-search}} % I've abbreviated away depth, char_pos
+\newcommand{\backwardsearchname}{\text{back-search}}
 \newcommand{\intervalsymbols}[3]{\text{int-syms}(#1, [#2,#3])}
 \newcommand{\pathlabel}[2]{\text{label}(#2)}
 
@@ -46,11 +50,15 @@
 \newcommand{\nlplusname}{\textsc{N1p}\xspace}
 \newcommand{\nlplusfunc}[3]{\nlplusname(#1, #2, #3)} % "
 \newcommand{\nlplusbacklname}{\textsc{N1pBack1}\xspace}
+\newcommand{\nlplusfrontlname}{\textsc{N1pFront1}\xspace}
 \newcommand{\nlplusbacklfunc}[3]{\nlplusbacklname(#1, #2, #3)} % " ^ 2
 \newcommand{\nlplusfrontbackname}{\textsc{N1pFrontBack}\xspace}
 \newcommand{\nlplusfrontbackfunc}[4]{\nlplusfrontbackname(#1, #2, #3, #4)} % " 
 \newcommand{\nlplusfrontbacklname}{\textsc{N1pFrontBack1}\xspace}
-\newcommand{\nlplusfrontbacklfunc}[3]{\nlplusfrontbacklname(#1, #2, #3)} % "
+\newcommand{\nlplusfrontbacklfunc}[3]{\nlplusfrontbacklname(#1, #2, #3)} % 
+
+\newcommand{\nlplusbackname}{\textsc{N1pBack}\xspace}
+\newcommand{\nlplusfrontname}{\textsc{N1pFront}\xspace}
 
 \newcommand{\tf}{t_{\text{F}}}
 \newcommand{\tr}{t_{\text{R}}}
@@ -92,6 +100,9 @@
 
 \newcommand{\SASAMPLE}{\mbox{\emph{SAS}}\xspace}
 \newcommand{\ISASAMPLE}{\mbox{\emph{ISAS}}\xspace}
+\newcommand{\dualCST}{\method{d-\CST}}
+\newcommand{\singleCST}{\method{s-\CST}}
+
 
 %%% Local Variables: 
 %%% mode: latex
