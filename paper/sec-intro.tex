@@ -84,11 +84,11 @@ we focus on KN-smoothing, our approach can be used to index and compute
 counts needed in other smoothing techniques as well \cite{chen1996empirical}.}  
 \cite{kneser1995improved}.
 % 
-The key quantities for computing probability under KN-LMs
+The key quantities for computing probabilities under KN-LMs
 are raw frequencies of \ngrams 
 and occurrence counts, i.e. the number of different contexts 
 in which an \ngram has 
-occurred which is challenging to compute.
+occurred whose efficient computation is challenging. 
 %
 %The raw frequency counts are simple to compute, but occurrence counts 
 %are challenging. 
@@ -100,8 +100,9 @@ We further show how to leverage count queries for shorter contexts in queries fo
 longer contexts to speed up the computation of KN-smoothed probabilities on the fly 
 (\S\ref{sec-dual-cst}).
 %
-Our second proposal consists of only one \emph{augmented} \CST, which 
-further improves both the space and query-time of our first proposal (\S\ref{sec-single-cst}). 
+Our second proposal consists of only one % \emph{augmented} 
+\CST, which further improves both the space and query-time requirements
+of our first proposal (\S\ref{sec-single-cst}). 
 % 
 
 Experiments ....
