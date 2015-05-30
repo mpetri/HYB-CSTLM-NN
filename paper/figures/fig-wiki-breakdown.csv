@@ -72,6 +72,12 @@ dual;N1PlusFront;10;46.701;20687951
 dual;N1PlusFrontBack;10;10606.3;18390807
 dual;forward_search;10;2185.02;41503820
 dual;backward_search;10;782.087;970041568
+
+dual;N1PlusBack;inf;1260.82;1216899736
+dual;N1PlusFront;inf;59.279;54062614
+dual;N1PlusFrontBack;inf;12622.4;53806286
+dual;forward_search;inf;3217.222;114394836
+dual;backward_search;inf;952.838;1197395731
 single;N1PlusBack;inf;245.317;75579842
 single;N1PlusFront;inf;41.726;54062614
 single;N1PlusFrontBack;inf;3100.3;53806286
