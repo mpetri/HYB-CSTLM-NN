@@ -9,9 +9,9 @@ Although our method is generally applicable to many LM variants, we focus on the
 
 Interpolated Kneser-Ney describes the conditional probability of a word $w_i$ conditioned on the context of $m-1$ preceeding words, $w_{i-m+1}^{i-1}$, as 
 \begin{align}
-\! P(w_i |& w_{i-m+1}^{i-1})
- = \frac{\max\left[c(w^{i}_{i-m+1}) - D_m,0\right]}{c(w^{i-1}_{i-m+1})} \nonumber \\
-& +\frac{D_m }{c(w^{i-1}_{i-m+1})}  P(w_i | w_{i-m+2}^{i-1}) \, , \label{eq:high}
+P(w_i |& w_{i-m+1}^{i-1})=\frac{\max\left[c(w^{i}_{i-m+1}) - D_m,0\right]}{c(w^{i-1}_{i-m+1})} \nonumber \\
+& \hspace{-6mm} +\frac{D_m \nlplus{w^{i-1}_{i-m-1}\Bigcdot} }{c(w^{i-1}_{i-m+1})}  P(w_i | w_{i-m+2}^{i-1}) ,  
+\label{eq:high}
 \end{align}
 where \mbox{$\nlplus{w^{i-1}_{i-m-1}\Bigcdot} = |\{s: c(w^{i-m}_{i-m-1}s)>0\}|$} is the \emph{occurrence count}, defined as the number of word types observed following the pattern, and $D$ is a vector of \ngram specific discount parameters.
 The highest order probability estimate in (\ref{eq:high}) interpolates a discounted frequency estimate with a $m-1$ order probability, defined as 
