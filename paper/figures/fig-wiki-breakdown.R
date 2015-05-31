@@ -62,8 +62,8 @@ theme_complete_bw <- function(base_size = 12, base_family = "") {
 mf_labeller <- function(var, value){
     value <- as.character(value)
     if (var=="index") { 
-        value[value=="single"] <- "single-CST"
-        value[value=="dual"]   <- "dual-CST"
+        value[value=="single"] <- "\\singleCST"
+        value[value=="dual"]   <- "\\dualCST"
     }
     return(value)
 }
