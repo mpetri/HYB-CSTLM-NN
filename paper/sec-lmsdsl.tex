@@ -177,7 +177,7 @@ compared to searching over the full index in each step.
 
 %\afterpage{\clearpage}
 
-Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
+Algorithm~\ref{alg-kn-slow} \ehsan{the match ... in linee 1,2,3 is a bit confusing. These nodes are not keeping track of the same thing.} presents an outline of the approach.
 This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $(i-1)$gram context ($\nf, \nr$), $i=1 \ldots m$.
 The need to maintain three concurrent searches arises from the calls to \emph{size}, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14, 15; 17; 21; and 18, respectively).
 These calls impose conditions on the direction of the suffix tree, e.g., such that the edge 
@@ -191,10 +191,10 @@ Conversely in the reverse \CST, we must use \emph{forward search} as we are effe
 
 The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
 $\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
-The precomputation algorithm is provided in Algorithm~7 in the \supp,
+The precomputation algorithm is provided in Algorithm~6 in the \supp,
 and operates by traversing the nodes of the reverse \CST and at each
-stage computing the number of \ngrams that occur 1--4 times or with
-$\nlplus{\dotpat} \in [1,4]$, for various lengths of \ngrams.
+stage computing the number of \ngrams that occur 1--4 times \ehsan{used for computing $D_m$ in eq.~\ref{eq:high}}, or with
+$\nlplus{\dotpat} \in [1,4]$ \ehsan{used for computing $D_k$ in eq.~\ref{eq:mid}}, for various lengths of \ngrams.
 These quantities are used to compute the discount parameters, which
 are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
@@ -214,14 +214,14 @@ Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are co
 This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
 
 
-The full algorithm for computing LM probabilities is given in the \supp as Algorithm 7, however for space reasons we will not describe this in detail.
+The full algorithm for computing LM probabilities is given in the \supp as Algorithm 6, however for space reasons we will not describe this in detail.
 Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
 The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
 This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the BWT as describes
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
 The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol its range of occurrences in the \SA.
-Using the same process as backward search, described in Section~\ref{sec-cst}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely deterimines the corresponding suffix tree node.
+Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely deterimines the corresponding suffix tree node.
 To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
 From the BWT we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in the BWT) and $s=$``the'' (4$^{th}$ and $5^{th}$);
 from which we can compute the suffix tree nodes, namely
@@ -258,7 +258,7 @@ $\nlplus{\dotpatdot}$, using forward \CST
   \end{algorithmic}
 \end{algorithm}
 
-\nlplusbacklname is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~6).
+\nlplusbacklname is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~5).
 Overall the time complexity of inference for both \nlplusbacklname and \nlplusfrontbacklname is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \nlplusfrontbackname using the forward and reverse \CSTs.
 Overall this leads to considerably faster computation of \ngram probabilities compared to the two \CST approach, and although still slower than highly optimised LM toolkits like \textsc{Srilm}, it is fast enough to support large scale experiments, and has considerably better scaling performance with the Markov order $m$ (even allowing unlimited order), as we will now demonstrate.
 
