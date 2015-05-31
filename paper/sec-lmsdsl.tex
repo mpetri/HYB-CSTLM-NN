@@ -201,7 +201,7 @@ Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
 although it is significantly faster if we remove the \emph{edge} calls
 and simply include in our counts all \ngrams finishing a sentence or
 spanning more than one sentence.
-This has a neglibile (often beneficial) effect on perplexity.
+This has a negligible (often beneficial) effect on perplexity.
 %These approximate discounts are typically within $10^{-2}$ of the correct values.
 
 \section{Improved Single \CST Approach}
@@ -221,7 +221,7 @@ This method assumes a \emph{wavelet tree} representation of the \SA component of
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
 The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol its range of occurrences in the \SA.
-Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely deterimines the corresponding suffix tree node.
+Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely determines the corresponding suffix tree node.
 To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
 From the BWT we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in the BWT) and $s=$``the'' (4$^{th}$ and $5^{th}$);
 from which we can compute the suffix tree nodes, namely
