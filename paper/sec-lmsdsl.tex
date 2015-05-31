@@ -156,7 +156,7 @@ compared to searching over the full index in each step.
           \Else  %\Comment{compute occurrence count and denominator}
              \Let{$c$}{$\nlplusfunc{\tr}{\nrfull}{\Bigcdot w^{k}_{k-i+1}}$} 
              \Let{$d$}{}
-             \Statex \hfill $\nlplusfrontbackfunc{\tf}{\nf}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$ %\Comment{precompute $\nlplus{\Bigcdot\Bigcdot}$}
+             \Statex \hfill $\nlplusfrontbackfunc{\tf}{\nf}{\tr}{\nr}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$ %\Comment{precompute $\nlplus{\Bigcdot\Bigcdot}$}
            \EndIf
            \If{$i > 1$}
              \If{$\nf$ is valid} %\Comment{compute backoff probability, or backoff for unseen contexts}
