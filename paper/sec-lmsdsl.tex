@@ -17,9 +17,9 @@ In electing to store the corpus directly in a suffix tree, we need to provide me
 The raw frequency counts are the simplest to compute. First we
 identify the locus node $v$ in the suffix tree for the query
 \ngram; the frequency corresponds to the node's \emph{size}, an $\Order{1}$ 
-operation which returns the number of descendents of $v$ \ehsan{Descendents or leaves of the subtree rooted at the node? This is not consistent with the size defined earlier on page 2.}. To illustrate, consider
+operation which returns the number of leaves below $v$. To illustrate, consider
 searching for $c(\text{\emph{the night}})$ in  Figure~\ref{fig-suffix-tree}, which
-matches a node with two descendents (labelled 19 and 12), and thus $c=2$. 
+matches a node with two leaves (labelled 19 and 12), and thus $c=2$. 
 
 More problematic are the occurrence counts, which come in several
 flavours: right contexts, $\nlplus{\patdot}$,
@@ -61,8 +61,8 @@ Algorithm~\ref{alg-occ-two-sided} shows how this is computed, with lines 7 and 8
 For each symbol, line 9 searches for an extended pattern incorporating
 the new symbol $s$ in the reverse \CSA (part of the reverse \CST), by
 refining the existing match $\nr$ using a single backward search
-operation after which we can compute $\nlplus{\patdot
-  s}$ \ehsan{this is confusing}.\footnote{Backward search in the reverse tree corresponds to
+operation after which we can compute $\nlplus{\dotpat
+  s}$.\footnote{Backward search in the reverse tree corresponds to
   searching for the reversed pattern appended with one symbol.}
 % Finally we can query the unique left contexts for the node (line 10),
 % which we accumulate to yield the return value.
@@ -75,7 +75,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
     \Require{$\nr$ in reverse \CST $\tr$ matches $\alpha$}
-    \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
+    \Function{N1PFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
         \Let{$d$}{$\depth{\tf}{\nf}$}   
@@ -95,7 +95,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
 \label{alg-occ-two-sided}
 \end{algorithm}
 
-\nlplusname\ and \nlplusfrontbackname\ can compute the requisite occurrence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
+\nlplusname\ and \nlplusfrontbackname\ can compute the requisite occurence counts for \ngram language modelling, however at considerable cost in terms of space and time. 
 The need for twin reverse and forward \CSTs incurs a significant storage overhead, as well as the search time to match the pattern in both \CSTs. 
 We show in Section \ref{sec-single-cst}  how we can avoid the need for the reversed suffix  tree, giving rise to lower memory requirements and faster runtime. 
 Beyond the need for twin suffix trees, the highest time complexity calls are \emph{string-depth}, \emph{edge} and \emph{backward-search}.
@@ -177,7 +177,7 @@ compared to searching over the full index in each step.
 
 %\afterpage{\clearpage}
 
-Algorithm~\ref{alg-kn-slow} \ehsan{the match ... in linee 1,2,3 is a bit confusing. These nodes are not keeping track of the same thing.} presents an outline of the approach.
+Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
 This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $(i-1)$gram context ($\nf, \nr$), $i=1 \ldots m$.
 The need to maintain three concurrent searches arises from the calls to \emph{size}, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14, 15; 17; 21; and 18, respectively).
 These calls impose conditions on the direction of the suffix tree, e.g., such that the edge 
@@ -193,15 +193,15 @@ The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
 $\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
 The precomputation algorithm is provided in Algorithm~6 in the \supp,
 and operates by traversing the nodes of the reverse \CST and at each
-stage computing the number of \ngrams that occur 1--4 times \ehsan{used for computing $D_m$ in eq.~\ref{eq:high}}, or with
-$\nlplus{\dotpat} \in [1,4]$ \ehsan{used for computing $D_k$ in eq.~\ref{eq:mid}}, for various lengths of \ngrams.
+stage computing the number of \ngrams that occur 1--4 times (used for computing $D_m$ in eq.~\ref{eq:high}), or with
+$\nlplus{\dotpat} \in [1,4]$ (used for computing $D_k$ in eq.~\ref{eq:mid}), for various lengths of \ngrams.
 These quantities are used to compute the discount parameters, which
 are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
 although it is significantly faster if we remove the \emph{edge} calls
 and simply include in our counts all \ngrams finishing a sentence or
 spanning more than one sentence.
-This has a negligible (often beneficial) effect on perplexity.
+This has a neglibile (often beneficial) effect on perplexity.
 %These approximate discounts are typically within $10^{-2}$ of the correct values.
 
 \section{Improved Single \CST Approach}
@@ -221,7 +221,7 @@ This method assumes a \emph{wavelet tree} representation of the \SA component of
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
 The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol its range of occurrences in the \SA.
-Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely determines the corresponding suffix tree node.
+Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely deterimines the corresponding suffix tree node.
 To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
 From the BWT we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in the BWT) and $s=$``the'' (4$^{th}$ and $5^{th}$);
 from which we can compute the suffix tree nodes, namely
