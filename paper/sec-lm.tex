@@ -23,9 +23,9 @@ where lower-order smoothed probabilities are defined recursively (for $1<k<m$) a
 \end{align}
 In the above formula, $D_k$ is the $k$gram-specific discount parameter, and 
 the \emph{occurrence count} 
-\mbox{$\nlplus{\uu\Bigcdot} = |\{w: c(\uu w)>0\}|$} 
-is the number of observed word types following the pattern $\uu$; 
-the occurence counts $\nlplus{\Bigcdot\uu}$ and $\nlplus{\Bigcdot\uu\Bigcdot}$ 
+\mbox{$\nlplus{\alpha\Bigcdot} = |\{w: c(\alpha w)>0\}|$} 
+is the number of observed word types following the pattern $\alpha$; 
+the occurence counts $\nlplus{\Bigcdot\alpha}$ and $\nlplus{\Bigcdot\alpha\Bigcdot}$ 
 are defined accordingly.
 %The highest order probability estimate in (\ref{eq:high}) interpolates a discounted frequency estimate with a $m-1$ order probability, defined as 
 %Note the difference between (\ref{eq:mid})~and~(\ref{eq:high}), in that the frequency counts are redefined as occurrence counts. 
