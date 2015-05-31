@@ -62,7 +62,7 @@ For each symbol, line 9 searches for an extended pattern incorporating
 the new symbol $s$ in the reverse \CSA (part of the reverse \CST), by
 refining the existing match $\nr$ using a single backward search
 operation after which we can compute $\nlplus{\patdot
-  s}$.\footnote{Backward search in the reverse tree corresponds to
+  s}$ \ehsan{this is confusing}.\footnote{Backward search in the reverse tree corresponds to
   searching for the reversed pattern appended with one symbol.}
 % Finally we can query the unique left contexts for the node (line 10),
 % which we accumulate to yield the return value.
@@ -74,7 +74,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
 \footnotesize
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
-    \Require{$\nf$ in reverse \CST $\tr$ matches $\alpha$}
+    \Require{$\nr$ in reverse \CST $\tr$ matches $\alpha$}
     \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
