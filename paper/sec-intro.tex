@@ -36,7 +36,7 @@ To be useful, LMs need to be not only accurate but also fast and compact.
 Depending on the order and the training corpus size, a typical \ngram
 LM may contain as many as several hundred billions of \ngrams
 \cite{brants2007large},
-raising challenges of efficient storage and retreival.
+raising challenges of efficient storage and retrieval.
 % Trevor: raising important algorithmic questions regarding efficient storage and retreival
 %
 As always, there is a trade-off between accuracy, space, and time, with recent papers considering small but approximate  \emph{lossy} LMs 
@@ -110,7 +110,7 @@ number of unique contexts to both sides.
 % resulting in slow runtime performance. 
 Our second method addresses this problem using a single \CST backed by
 a wavelet tree based FM-index \cite{fmmn-talg07}, which results in a better time
-complexity of querying and a considerably faster runtime \ehsan{arent runtime and querying the same thing?}.
+complexity of querying and a considerably faster runtime performance.
  
  % We further show how to leverage count queries for shorter contexts in queries for 
 % longer contexts to speed up the computation of KN-smoothed probabilities on the fly 
@@ -124,7 +124,7 @@ However our technique scales much more gracefully with Markov order $m$, allowin
 unbounded `non-Markov' application, and enables training on large
 corpora as we demonstrate on the complete Wikipedia dump.
 % What's the raw text size before numberising Matthias?
-Overall this paper illustates the vast potential succinct indexes have for language modelling  and
+Overall this paper illustrates the vast potential succinct indexes have for language modelling  and
 other `big data' problems in language processing such as machine translation 
 \cite{zhang_vogel_2005,DBLP:conf/acl/Callison-BurchBS05,lopez2008,DBLP:journals/tacl/HeLL15}.
 
