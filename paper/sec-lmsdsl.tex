@@ -177,7 +177,7 @@ compared to searching over the full index in each step.
 
 %\afterpage{\clearpage}
 
-Algorithm~\ref{alg-kn-slow} presents an outline of the approach.
+Algorithm~\ref{alg-kn-slow} \ehsan{the match ... in linee 1,2,3 is a bit confusing. These nodes are not keeping track of the same thing.} presents an outline of the approach.
 This uses a forward \CST, $\tf$, and a reverse \CST, $\tr$, with three \CST nodes (lines 2--4) tracking the match progress for the full $i$gram ($\nrfull$) and the $(i-1)$gram context ($\nf, \nr$), $i=1 \ldots m$.
 The need to maintain three concurrent searches arises from the calls to \emph{size}, $\nlplus{\dotpat}$, $\nlplus{\patdot}$ and $\nlplus{\dotpatdot}$ (lines 14, 15; 17; 21; and 18, respectively).
 These calls impose conditions on the direction of the suffix tree, e.g., such that the edge 
@@ -193,8 +193,8 @@ The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
 $\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
 The precomputation algorithm is provided in Algorithm~7 in the \supp,
 and operates by traversing the nodes of the reverse \CST and at each
-stage computing the number of \ngrams that occur 1--4 times or with
-$\nlplus{\dotpat} \in [1,4]$, for various lengths of \ngrams.
+stage computing the number of \ngrams that occur 1--4 times \ehsan{used for computing $D_m$ in eq.~\ref{eq:high}}, or with
+$\nlplus{\dotpat} \in [1,4]$ \ehsan{used for computing $D_k$ in eq.~\ref{eq:mid}}, for various lengths of \ngrams.
 These quantities are used to compute the discount parameters, which
 are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
