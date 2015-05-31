@@ -69,15 +69,17 @@ mf_labeller <- function(var, value){
 }
 
 d <- read.csv(csvFile,sep=";")
+d$method <- factor(d$method,levels=c("dual-CST","single-CST","srilm-compact","srilm-default"),labels=c("\\dualCST","\\singleCST","srilm-compact","srilm-default"))
+
 d$space <- d$space * 1024*1024
 d$timepersentence <- d$time / 10000
 
 srlmdef <- subset(d,d$method %in% c("srilm-default"))
 srlmc <- subset(d,d$method %in% c("srilm-compact"))
-dualcst <- subset(d,d$method %in% c("dual-CST"))
+dualcst <- subset(d,d$method %in% c("\\dualCST"))
 dualcsttwo <- subset(dualcst,dualcst$ngram == 2)
 dualcstrest <- subset(dualcst,dualcst$ngram != 2)
-singlecst <- subset(d,d$method %in% c("single-CST"))
+singlecst <- subset(d,d$method %in% c("\\singleCST"))
 singlecsttwo <- subset(singlecst,singlecst$ngram == 2)
 singlecstrest <- subset(singlecst,singlecst$ngram != 2)
 
