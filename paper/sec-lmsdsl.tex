@@ -17,9 +17,9 @@ In electing to store the corpus directly in a suffix tree, we need to provide me
 The raw frequency counts are the simplest to compute. First we
 identify the locus node $v$ in the suffix tree for the query
 \ngram; the frequency corresponds to the node's \emph{size}, an $\Order{1}$ 
-operation which returns the number of descendents of $v$ \ehsan{Descendents or leaves of the subtree rooted at the node? This is not consistent with the size defined earlier on page 2.}. To illustrate, consider
+operation which returns the number of leaves below $v$. To illustrate, consider
 searching for $c(\text{\emph{the night}})$ in  Figure~\ref{fig-suffix-tree}, which
-matches a node with two descendents (labelled 19 and 12), and thus $c=2$. 
+matches a node with two leaves (labelled 19 and 12), and thus $c=2$. 
 
 More problematic are the occurrence counts, which come in several
 flavours: right contexts, $\nlplus{\patdot}$,
@@ -61,7 +61,7 @@ Algorithm~\ref{alg-occ-two-sided} shows how this is computed, with lines 7 and 8
 For each symbol, line 9 searches for an extended pattern incorporating
 the new symbol $s$ in the reverse \CSA (part of the reverse \CST), by
 refining the existing match $\nr$ using a single backward search
-operation after which we can compute $\nlplus{\patdot
+operation after which we can compute $\nlplus{\dotpat
   s}$ \ehsan{this is confusing}.\footnote{Backward search in the reverse tree corresponds to
   searching for the reversed pattern appended with one symbol.}
 % Finally we can query the unique left contexts for the node (line 10),

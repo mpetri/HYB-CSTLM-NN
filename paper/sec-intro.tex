@@ -96,7 +96,7 @@ about $20\times$ the training corpus).
  
 In contrast, we make use of recent advances in  \emph{compressed suffix trees} (\CSTs) \cite{rno-talg11} 
 to build compact indices with much more modest memory requirements ($\approx$ the size of the corpus).
-We present methods for extracting frequency and unique occurrence count \ehsan{, based on unique contexts,}
+We present methods for extracting frequency and unique context count
 statistics for \ngram queries from \CSTs,  and two algorithms for
 computing Kneser-Ney LM probabilities on the fly using these statistics.
 The first method uses two \CSTs (over the corpus and the reversed corpus),
