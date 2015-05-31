@@ -75,7 +75,7 @@ Line 5 deals with the special case where the pattern does not match a complete e
   \begin{algorithmic}[1]
     \Require{$\nf$ in forward \CST $\tf$ matches $\alpha$}
     \Require{$\nr$ in reverse \CST $\tr$ matches $\alpha$}
-    \Function{N1PlusFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
+    \Function{N1PFrontBack}{$\tf, \nf, \tr, \nr, \alpha$} 
         \Let{$o$}{$0$}
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   \Comment{leaves and patterns internal to an edge}
         \Let{$d$}{$\depth{\tf}{\nf}$}   
