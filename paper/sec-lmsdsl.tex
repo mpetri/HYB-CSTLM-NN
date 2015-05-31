@@ -193,8 +193,8 @@ The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
 $\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
 The precomputation algorithm is provided in Algorithm~6 in the \supp,
 and operates by traversing the nodes of the reverse \CST and at each
-stage computing the number of \ngrams that occur 1--4 times used for computing $D_m$ in eq.~\ref{eq:high}, or with
-$\nlplus{\dotpat} \in [1,4]$ used for computing $D_k$ in eq.~\ref{eq:mid}, for various lengths of \ngrams.
+stage computing the number of \ngrams that occur 1--4 times (used for computing $D_m$ in eq.~\ref{eq:high}), or with
+$\nlplus{\dotpat} \in [1,4]$ (used for computing $D_k$ in eq.~\ref{eq:mid}), for various lengths of \ngrams.
 These quantities are used to compute the discount parameters, which
 are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
