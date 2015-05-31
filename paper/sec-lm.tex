@@ -30,7 +30,7 @@ are defined accordingly.
 %The highest order probability estimate in (\ref{eq:high}) interpolates a discounted frequency estimate with a $m-1$ order probability, defined as 
 %Note the difference between (\ref{eq:mid})~and~(\ref{eq:high}), in that the frequency counts are redefined as occurrence counts. 
 %The above equation is self-recursive, where each step shrinks the conditioning context by the least recent symbol. 
-The unigram probabilities are defined as
+The recursion stops at unigram level where the unigram probabilities are defined as
 %\begin{align*}
 %\label{eq:low}
 %

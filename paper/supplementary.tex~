@@ -1,0 +1,292 @@
+\documentclass[11pt,a4paper]{article}
+
+%\usepackage{acl2015}
+% just the paper size stuff, don't want two columns etc
+\setlength{\paperwidth}{21cm}   % A4
+\setlength{\paperheight}{29.7cm}% A4
+\setlength\topmargin{-0.5cm}    
+\setlength\oddsidemargin{0cm}   
+\setlength\textheight{24.7cm} 
+\setlength\textwidth{16.0cm}
+\setlength\columnsep{0.6cm}  
+\newlength\titlebox 
+\setlength\titlebox{5cm}
+\setlength\headheight{5pt}   
+\setlength\headsep{0pt}
+
+\usepackage{times}
+\usepackage{url}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{ifthen}
+\usepackage{xspace}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{scalerel}
+\usepackage{array}
+\usepackage[noend]{algpseudocode}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{tikz}
+\usepackage[all]{nowidow}
+ \usepackage{multirow,color}
+\usetikzlibrary{trees,matrix}
+
+\input{macros.tex}
+
+% some guff to allow very float-heavy pages
+    \renewcommand{\topfraction}{1}	% max fraction of floats at top
+    \renewcommand{\bottomfraction}{1}	% max fraction of floats at bottom
+    %   Parameters for TEXT pages (not float pages):
+    \setcounter{topnumber}{2}
+    \setcounter{bottomnumber}{2}
+    \setcounter{totalnumber}{4}     % 2 may work better
+    \setcounter{dbltopnumber}{2}    % for 2-column pages
+    \renewcommand{\dbltopfraction}{1}	% fit big float above 2-col. text
+    \renewcommand{\textfraction}{0.0001}	% allow minimal text w. figs
+    %   Parameters for FLOAT pages (not text pages):
+    \renewcommand{\floatpagefraction}{0.7}	% require fuller float pages
+	% N.B.: floatpagefraction MUST be less than topfraction !!
+    \renewcommand{\dblfloatpagefraction}{0.7}	% require fuller float pages
+
+\setlength\titlebox{25mm}
+
+% FIXME: have to set these to the number of alg/fig/tabs in cstlm.tex paper
+% so that numbering continues into supp material
+\setcounter{algorithm}{4}
+\setcounter{figure}{2}
+\setcounter{table}{2}
+
+\title{\textsc{Supplementary Material for} \\
+Compact, Efficient and Unlimited Capacity:
+    Language Modelling with Compressed Suffix Trees}
+
+\date{}
+
+\begin{document}
+\maketitle
+%\onecolumn
+
+\begin{algorithm}[htpb]
+  \caption{Compute one-sided occurrence counts, $\nlplus{\dotpat}$ or $\nlplus{\patdot}$ for pattern $\alpha$ 
+    \label{alg:n1plus}}
+  \begin{algorithmic}[1]
+    \Require{node $n$ in \CST $t$ matches $\alpha$}
+    \Function{N1Plus}{$t, n, \alpha$} %\Comment{ $t$ is either forward or reverse \CST}
+        \Let{$o$}{$1$} %\Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
+        %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
+        \If{$\depth{t}{n} = |\alpha|$}
+          \Let{$o$}{$\degree{t}{n}$}
+        % \Else
+        %   \Let{$o$}{$1$}
+        \EndIf
+      \State \Return{$o$}
+    \EndFunction
+  \end{algorithmic}
+\label{alg-nlplus}
+\end{algorithm}
+
+
+\begin{algorithm*}[htpb]
+  \caption{Compute backward occurrence counts, $\nlplus{\dotpat}$, using only forward \CST 
+    \label{alg:n1plusback_wt}}
+  \begin{algorithmic}[1]
+    \Require{$\nf$ is the node in the forward \CST $\tf$ matching pattern $\alpha$}
+    \Require{the \CSA component, $\af$ of $\tf$ is a wavelet tree}
+    \Function{N1PlusBack1}{$\tf, \nf, \alpha$} 
+    \Let{$S$}{$\intervalsymbols{\af}{\lb{\nf}}{\rb{\nf}}$}
+    \State \Return{$|S|$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm*}
+
+
+\begin{algorithm*}[htpb]
+  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
+    \label{alg:pkn_fwd}}
+  \begin{algorithmic}[1]
+    \Function{ProbKneserNey1}{$\tf, \ws, n$} 
+        \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
+        \Let{$\nffull$}{$\rooot{\tf}$} \Comment{match for $w^{k}_{k-i}$}
+        \Let{$p$}{$1$}
+        \For{$i \gets 1 \text{ to } n$}
+          \Let{$\nffull$}{$\backwardsearch{\tf}{\lb{\nffull}}{\rb{\nffull}}{w_{k-i+1}}$} \Comment{update matches in \CST}
+          \If{$i > 1$}
+             \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$}
+          \EndIf
+          \Let{$D$}{discount parameter for $n$-gram}
+          \If{$i = n$} % or if s == '<s>' 
+                 \Comment{compute the `count' and `denominator' for the full match}
+             \Let{$c$}{$\size{\tf}{\nffull}$} 
+             \Let{$d$}{$\size{\tf}{\nf}$}
+          \Else
+             \Let{$c$}{$\nlplusbacklfunc{\tf}{\nffull}{\Bigcdot w^{k-1}_{k-i+1}}$}
+             \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
+           \EndIf
+           \If{$i > 1$}
+             \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
+                  \Let{$d$}{$\size{\tf}{\nf}$}
+                  \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
+              \EndIf
+          \Else
+             \Let{$p$}{ $\frac{c}{d}$}
+          \EndIf
+        \EndFor
+      \State \Return{$p$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm*}
+
+\begin{algorithm*}[htpb]
+  \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
+  \begin{algorithmic}[1]
+    \Function{PrecomputeDiscounts}{$\tr, n$}
+        \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
+        \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\dotpat} = j$}
+        \Let{$N^{1+}(\Bigcdot\Bigcdot)$}{$0$} \Comment{number of unique bigrams}
+        \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
+           \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
+           %\If{$\leaf{\tr}{\nr}$} 
+               \State $d \gets \depth{\tr}{\nr}$  \Comment{find the length of the edge}
+            %\Else
+               %\State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
+             %\EndIf
+             \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+n\right)$}
+                \Let{$s$}{$\edge{\tr}{\nr}{k}$} %\Comment{FIXME: I haven't been consistent with edge index}
+                \If{$s$ is the end of sentence sentinel}
+                    \State skip all children of $\nr$ 
+                \Else
+                     \Let{$f$}{$\size{\tr}{\nr}$} \Comment{retrieve pattern frequency}
+                     \If{$1 \le f \le 4$}
+                        \Let{$c_{k,f}$}{$c_{k,f} + 1$}
+                     \EndIf
+                     \If{$f = 2$}
+                        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$N^{1+}(\Bigcdot, \Bigcdot) + 1$}
+                     \EndIf
+
+                     \State $g \gets \nlplus{\tr}{\nr}{\dot \alpha}$ \Comment{retrieve occurrence count}
+                     \If{$1 \le g \le 4$}
+                        \Let{$N^1_{g,f}$}{$c_{k,f} + 1$}
+                     \EndIf
+                 \EndIf
+          \EndFor
+        \EndFor
+      \State \Return{$c, N^1, N^{1+}(\Bigcdot, \Bigcdot)$}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm*}
+
+
+\begin{table*}[htpb]
+\footnotesize
+\begin{tabular}{p{0.2\textwidth}p{0.53\textwidth}p{0.2\textwidth}}
+\toprule
+Function/Constant & Description & Complexity \\
+\midrule
+$\SASAMPLE$ & sample rate of the suffix array. determines the number of jumps in \colbwt\ required before a suffix array value can be accessed & $8$ (in our exp.) \\
+$\SA[i]$ & access the $i$-th element of the suffix array & $\Order{\SASAMPLE \log \alphabetsize}$ \\
+$\leaf{t}{n}$ & tests if node $n$ is a leaf of the  $t$ & $\Order{1}$ \\
+$\depth{t}{n}$ & pattern length for the path from root to $n$ (inclusive). Requires $\SA[i]$ access if leaf & $\Order{1} \text{~non-leaf;}$ $\Order{\SASAMPLE \log \alphabetsize} \text{~leaf}$\\
+$\edge{t}{n}{k}$ & $k^{th}$ symbol in the edge label from root for node $n$. Requires $\SA[i]$ access &  $\Order{\SASAMPLE \log \alphabetsize}$ \\
+$\degree{t}{n}$ &  number of child nodes under parent $n$  &  $\Order{\sigma / 64}$ \\
+$\children{t}{n}$ & list of all $d$ child nodes under $n$  &  $\Order{ \sigma / 64 + d}$ \\
+$\backwardsearch{a}{l}{r}{s}$ & finds the node $v=[l',r']$ from parent node $\alpha=v'=[l,r]$ matching the pattern $s \alpha$. Requires $2$ \rankop\ operations on the wavelet tree  &  $\Order{\log \alphabetsize}$ \\
+$\forwardsearch{a}{l}{r}{s}$ & finds the node $v=[l',r']$ from parent node $\alpha=v'=[l,r]$ matching the pattern $\alpha s$. 
+Requires $\log \alphabetsize$ accesses to $\SA$ and one LCP access &  
+$\Order{\SASAMPLE \log^2 \alphabetsize + LCP_C}$ \\
+$\intervalsymbols{a}{l}{r}$ & finds the set of symbols $P(\alpha)$ preceeding pattern $\alpha$ matched by $[l, r]$; returns a list of tuples describing the bounds and the precedding symbol $\langle l, r, s\rangle$  &  $\Order{|P(\alpha)| \log \alphabetsize}$ \\
+\bottomrule
+\end{tabular}
+\caption{Summary of \CSA and \CST functions used and their time complexity of inference. The above assumes that $n$ or (equivalently) $[l, r]$ matches $\alpha$ in the \CSA $a$ and/or \CST $t$.}
+\end{table*}
+
+
+\begin{table}
+\centering{
+\begin{tabular}{ll|ccc|c}
+Language&&Size (MB)&Tokens (M)& Token Types& Sentences (K)\\
+\toprule
+Bulgarian&BG&36.11&8.53&114930&329\\
+Czech&CS&53.48&12.25&174592&535\\
+German&DE&171.80&44.07&399354&1785 \\
+English&EN&179.15&49.32&124233&1815\\
+Finnish&FI&145.32&32.85&721389&1737\\
+French&FR&197.68&53.82&147058&1792\\
+Hungarian&HU&52.53&12.02&318882&527\\
+Italian&IT&186.67&48.08&178259&1703\\
+Portuguese&PT&187.20&49.03&183633&1737\\
+\end{tabular}}
+\caption{Tokens and sentence counts refer to the training partition. }\label{fig:data}
+\end{table}
+
+\iffalse
+\begin{table*}\tiny
+\centering
+\begin{tabular}{llllll|llll||llll|llll||l}
+\toprule 
+    & & \multicolumn{8}{c}{\SRILM} & \multicolumn{8}{c}{\CST} & \multicolumn{1}{c}{pplx}\\
+   & & \multicolumn{4}{c}{Default} & \multicolumn{4}{c}{Compact} & \multicolumn{4}{c}{Dual}& \multicolumn{4}{c}{Single}&\\
+& & \multicolumn{2}{c}{Query}& \multicolumn{2}{c}{Training}& \multicolumn{2}{c}{Query} & \multicolumn{2}{c}{Training} & \multicolumn{2}{c}{Query}& \multicolumn{2}{c}{Building}& \multicolumn{2}{c}{Query}& \multicolumn{2}{c}{Building}&\\
+      \midrule
+&&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&MB&Sec&\\
+      \midrule
+  \multirow{3}{*}{BG} 
+ & n=2 &29.6&0.9&69.43&13.53&16.67&1.151&43.2&21.53&87.01&28.52&261.06&517.73&68.08&200.26&204.25&183.69&117.39\\
+ & n=3 &145.172&3.03&202.1&54.5&93.44&4.1105&139.32&65.37&87.01&9048.49&261.06&517.73&68.08&1419.42&204.25&183.69&76.79\\
+ & n=5 &675.54&18.3&582.78&263.5&530.46&15.725&482.68&292.56&87.01&10434.3&261.06&517.73&68.08&1454&204.25&183.69&73.33\\
+ & n=10 &&&&&&&&&87.01&&261.06&517.73&68.08&1505.12&204.25&183.69&73.02\\
+ & n=$\infty$ &&&&&&&&&87.01&&261.06&517.73&68.08&1605.99&204.25&183.69&73.01\\\hline
+  \multirow{3}{*}{CZ} 
+ & n=2 &48.32&1.55&125.89&30.32&30.65&1.878&80.13&40.78&132.54&25.94&397.64&1016&104.15&329.26&312.47&300.94&232.36\\
+ & n=3 &274.54&6.1&356.42&111.55&179.69&6.07&253.36&126.32&132.54&8750.31&397.64&1016&104.15&1738.14&312.47&300.94&161.15\\
+ & n=5 &1129.31&29.28&941.836&464.066&904.64&23.73&794.17&511.32&132.54&10387&397.64&1016&104.15&1787.94&312.47&300.94&154.89\\
+ & n=10 &&&&&&&&&132.54&&397.64&1016&104.15&1744.09&312.47&300.94&154.78\\
+ & n=$\infty$ &&&&&&&&&132.54&&397.64&1016&104.15&1696.39&312.47&300.94&154.87\\\hline
+  \multirow{3}{*}{DE} 
+ & n=2 &96.97&2.87&252.95&84.73&64.31&4.67&163.45&118.868&483.06&38.85&1449&3992&368.69&970.16&1106.09&991.06&178.11\\
+ &n=3&588.92&15.6&856.22&320.71&389.15&13.359&591.15&366.4&483.06&25920&1449&3992&368.69&4277.47&1106.09&991.06&115.87\\
+ & n=5 &3202.4&79.03&2811&1545.83&2493.43&62.911&2310.73&1721.543&483.06&28216&1449&3992&368.69&4374.95&1106.09&991.06&108.61\\
+ & n=10 &11377.5&394.197&7933.58&6575.628&10510.5&260.665&7385.69&7202.073&483.06&&1449&3992&368.69&4379.59&1106.09&991.06&108.26\\
+ & n=$\infty$ &&&&&&&&&483.06&&1449&3992&368.69&4936.86&1106.09&991.06&108.27\\\hline
+  \multirow{3}{*}{EN} 
+ & n=2 &50.8512&1.311&133.134&39.227&28.9268&1.982&79.9223&78.124&484.04&31.725&1452.16&3625&371.07&358.63&1113.25&939.43&105.25\\
+ & n=3 &366.96&7.939&608.273&187.751&229.921&8.474&395.966&244.404&484.04&18658&1452.16&3625&371.07&2555.99&1113.25&939.43&67.14\\
+ & n=5 &2754.65&62.326&2528.91&1179.648&2078.58&51.353&2027.39&1395.396&484.04&20837&1452.16&3625&371.07&2813.22&1113.25&939.43&60.12\\
+ & n=10 &&&&&&&&&484.04&&1452.16&3625&371.07&2936.07&1113.25&939.43&59.78\\
+ & n=$\infty$ &&&&&&&&&484.04&&1452.16&3625&371.07&2383.83&1113.25&939.43&59.92\\\hline
+  \multirow{3}{*}{FI} 
+ & n=2 &164.316&6.368&418.206&169.477&107.089&6.324&272.568&219.897&402.01&26.41&1206.04&3413&313.1&1157.3&939.34&849.23&446.29\\
+ & n=3 &848.814&19.052&1065.71&489.493&568.142&18.482&772.77&625.53&402.01&21635&1206.04&3413&313.1&4549.67&939.34&849.23&327.26\\
+ & n=5 &3156.15&108.746&2630.37&1665.111&2550.97&61.121&2225.55&2011.189&402.01&23730&1206.04&3413&313.1&4492&939.34&849.23&314.46\\
+ & n=10 &&&&&&&&&402.01&&1206.04&3413&313.1&4499.58&939.34&849.23&314.03\\
+ & n=$\infty$ &&&&&&&&&402.01&&1206.04&3413&313.1&4616.33&939.34&849.23&314.22\\\hline
+  \multirow{3}{*}{FR} 
+ & n=2 &51.2345&1.445&134.724&46.177&30.3573&1.849&82.2518&77.219&545.31&44.78&1635.96&227.98&409.03&589.61&1227.13&1005.79&89.95\\
+ & n=3 &360.534&7.573&587.402&186.42&228.099&11.18&385.87&279.465&545.31&15180&1635.96&227.98&409.03&3832.33&1227.13&1005.79&54.84\\
+ & n=5 &2727.57&84.835&2537.06&1308.478&2054.06&54.643&2028.54&1425.704&545.31&16120&1635.96&227.98&409.03&3895.4&1227.13&1005.79&48.16\\
+ & n=10 &&&&&&&&&545.31&&1635.96&227.98&409.03&3983.98&1227.13&1005.79&47.88\\
+ & n=$\infty$ &&&&&&&&&545.31&&1635.96&227.98&409.03&4233.02&1227.13&1005.79&47.91\\\hline
+  \multirow{3}{*}{HU} 
+ & n=2 &65.1734&2.071&157.863&46.87&40.6251&2.437&102.55&51.328&140.49&24.88&421.47&77.92&110.21&707.68&330.66&56.49&251.49\\
+ & n=3 &304.252&6.884&388.353&141.252&204.766&7.038&280.492&165.791&140.49&17432&421.47&77.92&110.21&3042.19&330.66&56.49&189.56\\
+ & n=5 &1135.78&35.256&959.429&489.723&915.679&22.423&807.926&597.215&140.49&18858&421.47&77.92&110.21&3074.81&330.66&56.49&182.18\\
+ & n=10 &&&&&&&&&140.49&&421.47&77.92&110.21&3045.14&330.66&56.49&182.08\\
+ & n=$\infty$ &&&&&&&&&140.49&&421.47&77.92&110.21&3084.71&330.66&56.49&182.18\\\hline
+  \multirow{3}{*}{IT} 
+ & n=2 &61.0095&1.81&163.93&50.116&37.733&2.137&101.353&82.037&491.18&40.2&1473.54&117.43&374.23&565.45&1122.73&119.47&132.26\\
+ & n=3 &442.542&10.448&710.192&221.435&281.213&10.207&469.411&278.894&491.18&15560&1473.54&117.43&374.23&3331.25&1122.73&119.47&83.88\\
+ & n=5 &3045.44&74.775&2733.79&1408.377&2323.81&61.3&2218.28&1625.207&491.18&16696&1473.54&117.43&374.23&3564.12&1122.73&119.47&78.18\\
+ & n=10 &&&&&&&&&491.18&&1473.54&117.43&374.23&3698.75&1122.73&119.47&77.81\\
+ & n=$\infty$ &&&&&&&&&491.18&&1473.54&117.43&374.23&3586.56&1122.73&119.47&77.80\\\hline
+  \multirow{3}{*}{PT} 
+ & n=2 &58.6033&1.678&156.691&56.284&37.3682&2.216&98.564&83.269&501.21&43.86&1503.67&219.544&380.93&829.62&1142.81&142.23&121.43\\
+ & n=3 &418.646&10.344&674.501&234.014&269.649&9.158&448.435&261.031&501.21&21328&1503.67&219.544&380.93&4295.43&1142.81&142.23&74.74\\
+ & n=5 &2936.56&68.394&2664.59&1475.629&2238.67&65.599&2155.01&1468.062&501.21&22336&1503.67&219.544&380.93&4242.86&1142.81&142.23&68.84\\
+ & n=10 &&&&&&&&&501.21&&1503.67&219.544&380.93&4468.97&1142.81&142.23&68.53\\
+ & n=$\infty$ &&&&&&&&&501.21&&1503.67&219.544&380.93&4495.51&1142.81&142.23&68.59\\\hline
+\end{tabular}
+\caption{Time-Space comparison of construction and query time for different \CST and \SRILM methods.}
+\end{table*}
+\fi
+\end{document}

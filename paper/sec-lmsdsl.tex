@@ -1,6 +1,6 @@
 %Computing counts, N1+ of several flavours of different sized n-grams.
 
-The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying how many different contexts the \ngram has occurred.
+The key requirements for computing probability under a Kneser-Ney language model are two types of counts: raw frequencies of \ngrams and occurrence counts, quantifying how many different contexts the \ngram has occurred in.
 Figure~\ref{fig-counts-example} (right) illustrates the requisite
 counts for calculating the probability of an example 4-gram.
 In electing to store the corpus directly in a suffix tree, we need to provide mechanisms for computing these counts based on queries into the suffix tree.
@@ -17,7 +17,7 @@ In electing to store the corpus directly in a suffix tree, we need to provide me
 The raw frequency counts are the simplest to compute. First we
 identify the locus node $v$ in the suffix tree for the query
 \ngram; the frequency corresponds to the node's \emph{size}, an $\Order{1}$ 
-operation which returns the number of descendents of $v$. To illustrate, consider
+operation which returns the number of descendents of $v$ \ehsan{Descendents or leaves of the subtree rooted at the node? This is not consistent with the size defined earlier on page 2.}. To illustrate, consider
 searching for $c(\text{\emph{the night}})$ in  Figure~\ref{fig-suffix-tree}, which
 matches a node with two descendents (labelled 19 and 12), and thus $c=2$. 
 
@@ -33,8 +33,8 @@ The first of these can be handled easily, as
    1, & \text{otherwise}
 \end{array} \right.
 \end{equation*}
-where $t$ is the \CST, $v$ is the node matching $\alpha$, and 
-$\pathlabel{t}{v}$ denotes the label of the path from the root to $v$.%
+where $v$ is the node matching $\alpha$, and 
+$\pathlabel{t}{v}$ denotes the  {\it path-label} of $v$.%
 \footnote{See the \supp for the explicit algorithm, but note there are some corner cases involving sentinels \#
   and \$, which must be excluded when computing occurrence counts.
   Such tests have been omitted from the presentation for clarity. On publication the
@@ -47,7 +47,7 @@ Figure~\ref{fig-suffix-tree} as it can only be followed by \emph{in}, $\nlplus{\
 % This method is illustrated in Algorithm~\ref{alg-nlplus}, which computes $\nlplus{\dotpat}$ 
 % when $t$ is the reversed \CST and $\nlplus{\patdot}$ when $t$ is the forward \CST.
 A similar line of reasoning applies to computing $\nlplus{\dotpat}$. 
-Assuming we also have a second suffix tree representing the \emph{reversed corpus}, we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$). 
+Assuming we also have a second suffix tree representing the \emph{reversed corpus}, we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$, where $t$ is the \CST.). 
 
 The final component of the Kneser-Ney LM computation is
 $\nlplus{\dotpatdot}$, the number of unique contexts considering

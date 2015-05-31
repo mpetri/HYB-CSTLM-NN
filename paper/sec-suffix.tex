@@ -32,7 +32,7 @@ keeps the keep in the town\# the night keeper keeps the keep in the night\#\$}''
 \end{figure*}
 
 Let {\col} be a string of size {\collen} drawn from an alphabet {\alphabet} of
-size {\alphabetsize}. Let {$\col[i..\collen-1]$} be a {\it suffix} of {\col}.
+size {\alphabetsize}. Let {$\col[i..\collen-1]$} be a {\it suffix} of {\col} \ehsan{Do we use this anywhere in the write-up?}.
 The {\it suffix tree}~\cite{w-swat73} of {\col} is the compact labeled
 tree of $\collen+1$ leaves where the root to leaf paths correspond to all suffixes of {\col\$},
 where \$ is a terminating symbol not in {\alphabet}. The {\it path-label}
@@ -130,7 +130,7 @@ based on their Huffman-codes the size of the wavelet tree reduces to $nH_0(\col)
 bits which can be further be reduced to to $\collen H_k(\col)+o(\collen \log \sigma)$ bits by using 
 entropy compressed bitvectors.} Additional space is required to access $\SA[i]$
 or the inverse suffix array $\SA^{-1}[SA[i]]=i$. In the simplest scheme, both 
-values are periodically sampled using a given sample rate \SASAMPLE (e.g. 32). Then, 
+values are periodically sampled using a given sample rate \SASAMPLE (e.g. 32) \ehsan{1-2 sentences about SAS is required.}. Then, 
 for any $\SA[i]$ or $\SA^{-1}[i]$, at most $\Order{\SASAMPLE}$ \rankop\
 operations on \colbwt\ are required to access the value.
 Different sample rates, bitvector implementations and wavelet tree types result
