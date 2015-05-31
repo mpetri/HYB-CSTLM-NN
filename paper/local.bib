@@ -30,6 +30,8 @@
 @string{ pvldb = "PVLDB" }
 @string{ acsc= "Proc. ACSC" }
 @string{ acl = "Proc. ACL" }
+@string{ tacl = "Transactions of the ACL" }
+@string{ eacl = "Proc. EACL" }
 @string{ aclhlt = "Proc. ACL-HLT" }
 @string{ emnlp = "Proc. EMNLP" }
 @string{ lrec = "Proc. LREC" }
@@ -40,6 +42,44 @@
 @string{ asru = "Proc. ASRU"}
 @string{ swat = "Proc. SWAT"}
 @string{ fsttcs = "Proc. FSTTCS"}
+
+@article{DBLP:journals/tacl/HeLL15,
+  author    = {Hua He and
+               Jimmy Lin and
+               Adam Lopez},
+  title     = {Gappy Pattern Matching on GPUs for On-Demand Extraction of Hierarchical
+               Translation Grammars},
+  journal   = tacl,
+  volume    = {3},
+  pages     = {87--100},
+  year      = {2015}
+}
+
+@phdthesis{lopez2008,
+  author       = {Adam Lopez}, 
+  title        = {Machine Translation by Pattern Matching}, 
+  school       = {University of Maryland},
+  year         = 2008
+}
+
+@inproceedings{DBLP:conf/acl/Callison-BurchBS05,
+  author    = {Chris Callison{-}Burch and
+               Colin J. Bannard and
+               Josh Schroeder},
+  title     = {Scaling Phrase-Based Statistical Machine Translation to Larger Corpora
+               and Longer Phrases},
+  booktitle = acl, 
+  year      = {2005}
+}
+
+
+@INPROCEEDINGS{zhang_vogel_2005, 
+AUTHOR = {Ying Zhang and Stephan Vogel}, 
+TITLE = {An Efficient Phrase-to-Phrase Alignment Model for Arbitrarily Long Phrase and Large Corpora}, 
+BOOKTITLE = eacl,
+year=2005
+}
+ 
 
 @inproceedings{DBLP:conf/acl/TalbotO07,
   author    = {David Talbot and
@@ -79,8 +119,7 @@ pages = {1425-1428}
 @inproceedings{Chazelle:2004:BFE:982792.982797,
  author = {Chazelle, Bernard and Kilian, Joe and Rubinfeld, Ronitt and Tal, Ayellet},
  title = {The Bloomier Filter: An Efficient Data Structure for Static Support Lookup Tables},
- booktitle = {Proceedings of the Fifteenth Annual ACM-SIAM Symposium on Discrete Algorithms},
- series = soda,
+ booktitle = soda, 
  year = {2004},
  pages = {30--39}
 } 
@@ -374,20 +413,20 @@ address = {New York, NY, USA}
 }
 
 % Berkeley-LM
+%  pages={258--267},
 @inproceedings{pauls2011faster,
   title={Faster and smaller n-gram language models},
   author={Pauls, Adam and Klein, Dan},
   booktitle=aclhlt,
-  pages={258--267},
   year={2011}
 }
 
 % KenLM
+%  pages={187--197},
 @inproceedings{heafield2011kenlm,
   title={{KenLM}: Faster and smaller language model queries},
   author={Heafield, Kenneth},
   booktitle=wmt,
-  pages={187--197},
   year={2011}
 }
 
