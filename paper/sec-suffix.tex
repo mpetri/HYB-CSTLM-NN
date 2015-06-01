@@ -130,7 +130,9 @@ based on their Huffman-codes the size of the wavelet tree reduces to $nH_0(\col)
 bits which can be further be reduced to to $\collen H_k(\col)+o(\collen \log \sigma)$ bits by using 
 entropy compressed bitvectors.} If locations of matches are required, additional space is needed 
 to access $\SA[i]$ or the inverse suffix array $\SA^{-1}[SA[i]]=i$. In the simplest scheme, both 
-values are periodically sampled using a given sample rate \SASAMPLE (e.g. 32) such that $\SA[i] \mod \SASAMPLE = 0$. Then, 
+values are periodically sampled using a given sample rate \SASAMPLE (e.g. 32) such that 
+\reza{should it be $n$ instead of $\SA[i]$}
+$\SA[i] \mod \SASAMPLE = 0$. Then, 
 for any $\SA[i]$ or $\SA^{-1}[i]$, at most $\Order{\SASAMPLE}$ \rankop\
 operations on \colbwt\ are required to access the value.
 Different sample rates, bitvector implementations and wavelet tree types result
