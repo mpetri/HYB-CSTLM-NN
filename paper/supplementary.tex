@@ -72,7 +72,7 @@ Compact, Efficient and Unlimited Capacity:
     \label{alg:n1plus}}
   \begin{algorithmic}[1]
     \Require{node $n$ in \CST $t$ matches $\alpha$}
-    \Function{N1Plus}{$t, n, \alpha$} %\Comment{ $t$ is either forward or reverse \CST}
+    \Function{N1P}{$t, n, \alpha$} %\Comment{ $t$ is either forward or reverse \CST}
         \Let{$o$}{$1$} %\Comment{yielding $\nlplus{\patdot}$ or $\nlplus{\dotpat}$, respectively}
         %\If{$\leaf{t}{n} \, \wedge \, \depth{t}{n} = |\alpha|$}
         \If{$\depth{t}{n} = |\alpha|$}
@@ -102,7 +102,7 @@ Compact, Efficient and Unlimited Capacity:
 
 
 \begin{algorithm*}[htpb]
-  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
+  \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(m-1)}\big)$, using a single \CST
     \label{alg:pkn_fwd}}
   \begin{algorithmic}[1]
     \Function{ProbKneserNey1}{$\tf, \ws, m$} 
@@ -114,23 +114,23 @@ Compact, Efficient and Unlimited Capacity:
           \If{$i > 1$}
              \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$}
           \EndIf
-          \Let{$D_i$}{discount parameter for \ngram}
+          \Let{$D_i$}{discount parameter for $i$gram}
           \If{$i = m$} % or if s == '<s>' 
                  \Comment{compute the `count' and `denominator' for the full match}
              \Let{$c$}{$\size{\tf}{\nffull}$} 
              \Let{$d$}{$\size{\tf}{\nf}$}
           \Else
              \Let{$c$}{$\nlplusbacklfunc{\tf}{\nffull}{\Bigcdot w^{k-1}_{k-i+1}}$}
-             \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} \Comment{N.b., precompute $\nlplus{\Bigcdot\Bigcdot}$}
+             \Let{$d$}{$\nlplusfrontbacklfunc{\tf}{\nf}{\Bigcdot w^{k-1}_{k-i+1} \Bigcdot}$} 
            \EndIf
            \If{$i > 1$}
              \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
-                  \Let{$d$}{$\size{\tf}{\nf}$}
+                  %\Let{$d$}{$\size{\tf}{\nf}$}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
                   \Let{$p$}{ $\frac{1}{d} \left( \max(c-D_i, 0)  + D_i  q  p \right)$}
               \EndIf
           \Else
-             \Let{$p$}{ $\frac{c}{d}$}
+             \Let{$p$}{ ${c}/{N^{1+}(\Bigcdot \Bigcdot)}$}
           \EndIf
         \EndFor
       \State \Return{$p$}
@@ -141,9 +141,9 @@ Compact, Efficient and Unlimited Capacity:
 \begin{algorithm*}[htpb]
   \caption{Precompute Kneser-Ney discounts\label{alg:precompute}}
   \begin{algorithmic}[1]
-    \Function{PrecomputeDiscounts}{$\tr, n$}
-        \Let{$c_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with count $j$}
-        \Let{$N^1_{k,j}$}{$0 \quad \forall k \in [1, n] , j \in [1, 4]$} \Comment{number of $k$-grams with $N^1{\dotpat} = j$}
+    \Function{PrecomputeDiscounts}{$\tr, m$}
+        \Let{$c_{k,f}$}{$0 \quad \forall k \in [1, m] , f \in [1, 2]$} \Comment{number of $k$-grams with count $f$}
+        \Let{$N^1_{k,g}$}{$0 \quad \forall k \in [1, m] , g \in [1, 2]$} \Comment{number of $k$-grams with  $N^{1+}({\dotpat}) = g$}
         \Let{$N^{1+}(\Bigcdot\Bigcdot)$}{$0$} \Comment{number of unique bigrams}
         \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
            \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
@@ -152,22 +152,31 @@ Compact, Efficient and Unlimited Capacity:
             %\Else
                %\State $d \gets \infty$  \Comment{leaves continue to the end of corpus}
              %\EndIf
-             \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+n\right)$}
+             \For{$k \gets d_P+1 \text{ to } \min\left(d, d_P+m\right)$}
                 \Let{$s$}{$\edge{\tr}{\nr}{k}$} %\Comment{FIXME: I haven't been consistent with edge index}
                 \If{$s$ is the end of sentence sentinel}
                     \State skip all children of $\nr$ 
                 \Else
-                     \Let{$f$}{$\size{\tr}{\nr}$} \Comment{retrieve pattern frequency}
-                     \If{$1 \le f \le 4$}
-                        \Let{$c_{k,f}$}{$c_{k,f} + 1$}
-                     \EndIf
-                     \If{$f = 2$}
+
+                     \If{$k = 2$}
                         \Let{$N^{1+}(\Bigcdot \Bigcdot)$}{$N^{1+}(\Bigcdot \Bigcdot) + 1$}
                      \EndIf
 
-                     \State $g \gets \nlplusfunc{\tr}{\nr}{\Bigcdot \alpha}$ \Comment{retrieve occurrence count}
-                     \If{$1 \le g \le 4$}
-                        \Let{$N^1_{g,f}$}{$c_{k,f} + 1$}
+                     \Let{$f$}{$\size{\tr}{\nr}$} \Comment{retrieve pattern frequency}
+                     \If{$1 \le f \le 2$}
+                        \Let{$c_{k,f}$}{$c_{k,f} + 1$}
+                     \EndIf
+
+                     %\State $g \gets \nlplusfunc{\tr}{\nr}{\Bigcdot \alpha}$ \Comment{retrieve occurrence count}
+
+                     \If{$k < d$}
+                        \Let{$g$}{1}
+                     \Else
+                        \Let{$g$}{\degree{t}{$\nr$}}
+                     \EndIf
+
+                     \If{$1 \le g \le 2$}
+                        \Let{$N^1_{k,g}$}{$N^1_{k,g} + 1$}
                      \EndIf
                  \EndIf
           \EndFor

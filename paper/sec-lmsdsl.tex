@@ -47,7 +47,10 @@ Figure~\ref{fig-suffix-tree} as it can only be followed by \emph{in}, $\nlplus{\
 % This method is illustrated in Algorithm~\ref{alg-nlplus}, which computes $\nlplus{\dotpat}$ 
 % when $t$ is the reversed \CST and $\nlplus{\patdot}$ when $t$ is the forward \CST.
 A similar line of reasoning applies to computing $\nlplus{\dotpat}$. 
-Assuming we also have a second suffix tree representing the \emph{reversed corpus}, we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$, where $t$ is the \CST.). 
+Assuming we also have a second suffix tree representing the \emph{reversed corpus}, 
+we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the 
+occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$\footnote{In the presented algorithms, we overload the pattern argument in function calls for 
+readability, and use $\Bigcdot$ to denote the query context.}, where $t$ is the \CST.). 
 
 The final component of the Kneser-Ney LM computation is
 $\nlplus{\dotpatdot}$, the number of unique contexts considering
@@ -224,9 +227,9 @@ The \emph{interval-symbols} method uses \rankop~ operations to efficiently ident
 and the ranges $\SA[l_s,r_s]$ corresponding to the patterns $s\alpha$ for all $s \in P(\alpha)$ by visiting all leaves of the wavelet tree of symbols occurring in $\colbwt[l,r]$ (corresponding to $\alpha$) in $\Order{|P(\alpha)|\log\alphabetsize}$ time (lines 6-8).
 These ranges $\SA[l',r']$ can be used to find the corresponding suffix tree node for each $s\alpha$ in $\Order{1}$ time.
 To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
-From \colbwt\ we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in \colbwt) and $s=$``the'' (4$^{th}$ and $5^{th}$);
+From \colbwt\ we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in \colbwt) and $s=$``the'' ($3^{rd}$ and $4^{th}$);
 from which we can compute the suffix tree nodes, namely
-$[15,15]$ and $[16+(4-1),16+(5-1)] = [19,20]$ for ``old'' and ``the'' respectively.\footnote{Using the offsets into the \SA for each symbol, $C_{\text{old}} = 15$ and $C_{\text{the}} = 16$, while $-1$ adjusts for counting from 1.}
+$[15,15]$ and $[16+(3-1),16+(4-1)] = [18,19]$ for ``old'' and ``the'' respectively.\footnote{Using the offsets into the \SA for each symbol, $C_{\text{old}} = 15$ and $C_{\text{the}} = 16$, while $-1$ adjusts for counting from 1.}
 %$C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
 %For example, in Figure~\ref{fig-suffix-tree} the pattern $\alpha=\text{``night''}$ is preceeded by $s=$``old'' and $s=$``the''.
 %These correspond to the only occurrence of ``old'', and the 4$^{th}$ and 5$^{th}$ occurrence of ``the'' in the BWT.
@@ -247,11 +250,11 @@ $\nlplus{\dotpatdot}$, using forward \CST
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
         \If{$\depth{\tf}{\nf} > |\alpha|$}   
           \Let{$o$}{$\nlplusbacklfunc{\tf}{\nf}{\dotpat}$} %\Comment{only one unique right context}
-        \Else
+        \Else 
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\tf}{\lb{\nf}}{\rb{\nf}}$}
                \Let{$l'$}{$C_s + l$}% \Comment{compute offsets into \SA for patterns starting with symbol $s$}
                \Let{$r'$}{$C_s + r$} %\Comment{adjusted by occurence indices $[l,r]$}
-               \Let{$o$}{$o + \nlplusfrontlfunc{\tf}{\text{node}(l', r')}{s\patdot }$}
+               \Let{$o$}{$o + \nlplusfunc{\tf}{\text{node}(l', r')}{s\patdot }$}
             \EndFor
           \EndIf
       \State \Return{$o$}
