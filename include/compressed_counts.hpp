@@ -6,6 +6,7 @@
 
 #include "constants.hpp"
 #include "collection.hpp"
+#include "logging.hpp"
 
 template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::dac_vector<> >
 struct compressed_counts {
@@ -18,6 +19,8 @@ private:
     typename bv_type::rank_1_type m_bv_rank;
     vector_type m_counts_fb;
     vector_type m_counts_b;
+    vector_type m_counts_f1;
+    vector_type m_counts_f2;
 
 public:
     compressed_counts() = default;
@@ -27,6 +30,8 @@ public:
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = cc.m_counts_fb;
         m_counts_b = cc.m_counts_b;
+        m_counts_f1 = cc.m_counts_f1;
+        m_counts_f2 = cc.m_counts_f2;
     }
     compressed_counts(compressed_counts&& cc)
     {
@@ -34,6 +39,8 @@ public:
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
         m_counts_b = std::move(cc.m_counts_b);
+        m_counts_f1 = std::move(cc.m_counts_f1);
+        m_counts_f2 = std::move(cc.m_counts_f2);
     }
     compressed_counts& operator=(compressed_counts&& cc)
     {
@@ -41,6 +48,8 @@ public:
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
         m_counts_b = std::move(cc.m_counts_b);
+        m_counts_f1 = std::move(cc.m_counts_f1);
+        m_counts_f2 = std::move(cc.m_counts_f2);
         return *this;
     }
 
@@ -75,43 +84,70 @@ public:
         return total_contexts;
     }
 
-    template <class t_cst> compressed_counts(t_cst& cst, uint64_t max_node_depth)
+    template <class t_cst> compressed_counts(t_cst& cst, uint64_t max_node_depth, bool mkn_counts)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
+        // FIXME: this map could be replaced with a stack / vector, perhaps
+        std::map<uint64_t, std::pair<uint64_t, uint64_t>> node_counts;
+        auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
+        auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
         uint64_t num_syms = 0;
 
+        uint32_t last_node_depth = 0;
         auto root = cst.root();
         for (const auto& child : cst.children(root)) {
             auto itr = cst.begin(child);
             auto end = cst.end(child);
+
             while (itr != end) {
+                auto depth = cst.node_depth(*itr);
+
                 if (itr.visit() == 2) {
                     auto node = *itr;
                     auto node_id = cst.id(node);
-                    auto depth = cst.depth(node);
-                    if (depth <= max_node_depth) {
+
+                    auto str_depth = cst.depth(node);
+                    if (str_depth <= max_node_depth) {
                         auto c = compute_contexts(cst, node, num_syms);
                         tmp_buffer_counts_fb.push_back(c);
                         tmp_buffer_counts_b.push_back(num_syms);
                         tmp_bv[node_id] = 1;
+                        if (mkn_counts) {
+                            auto f12 = node_counts[node_id];
+                            tmp_buffer_counts_f1.push_back(f12.first);
+                            tmp_buffer_counts_f2.push_back(f12.second);
+                            node_counts.erase(node_id);
+                        }
                     }
                 } else {
                     /* first visit */
                     auto node = *itr;
+
                     if (! cst.is_leaf(node) ) {
                         auto depth = cst.depth(node);
                         if (depth > max_node_depth) {
                             itr.skip_subtree();
-                        }
+                        } 
+                    }
+                    
+                    if (mkn_counts) {
+                        int count = cst.size(node);
+                        auto &cs = node_counts[cst.id(cst.parent(node))];
+                        cs.first += (count == 1);
+                        cs.second += (count == 2);
                     }
                 }
                 ++itr;
+                last_node_depth = depth;
             }        
         }
+        assert(node_counts.size() == 1u);
         m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
+        m_counts_f1 = vector_type(tmp_buffer_counts_f1);
+        m_counts_f2 = vector_type(tmp_buffer_counts_f2);
 
         m_bv = bv_type(tmp_bv);
         m_bv_rank.set_vector(&m_bv);
@@ -126,11 +162,22 @@ public:
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_counts_fb, out, child, "counts_fb");
         written_bytes += sdsl::serialize(m_counts_b, out, child, "counts_b");
+        written_bytes += sdsl::serialize(m_counts_f1, out, child, "counts_f1");
+        written_bytes += sdsl::serialize(m_counts_f2, out, child, "counts_f2");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
+    
+    template <class t_cst, class t_node_type>
+    void lookup_f12(t_cst& cst, t_node_type node, uint64_t &f1, uint64_t &f2) const
+    {
+        auto id = cst.id(node);
+        auto rank_in_vec = m_bv_rank(id);
+        f1 = m_counts_f1[rank_in_vec];
+        f2 = m_counts_f2[rank_in_vec];
+    }
 
-    template <class t_cst, class t_node_type> 
+    template <class t_cst, class t_node_type>
     uint64_t lookup_fb(t_cst& cst, t_node_type node) const
     {
         auto id = cst.id(node);
@@ -152,5 +199,7 @@ public:
         m_bv_rank.load(in, &m_bv);
         sdsl::load(m_counts_fb, in);
         sdsl::load(m_counts_b, in);
+        sdsl::load(m_counts_f1, in);
+        sdsl::load(m_counts_f2, in);
     }
 };

@@ -179,7 +179,7 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
     return probability;
 }
 
-extern std::vector<uint32_t> ngram_occurrences;
+//extern std::vector<uint32_t> ngram_occurrences;
 
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
@@ -253,9 +253,9 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 probability = (numerator / denominator) + (D * N1plus_front / denominator) * probability;
                 //LOG(INFO) << "\tsize " << i << " (top): " << probability;
                 //LOG(INFO) << "\tsize " << i << " (top): N1+f=" << N1plus_front << " D=" << D << " denom=" << denominator;
-                if (ngram_occurrences.size() <= i)
-                    ngram_occurrences.resize(i+1);
-                ngram_occurrences[i] += 1;
+                //if (ngram_occurrences.size() <= i)
+                    //ngram_occurrences.resize(i+1);
+                //ngram_occurrences[i] += 1;
             } else {
                 // just use backoff probability 
                 //LOG(INFO) << "\tsize " << i << " (top): fall-through";
@@ -280,9 +280,9 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 probability = (numerator / back_N1plus_front) + (D * N1plus_front / back_N1plus_front) * probability;
                 //LOG(INFO) << "\tsize " << i << " (mid): " << probability;
                 //LOG(INFO) << "\tsize " << i << " (mid): N1+f=" << N1plus_front << " D=" << D << " denom=" << back_N1plus_front;
-                if (ngram_occurrences.size() <= i)
-                    ngram_occurrences.resize(i+1);
-                ngram_occurrences[i] += 1;
+                //if (ngram_occurrences.size() <= i)
+                    //ngram_occurrences.resize(i+1);
+                //ngram_occurrences[i] += 1;
             } else {
                 // just use backoff probability 
                 //LOG(INFO) << "\tsize " << i << " (mid): fall-through";
@@ -298,9 +298,9 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 assert(incl_pattern_found);
                 numerator = idx.N1PlusBack_from_forward(node_incl, start, pattern_end); 
                 //LOG(INFO) << "\t\tunigram, not UNK numer: " << numerator << " node: [" << idx.m_cst.lb(node_incl) << ", " << idx.m_cst.rb(node_incl) << "]";
-                if (ngram_occurrences.size() <= i)
-                    ngram_occurrences.resize(i+1);
-                ngram_occurrences[i] += 1;
+                //if (ngram_occurrences.size() <= i)
+                    //ngram_occurrences.resize(i+1);
+                //ngram_occurrences[i] += 1;
             } else {
                 // TODO: will the node_incl be invalid? shouldn't we still do forward_search?
                 // seems values are ignored all the way up

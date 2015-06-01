@@ -32,7 +32,7 @@ public: // data
 
 public:
     index_succinct_compute_n1fb() = default;
-    index_succinct_compute_n1fb(collection& col, bool dodgy_discounts=false)
+    index_succinct_compute_n1fb(collection& col, bool dodgy_discounts=false, bool use_mkn=false)
     {
         using clock = std::chrono::high_resolution_clock;
 
@@ -68,7 +68,7 @@ public:
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts);
+        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts, use_mkn);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
                   << " sec)";
@@ -305,5 +305,49 @@ public:
             N1plus_front -= 1;
         }
         return N1plus_front;
+    }
+
+    void N123PlusFront(const node_type &node,
+                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    {
+        //LOG(INFO) << "N123PlusFront -- node " << node << " pattern " << std::vector<uint64_t>(pattern_begin, pattern_end);
+
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
+        n1 = n2 = n3p = 0;
+        if (full_match) {
+            // pattern matches the edge label
+            auto child = m_cst.select_child(node, 1); 
+            while (child != m_cst.root()) {
+                auto c = m_cst.size(child);
+                //LOG(INFO) << "\ttop -- child " << child << " count " << c;
+                if (c == 1)
+                    n1 += 1;
+                else if (c == 2)
+                    n2 += 1;
+                else if (c >= 3)
+                    n3p += 1;
+                child = m_cst.sibling(child);
+            }
+            //n1p = m_cst.degree(node);
+        } else {
+            // pattern is part of the edge label
+            uint64_t symbol = *(pattern_end - 1);
+            if (symbol != PAT_END_SYM) {
+                auto c = m_cst.size(node);
+                //LOG(INFO) << "\tbottom -- count " << c;
+                if (c == 1)
+                    n1 += 1;
+                else if (c == 2)
+                    n2 += 1;
+                else if (c >= 3)
+                    n3p += 1;
+            } else {
+                //LOG(INFO) << "\tbottom -- skipping";
+            }
+        }
+        //LOG(INFO) << "\treturning " << n1 << " " << n2 << " " << n3p;
     }
 };
