@@ -59,7 +59,7 @@
 
 \title{\textsc{Supplementary Material for} \\
 Compact, Efficient and Unlimited Capacity:
-    Language Modelling with Compressed Suffix Trees}
+    Language Modeling with Compressed Suffix Trees}
 
 \date{}
 
@@ -162,17 +162,17 @@ Compact, Efficient and Unlimited Capacity:
                         \Let{$c_{k,f}$}{$c_{k,f} + 1$}
                      \EndIf
                      \If{$f = 2$}
-                        \Let{$N^{1+}(\Bigcdot, \Bigcdot)$}{$N^{1+}(\Bigcdot, \Bigcdot) + 1$}
+                        \Let{$N^{1+}(\Bigcdot \Bigcdot)$}{$N^{1+}(\Bigcdot \Bigcdot) + 1$}
                      \EndIf
 
-                     \State $g \gets \nlplus{\tr}{\nr}{\dot \alpha}$ \Comment{retrieve occurrence count}
+                     \State $g \gets \nlplusfunc{\tr}{\nr}{\Bigcdot \alpha}$ \Comment{retrieve occurrence count}
                      \If{$1 \le g \le 4$}
                         \Let{$N^1_{g,f}$}{$c_{k,f} + 1$}
                      \EndIf
                  \EndIf
           \EndFor
         \EndFor
-      \State \Return{$c, N^1, N^{1+}(\Bigcdot, \Bigcdot)$}
+      \State \Return{$c, N^1, N^{1+}(\Bigcdot \Bigcdot)$}
     \EndFunction
   \end{algorithmic}
 \end{algorithm*}
@@ -216,7 +216,7 @@ French&FR&197.68&53.82&147058&1792\\
 Hungarian&HU&52.53&12.02&318882&527\\
 Italian&IT&186.67&48.08&178259&1703\\
 Portuguese&PT&187.20&49.03&183633&1737\\ \midrule
-Wikipedia && 8637 & 9057 & 196M & 87835 \\ 
+Wikipedia && 8637 & 9057 & 196 & 87835 \\ 
 \end{tabular}}
 \caption{Dataset statistics, showing total uncompressed size; and tokens, types and sentence counts for the training partition. }\label{fig:data}
 \end{table}
