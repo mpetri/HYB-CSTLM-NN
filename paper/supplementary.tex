@@ -105,17 +105,17 @@ Compact, Efficient and Unlimited Capacity:
   \caption{Compute Kneser-Ney probability, $P\big(w_k | w^{k-1}_{k-(n-1)}\big)$, using a single \CST
     \label{alg:pkn_fwd}}
   \begin{algorithmic}[1]
-    \Function{ProbKneserNey1}{$\tf, \ws, n$} 
+    \Function{ProbKneserNey1}{$\tf, \ws, m$} 
         \Let{$\nf$}{$\rooot{\tf}$} \Comment{match for context $w^{k-1}_{k-i}$}
         \Let{$\nffull$}{$\rooot{\tf}$} \Comment{match for $w^{k}_{k-i}$}
         \Let{$p$}{$1$}
-        \For{$i \gets 1 \text{ to } n$}
+        \For{$i \gets 1 \text{ to } m$}
           \Let{$\nffull$}{$\backwardsearch{\tf}{\lb{\nffull}}{\rb{\nffull}}{w_{k-i+1}}$} \Comment{update matches in \CST}
           \If{$i > 1$}
              \Let{$\nf$}{$\backwardsearch{\tf}{\lb{\nf}}{\rb{\nf}}{w_{k-i+1}}$}
           \EndIf
-          \Let{$D$}{discount parameter for $n$-gram}
-          \If{$i = n$} % or if s == '<s>' 
+          \Let{$D_i$}{discount parameter for \ngram}
+          \If{$i = m$} % or if s == '<s>' 
                  \Comment{compute the `count' and `denominator' for the full match}
              \Let{$c$}{$\size{\tf}{\nffull}$} 
              \Let{$d$}{$\size{\tf}{\nf}$}
@@ -127,7 +127,7 @@ Compact, Efficient and Unlimited Capacity:
              \If{$\nf$ is valid} \Comment{compute backoff probability, or backoff for unseen contexts}
                   \Let{$d$}{$\size{\tf}{\nf}$}
                   \Let{$q$}{$\nlplusfunc{\tf}{\nf}{w^{k-1}_{k-i+1} \Bigcdot}$}
-                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D, 0)  + D  q  p \right)$}
+                  \Let{$p$}{ $\frac{1}{d} \left( \max(c-D_i, 0)  + D_i  q  p \right)$}
               \EndIf
           \Else
              \Let{$p$}{ $\frac{c}{d}$}
