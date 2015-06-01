@@ -216,14 +216,15 @@ This confers the benefit of using only backward search and avoiding redundant se
 
 The full algorithm for computing LM probabilities is given in the \supp as Algorithm 6, however for space reasons we will not describe this in detail.
 Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols} method.
+The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols}~\cite{sog-cpm10} method.
 This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the BWT as describes
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
-The \emph{interval-symbols} method uses \rankop~and \selectop~bit operations to efficiently identify for a given pattern the set of preceeding symbols, and for each of symbol its range of occurrences in the \SA.
-Using the same process as backward search, described in Section~\ref{sec-css}, these ranges can be used to find the $\SA[l,r]$ interval for the extended pattern (lines 7 and 8), which uniquely determines the corresponding suffix tree node.
+The \emph{interval-symbols} method uses \rankop~ operations to efficiently identify for a given pattern the set of preceding symbols $P(\alpha)$
+and the ranges $\SA[l_s,r_s]$ corresponding to the patterns $s\alpha$ for all $s \in P(\alpha)$ by visiting all leaves of the wavelet tree of symbols occurring in $\colbwt[l,r]$ (corresponding to $\alpha$) in $\Order{|P(\alpha)|\log\alphabetsize}$ time (lines 6-8).
+These ranges $\SA[l',r']$ can be used to find the corresponding suffix tree node for each $s\alpha$ in $\Order{1}$ time.
 To illustrate, consider the pattern $\alpha=\text{``night''}$ in Figure~\ref{fig-suffix-tree}.
-From the BWT we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in the BWT) and $s=$``the'' (4$^{th}$ and $5^{th}$);
+From \colbwt\ we can see that this is preceeded by $s=$``old'' (1$^{st}$ occurrence in \colbwt) and $s=$``the'' (4$^{th}$ and $5^{th}$);
 from which we can compute the suffix tree nodes, namely
 $[15,15]$ and $[16+(4-1),16+(5-1)] = [19,20]$ for ``old'' and ``the'' respectively.\footnote{Using the offsets into the \SA for each symbol, $C_{\text{old}} = 15$ and $C_{\text{the}} = 16$, while $-1$ adjusts for counting from 1.}
 %$C_{\text{the}} = 16$ (``the'' corresponds to \SA entries 16--20) and therefore the location of ``the night'' is $[16+(4-1),16+(5-1)] = [19,20]$.\footnote{Subtracting one to adjusts for counting from 1 in the above exposition, not 0.}
@@ -250,7 +251,7 @@ $\nlplus{\dotpatdot}$, using forward \CST
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\tf}{\lb{\nf}}{\rb{\nf}}$}
                \Let{$l'$}{$C_s + l$}% \Comment{compute offsets into \SA for patterns starting with symbol $s$}
                \Let{$r'$}{$C_s + r$} %\Comment{adjusted by occurence indices $[l,r]$}
-               \Let{$o$}{$o + \nlplusbacklfunc{\tf}{\text{node}(l', r')}{\dotpat s}$}
+               \Let{$o$}{$o + \nlplusfrontlfunc{\tf}{\text{node}(l', r')}{s\patdot }$}
             \EndFor
           \EndIf
       \State \Return{$o$}
@@ -259,7 +260,7 @@ $\nlplus{\dotpatdot}$, using forward \CST
 \end{algorithm}
 
 \nlplusbacklname is computed in a similar way, using the \emph{interval-symbols} method to compute the number of unique preceeding symbols (see \supp, Algorithm~5).
-Overall the time complexity of inference for both \nlplusbacklname and \nlplusfrontbacklname is $\Order{k \log \sigma}$ where $k$ is the number of preceeding symbols, a considerable improvement over \nlplusfrontbackname using the forward and reverse \CSTs.
+Overall the time complexity of inference for both \nlplusbacklname and \nlplusfrontbacklname is $\Order{P(\alpha) \log \sigma}$ where $P(\alpha)$ is the number of preceeding symbols of $\alpha$, a considerable improvement over \nlplusfrontbackname using the forward and reverse \CSTs.
 Overall this leads to considerably faster computation of \ngram probabilities compared to the two \CST approach, and although still slower than highly optimised LM toolkits like \textsc{Srilm}, it is fast enough to support large scale experiments, and has considerably better scaling performance with the Markov order $m$ (even allowing unlimited order), as we will now demonstrate.
 
 
