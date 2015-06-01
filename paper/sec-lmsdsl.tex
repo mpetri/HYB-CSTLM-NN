@@ -47,7 +47,10 @@ Figure~\ref{fig-suffix-tree} as it can only be followed by \emph{in}, $\nlplus{\
 % This method is illustrated in Algorithm~\ref{alg-nlplus}, which computes $\nlplus{\dotpat}$ 
 % when $t$ is the reversed \CST and $\nlplus{\patdot}$ when $t$ is the forward \CST.
 A similar line of reasoning applies to computing $\nlplus{\dotpat}$. 
-Assuming we also have a second suffix tree representing the \emph{reversed corpus}, we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$, where $t$ is the \CST.). 
+Assuming we also have a second suffix tree representing the \emph{reversed corpus}, 
+we first identify the reversed pattern (e.g., \emph{in keep}$_R$) and then use above method to compute the 
+occurrence count (denoted hereafter $\nlplusfunc{t}{v}{\alpha}$\footnote{In the presented algorithms, we overload the pattern argument in function calls for 
+readability, and use $\Bigcdot$ to denote the query context.}, where $t$ is the \CST.). 
 
 The final component of the Kneser-Ney LM computation is
 $\nlplus{\dotpatdot}$, the number of unique contexts considering
@@ -247,11 +250,11 @@ $\nlplus{\dotpatdot}$, using forward \CST
         %\If{$\leaf{\tf}{\nf} \, \vee \, \depth{\tf}{\nf} > |\alpha|$}   
         \If{$\depth{\tf}{\nf} > |\alpha|$}   
           \Let{$o$}{$\nlplusbacklfunc{\tf}{\nf}{\dotpat}$} %\Comment{only one unique right context}
-        \Else
+        \Else 
             \For{$\langle l, r, s\rangle \gets \intervalsymbols{\tf}{\lb{\nf}}{\rb{\nf}}$}
                \Let{$l'$}{$C_s + l$}% \Comment{compute offsets into \SA for patterns starting with symbol $s$}
                \Let{$r'$}{$C_s + r$} %\Comment{adjusted by occurence indices $[l,r]$}
-               \Let{$o$}{$o + \nlplusfrontlfunc{\tf}{\text{node}(l', r')}{s\patdot }$}
+               \Let{$o$}{$o + \nlplusfunc{\tf}{\text{node}(l', r')}{s\patdot }$}
             \EndFor
           \EndIf
       \State \Return{$o$}
