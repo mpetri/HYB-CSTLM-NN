@@ -143,7 +143,7 @@ Compact, Efficient and Unlimited Capacity:
   \begin{algorithmic}[1]
     \Function{PrecomputeDiscounts}{$\tr, m$}
         \Let{$c_{k,f}$}{$0 \quad \forall k \in [1, m] , f \in [1, 2]$} \Comment{number of $k$-grams with count $f$}
-        \Let{$N^1_{k,g}$}{$0 \quad \forall k \in [1, m] , g \in [1, 2]$} \Comment{number of $k$-grams with $N^1{\dotpat} = g$}
+        \Let{$N^1_{k,g}$}{$0 \quad \forall k \in [1, m] , g \in [1, 2]$} \Comment{number of $k$-grams with  $N^{1+}({\dotpat}) = g$}
         \Let{$N^{1+}(\Bigcdot\Bigcdot)$}{$0$} \Comment{number of unique bigrams}
         \For{$\nr \gets \text{descendents}(\rooot{\tr})$} \Comment{depth-first search over nodes in \CST}
            \State $d_P \gets \depth{\tr}{\parent{\tr}{\nr}}$
