@@ -196,8 +196,8 @@ The discounts $D$ on line 12 of Algorithm~\ref{alg-kn-slow} and
 $\nlplus{\Bigcdot\Bigcdot}$ (a special case of line 18) are precomputed directly from the \CSTs thus avoiding several costly computations at runtime. 
 The precomputation algorithm is provided in Algorithm~7 in the \supp,
 and operates by traversing the nodes of the reverse \CST and at each
-stage computing the number of \ngrams that occur 1--4 times (used for computing $D_m$ in eq.~\ref{eq:high}), or with
-$\nlplus{\dotpat} \in [1,4]$ (used for computing $D_k$ in eq.~\ref{eq:mid}), for various lengths of \ngrams.
+stage computing the number of \ngrams that occur 1--2 times (used for computing $D_m$ in eq.~\ref{eq:high}), or with
+$\nlplus{\dotpat} \in [1-2]$ (used for computing $D_k$ in eq.~\ref{eq:mid}), for various lengths of \ngrams.
 These quantities are used to compute the discount parameters, which
 are then stored for later use in inference.\footnote{Discounts are computed up to a limit on \ngram size, here set to 10. The highest order values are used for computing the discount of \ngrams above the limit at runtime.}
 Note that the \textsc{PrecomputeDiscounts} algorithm can be slow,
@@ -214,12 +214,12 @@ The above dual \CST algorithm provides an elegant means of computing LM probabil
 However the time complexity is problematic, stemming from the expensive method for computing \nlplusfrontbackname and repeated searches over the \CST, particularly \emph{forward-search}.
 Now we outline a method for speeding up the algorithm by doing away with the reverse \CST.
 Instead the critical counts, $\nlplus{\dotpat}$ and $\nlplus{\dotpatdot}$ are computed directly from a single forward \CST. 
-This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Alg~\ref{alg-kn-slow}).
+This confers the benefit of using only backward search and avoiding redundant searches for the same pattern (cf.~lines 9 and 11 in Algorithm~\ref{alg-kn-slow}).
 
 
 The full algorithm for computing LM probabilities is given in the \supp as Algorithm 6, however for space reasons we will not describe this in detail.
-Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Alg~\ref{alg:n1plusfb_wt}.
-The key difference from Alg~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols}~\cite{sog-cpm10} method.
+Instead we will focus on the method's most critical component, the algorithm for computing $\nlplus{\dotpatdot}$ from the forward \CST, presented in Algorithm~\ref{alg:n1plusfb_wt}.
+The key difference from Algorithm~\ref{alg:n1plusfb} is the loop from lines 6--9, which uses the \emph{interval-symbols}~\cite{sog-cpm10} method.
 This method assumes a \emph{wavelet tree} representation of the \SA component of the \CST, an efficient encoding of the BWT as describes
 in section~\ref{sec-css}.
 %\emph{Burrows-Wheeler transform} (an array comprising the symbol preceeding each entry in the \SA).
