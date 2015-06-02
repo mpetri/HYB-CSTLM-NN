@@ -28,7 +28,7 @@ struct precomputed_stats {
     precomputed_stats() = default;
 
     template <typename t_cst>
-    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts=false);
+    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts=false, bool is_mkn=false);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -185,7 +185,7 @@ private:
 // }
 
 template <typename t_cst>
-precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts)
+precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts, bool ismkn)
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)

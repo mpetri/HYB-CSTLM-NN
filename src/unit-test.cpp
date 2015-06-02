@@ -50,7 +50,7 @@ protected:
         // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
         {
             col = collection(col_path);
-            idx = t_idx(col);
+            idx = t_idx(col, false, true);
         }
 
         {
@@ -543,6 +543,72 @@ TYPED_TEST(LMTest, N1PlusFront)
                 if (cnt > 0) {
                     auto actual_count = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFront_count);
+                }
+            }
+        }
+    }
+}
+
+TYPED_TEST(LMTest, N123PlusFront)
+{
+    // (1) get the text
+    std::vector<uint64_t> text;
+    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+              std::back_inserter(text));
+
+    // (2) for all n-gram sizes
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+        // (3) determine all valid ngrams and their actual N1PlusFront counts
+        typedef std::map<uint64_t, uint64_t> t_symbol_counts;
+        std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
+        /* compute N1PlusFront c-gram stats */
+        for (size_t i = 0; i < text.size() - cgram; i++) {
+            std::vector<uint64_t> cur_gram(cgram);
+            auto beg = text.begin() + i;
+            std::copy(beg, beg + cgram, cur_gram.begin());
+
+            if (text[i + cgram] != EOS_SYM) {
+                auto following_syms_set = ngram_counts[cur_gram];
+                following_syms_set[text[i + cgram]] += 1;
+                ngram_counts[cur_gram] = following_syms_set;
+            } else {
+                ngram_counts[cur_gram] = t_symbol_counts();
+            }
+        }
+
+        // (4) for all valid ngrams, query the index
+        for (const auto& ngc : ngram_counts) {
+            const auto& cng = ngc.first;
+            auto expected_stuff = ngc.second;
+            uint64_t expected_n1 = 0, expected_n2 = 0, expected_n3p = 0;
+            for (auto symbol_count : expected_stuff) {
+                if (symbol_count.second == 1)
+                    expected_n1 += 1;
+                else if (symbol_count.second == 2)
+                    expected_n2 += 1;
+                else if (symbol_count.second >= 3)
+                    expected_n3p += 1;
+            }
+
+            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
+                && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
+                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; }) 
+                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
+                // (1) perform backward search on reverse csa to get the node [lb,rb]
+                uint64_t lb, rb;
+                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
+                                           cng.begin(), cng.end(), lb, rb);
+                EXPECT_TRUE(cnt > 0);
+                if (cnt > 0) {
+                    uint64_t n1, n2, n3p, n1p;
+                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
+                    //LOG(INFO) << "pattern is " << cng << " expected " << expected_n1 << ", " << expected_n2 << ", " << expected_n3p;
+                    n1p = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    
+                    EXPECT_EQ(n1, expected_n1);
+                    EXPECT_EQ(n2, expected_n2);
+                    EXPECT_EQ(n3p, expected_n3p);
+                    EXPECT_EQ(n1p, n1+n2+n3p);
                 }
             }
         }

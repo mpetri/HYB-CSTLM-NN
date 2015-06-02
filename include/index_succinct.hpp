@@ -33,7 +33,7 @@ public: // data
 
 public:
     index_succinct() = default;
-    index_succinct(collection& col, bool dodgy_discounts=false)
+    index_succinct(collection& col, bool dodgy_discounts=false, bool use_mkn=false)
     {
         using clock = std::chrono::high_resolution_clock;
 
@@ -69,7 +69,7 @@ public:
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts);
+        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts, use_mkn);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
                   << " sec)";
@@ -248,5 +248,12 @@ public:
             N1plus_front -= 1;
         }
         return N1plus_front;
+    }
+
+    void N123PlusFront(const node_type &node,
+                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    {
+        assert(false && "not implemented");
     }
 };

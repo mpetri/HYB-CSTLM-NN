@@ -35,7 +35,7 @@ public: // data
     // compressed_sentinel_flag<> m_csf, m_csf_rev; // trevor: temporary?
 public:
     index_succinct_store_n1fb() = default;
-    index_succinct_store_n1fb(collection& col, bool dodgy_discounts=false)
+    index_succinct_store_n1fb(collection& col, bool dodgy_discounts=false, bool is_mkn=false)
     {
         using clock = std::chrono::high_resolution_clock;
 
@@ -71,14 +71,14 @@ public:
 
         LOG(INFO) << "PRECOMPUTE N1PLUSFRONTBACK";
         start = clock::now();
-        m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count);
+        m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
                   << " sec)";
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts);
+        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts, is_mkn);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
                   << " sec)";
@@ -171,6 +171,7 @@ public:
         if (m_cst.is_leaf(node)) {
             //std::cout << "\tleaf\n";
             n1plus_back = 1;
+            // FIXME: does this really follow? Yes, there's only 1 previous context as this node goes to the end of the corpus
         } else if (m_cst.depth(node) <= t_max_ngram_count) {
             n1plus_back = m_n1plusfrontback.lookup_b(m_cst, node);
             //std::cout << "\tnon-leaf\n";
@@ -328,5 +329,48 @@ public:
             N1plus_front -= 1;
         }
         return N1plus_front;
+    }
+    
+    // Computes N_1( abc * ), N_2( abc * ), N_3+( abc * ); needed for modified Kneser-Ney smoothing
+    void N123PlusFront(const node_type &node,
+                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    {
+        // ASSUMPTION: node matches the pattern in the forward tree, m_cst
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
+        n1 = n2 = n3p = 0;
+        if (full_match) {
+            if (pattern_size <= t_max_ngram_count) {
+                // FIXME: this bit is currently broken
+                m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
+                n3p = m_cst.degree(node) - n1 - n2;
+            } else {
+                // loop over the children
+                auto child = m_cst.select_child(node, 1); 
+                while (child != m_cst.root()) {
+                    auto c = m_cst.size(child);
+                    if (c == 1)
+                        n1 += 1;
+                    else if (c == 2)
+                        n2 += 1;
+                    else if (c >= 3)
+                        n3p += 1;
+                    child = m_cst.sibling(child);
+                }
+            }
+        } else {
+            // pattern is part of the edge label
+            uint64_t symbol = *(pattern_end - 1);
+            if (symbol != PAT_END_SYM) {
+                auto c = m_cst.size(node);
+                if (c == 1)
+                    n1 += 1;
+                else if (c == 2)
+                    n2 += 1;
+                else if (c >= 3)
+                    n3p += 1;
+            } 
+        }
     }
 };

@@ -99,7 +99,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
     double perplexity = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    uint64_t ind = 1;
+    //uint64_t ind = 1;
     lm_bench::reset();
     for (std::vector<uint64_t> pattern : patterns) {
         uint64_t pattern_size = pattern.size();
