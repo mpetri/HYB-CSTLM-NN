@@ -129,6 +129,6 @@ backward_search_wrapper(
     auto timer = lm_bench::bench(timer_type::backward_search);
     typename t_cst::size_type l = cst.lb(v), r = cst.rb(v);
     auto output = backward_search(cst.csa, l, r, c, l, r);
-    if (output > 0) v = cst.node(l, r);
+    v = cst.node(l, r);
     return output;
 }
