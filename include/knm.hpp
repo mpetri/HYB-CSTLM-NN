@@ -16,10 +16,7 @@
 #include "index_succinct.hpp"
 #include "constants.hpp"
 
-
-template <class t_idx, class t_pat_iter>
-double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin, 
-        t_pat_iter pattern_end, uint64_t ngramsize);
+#include "kn.hpp"
 
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, bool fast_index)
@@ -41,9 +38,9 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
 */
         double score;
         if (fast_index)
-            score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
+            score = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
         else
-            score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
+            score = prob_kneser_ney_dual(idx, pattern.begin(), pattern.end(), ngramsize);
         final_score += log10(score);
 
     }
@@ -63,6 +60,7 @@ double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint
     return perplexity;
 }
 
+#if 0
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
 // predicted given the previous values in the pattern.
@@ -322,3 +320,4 @@ double prob_kneser_ney_forward(const t_idx& idx,
     //LOG(INFO) << "PKN: returning " << probability;
     return probability;
 }
+#endif
