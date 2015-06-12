@@ -15,6 +15,7 @@
 #include "collection.hpp"
 #include "index_succinct.hpp"
 #include "constants.hpp"
+#include "kn.hpp"
 
 
 template <class t_idx, class t_pat_iter>
@@ -40,10 +41,13 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
         }
 */
         double score;
-        if (fast_index)
-            score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
-        else
-            score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
+        if (fast_index) {
+            //score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
+            score = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+        } else {
+            //score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
+            score = prob_kneser_ney_dual(idx, pattern.begin(), pattern.end(), ngramsize);
+        }
         final_score += log10(score);
 
     }
@@ -203,9 +207,10 @@ double prob_kneser_ney_forward(const t_idx& idx,
     static std::unordered_map<size_type, cache_type> ngram_cache;
     static uint64_t cache_hits = 0, cache_misses = 0;
 
-    LOG_EVERY_N(1000, INFO) << "PKN cache stats: " << cache_hits << " hits and " << cache_misses << " misses";
+    //LOG_EVERY_N(1000, INFO) << "PKN cache stats: " << cache_hits << " hits and " << cache_misses << " misses";
 
-    //LOG(INFO) << "PKN: pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
+    LOG(INFO) << "PKN': pattern = " << std::vector<uint64_t>(pattern_begin, pattern_end);
+    LOG(INFO) << "ngramsize = " << ngramsize;
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -256,6 +261,10 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 //if (ngram_occurrences.size() <= i)
                     //ngram_occurrences.resize(i+1);
                 //ngram_occurrences[i] += 1;
+                LOG(INFO) << "TOP i=" << i << "; c=" << c << "; d=" << denominator << "; ok=" << incl_pattern_found << "; D=" << D;
+                LOG(INFO) << "ngram; q=" << N1plus_front << "; p=" << probability;
+                LOG(INFO) << "node_incl=" << node_incl << "; node_excl=" << node_excl;
+
             } else {
                 // just use backoff probability 
                 //LOG(INFO) << "\tsize " << i << " (top): fall-through";
@@ -283,6 +292,12 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 //if (ngram_occurrences.size() <= i)
                     //ngram_occurrences.resize(i+1);
                 //ngram_occurrences[i] += 1;
+                LOG(INFO) << "MID i=" << i << "; c=" << c << "; d=" << back_N1plus_front << "; ok=" << incl_pattern_found << "; D=" << D;
+                LOG(INFO) << "ngram; q=" << N1plus_front << "; p=" << probability;
+                LOG(INFO) << "node_incl=" << node_incl << "; node_excl=" << node_excl;
+                if (incl_pattern_found) {
+                    LOG(INFO) << "\tthese are not the numbers you are looking for..." << idx.N1PlusBack_from_forward(node_incl, start, pattern_end);
+                }
             } else {
                 // just use backoff probability 
                 //LOG(INFO) << "\tsize " << i << " (mid): fall-through";
@@ -308,6 +323,8 @@ double prob_kneser_ney_forward(const t_idx& idx,
                 //LOG(INFO) << "\t\tunigram, UNK numer: " << numerator;
             }
             probability = numerator / idx.m_precomputed.N1plus_dotdot;
+            LOG(INFO) << "BOT i=" << i << "; c=" << numerator << "; d=" << idx.m_precomputed.N1plus_dotdot << "; ok=" << (!unk) << "; D=" << idx.discount(1, true);
+            LOG(INFO) << "unigram; p=" << probability;
             //LOG(INFO) << "\tsize 1: " << probability;
         } else {
             assert(false);
@@ -319,6 +336,7 @@ double prob_kneser_ney_forward(const t_idx& idx,
         }
     }
 
+    LOG(INFO) << "done; p=" << probability;
     //LOG(INFO) << "PKN: returning " << probability;
     return probability;
 }

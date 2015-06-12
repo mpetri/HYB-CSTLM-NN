@@ -30,10 +30,12 @@ double prob_kneser_ney_dual(const t_idx& idx,
     t_node node_rev = idx.m_cst_rev.root(); // v_R^all
     double p = 1.0; // p
 
+    // FIXME: there's a bug somewhere in here, as it fails the unit test (1.Perplexity)
+
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM); 
     uint64_t char_pos = 0, char_pos_ctx = 0;
-    bool ok = true;
+    bool ok = !unk;
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -41,8 +43,9 @@ double prob_kneser_ney_dual(const t_idx& idx,
             break;
 
         // update match for full pattern
-        if (!unk)
+        if (ok) {
             ok = forward_search_wrapper(idx.m_cst_rev, node_rev, i, *start, char_pos);
+        }
         // update match for context (pattern without last token)
         if (i >= 2) {
             if (backward_search_wrapper(idx.m_cst, node, *start) <= 0)
@@ -52,14 +55,14 @@ double prob_kneser_ney_dual(const t_idx& idx,
         }
 
         // compute the numerator and denominator
-        double D = idx.discount(ngramsize, i != ngramsize);
+        double D = idx.discount(i, i == 1 || i != ngramsize);
         double c, d;
-        if (i == 1) {
-            c = (!unk && ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : D;
-            d = idx.m_precomputed.N1plus_dotdot;
-        } else if (i == ngramsize) {
+        if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
             c = (ok) ? idx.m_cst_rev.size(node_rev) : 0;
             d = idx.m_cst.size(node);
+        } else if (i == 1 || ngramsize == 1) {
+            c = (!unk && ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : D;
+            d = idx.m_precomputed.N1plus_dotdot;
         } else {
             c = (ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack(node, node_rev_ctx, start, pattern_end - 1); 
@@ -91,7 +94,7 @@ double prob_kneser_ney_single(const t_idx& idx,
     t_node node_excl = idx.m_cst.root(); // v_F     matching only the context, excluding last item
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
-    bool ok = true;
+    bool ok = !unk;
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
@@ -99,7 +102,7 @@ double prob_kneser_ney_single(const t_idx& idx,
             break;
 
         // update the two searches into the CST
-        if (!unk) {
+        if (ok) {
             ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
         }
         if (i >= 2) {
@@ -108,14 +111,14 @@ double prob_kneser_ney_single(const t_idx& idx,
         }
 
         // compute the count and normaliser
-        double D = idx.discount(ngramsize, i != ngramsize);
+        double D = idx.discount(i, i == 1 || i != ngramsize);
         double c, d;
-        if (i == 1) {
-            c = (!unk && ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : D;
-            d = idx.m_precomputed.N1plus_dotdot;
-        } else if (i == ngramsize) {
+        if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
             d = idx.m_cst.size(node_excl);
+        } else if (i == 1 || ngramsize == 1) {
+            c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : D;
+            d = idx.m_precomputed.N1plus_dotdot;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
@@ -129,6 +132,6 @@ double prob_kneser_ney_single(const t_idx& idx,
             p = c / d;
         }
     }
-    
+
     return p;
 }
