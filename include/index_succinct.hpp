@@ -162,6 +162,22 @@ public:
             return m_precomputed.Y[level];
     }
 
+    void mkn_discount(uint64_t level, double &D1, double &D2, double &D3p, bool cnt = false) const
+    {
+        // trim to the maximum computed length, assuming that
+        // discounts stay flat beyond this (a reasonable guess)
+        level = std::min(level, (uint64_t) t_max_ngram_count);
+        if (cnt) {
+            D1 = m_precomputed.D1_cnt[level];
+            D2 = m_precomputed.D2_cnt[level];
+            D3p = m_precomputed.D3_cnt[level];
+        } else {
+            D1 = m_precomputed.D1[level];
+            D2 = m_precomputed.D2[level];
+            D3p = m_precomputed.D3[level];
+        }
+    }
+
     void print_params(bool ismkn, uint32_t ngramsize) const
     {
         m_precomputed.print(ismkn, ngramsize);
