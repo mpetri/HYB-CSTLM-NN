@@ -16,14 +16,15 @@
 #include "index_succinct.hpp"
 #include "constants.hpp"
 #include "kn.hpp"
+#include "kn_modified.hpp"
 
 
-template <class t_idx, class t_pat_iter>
-double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin, 
-        t_pat_iter pattern_end, uint64_t ngramsize);
+//template <class t_idx, class t_pat_iter>
+//double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin, 
+        //t_pat_iter pattern_end, uint64_t ngramsize);
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, bool fast_index)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, bool fast_index, bool ismkn)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
@@ -43,10 +44,17 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
         double score;
         if (fast_index) {
             //score = prob_kneser_ney_forward(idx, pattern.begin(), pattern.end(), ngramsize);
-            score = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+            if (!ismkn)
+                score = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+            else
+                score = prob_mod_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+
         } else {
             //score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
-            score = prob_kneser_ney_dual(idx, pattern.begin(), pattern.end(), ngramsize);
+            if (!ismkn)
+                score = prob_kneser_ney_dual(idx, pattern.begin(), pattern.end(), ngramsize);
+            else
+                score = prob_mod_kneser_ney_dual(idx, pattern.begin(), pattern.end(), ngramsize);
         }
         final_score += log10(score);
 
@@ -55,14 +63,14 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
 }
 
 template <class t_idx, class t_pattern>
-double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize, bool fast_index)
+double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize, bool fast_index, bool ismkn)
 {
     auto pattern_size = pattern.size();
     pattern.push_back(PAT_END_SYM);
     pattern.insert(pattern.begin(), PAT_START_SYM);
     // run the query
     uint64_t M = pattern_size + 1;
-    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index);
+    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index, ismkn);
     double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
     return perplexity;
 }

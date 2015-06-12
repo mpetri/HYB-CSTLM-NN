@@ -21,14 +21,14 @@
 // predicted given the previous values in the pattern.
 // Uses forward and reversed CST.
 template <class t_idx, class t_pat_iter>
-double prob_kneser_ney_dual(const t_idx& idx, 
+double prob_mod_kneser_ney_dual(const t_idx& idx, 
         t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     t_node node = idx.m_cst.root(); // v_F
     t_node node_rev_ctx = idx.m_cst_rev.root(); // v_R
     t_node node_rev = idx.m_cst_rev.root(); // v_R^all
-    double p = 1.0; // p
+    double p = 1.0 / idx.m_vocab.size(); // p -- FIXME: should we subtract away sentinels?
 
     // FIXME: there's a bug somewhere in here, as it fails the unit test (1.Perplexity)
 
@@ -63,7 +63,7 @@ double prob_kneser_ney_dual(const t_idx& idx,
             c = (ok) ? idx.m_cst_rev.size(node_rev) : 0;
             d = idx.m_cst.size(node);
         } else if (i == 1 || ngramsize == 1) {
-            c = (!unk && ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : D;
+            c = (ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : 0;
             d = idx.m_precomputed.N1plus_dotdot;
         } else {
             c = (ok) ? idx.N1PlusBack(node_rev, start, pattern_end) : 0;
@@ -71,23 +71,19 @@ double prob_kneser_ney_dual(const t_idx& idx,
         }
 
         // update the running probability
-        if (i > 1) {
-            if (c == 1) {
-                c -= D1;
-            } else if (c == 2) {
-                c -= D2; 
-            } else if (c >= 3) {
-                c -= D3p;
-            }
-                
-            uint64_t n1, n2, n3p;
-            idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
-            double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
-
-            p = (c + gamma * p) / d;
-        } else {
-            p = c / d;
+        if (c == 1) {
+            c -= D1;
+        } else if (c == 2) {
+            c -= D2; 
+        } else if (c >= 3) {
+            c -= D3p;
         }
+            
+        uint64_t n1, n2, n3p;
+        idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
+        double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
+
+        p = (c + gamma * p) / d;
     }
 
     return p;
@@ -98,11 +94,11 @@ double prob_kneser_ney_dual(const t_idx& idx,
 // predicted given the previous values in the pattern.
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
-double prob_kneser_ney_single(const t_idx& idx, 
+double prob_mod_kneser_ney_single(const t_idx& idx, 
         t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize)
 {
     typedef typename t_idx::cst_type::node_type t_node;
-    double p = 1.0;
+    double p = 1.0 / idx.m_vocab.size(); // p -- FIXME: should we subtract away sentinels?
     t_node node_incl = idx.m_cst.root(); // v_F^all matching the full pattern, including last item
     t_node node_excl = idx.m_cst.root(); // v_F     matching only the context, excluding last item
     size_t size = std::distance(pattern_begin, pattern_end);
@@ -132,7 +128,7 @@ double prob_kneser_ney_single(const t_idx& idx,
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
             d = idx.m_cst.size(node_excl);
         } else if (i == 1 || ngramsize == 1) {
-            c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : D;
+            c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.m_precomputed.N1plus_dotdot;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
@@ -140,22 +136,18 @@ double prob_kneser_ney_single(const t_idx& idx,
         }
 
         // update the running probability
-        if (i > 1) {
-            if (c == 1) {
-                c -= D1;
-            } else if (c == 2) {
-                c -= D2; 
-            } else if (c >= 3) {
-                c -= D3p;
-            }
-                
-            uint64_t n1, n2, n3p;
-            idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
-            double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
-            p = (c + gamma * p) / d;
-        } else {
-            p = c / d;
+        if (c == 1) {
+            c -= D1;
+        } else if (c == 2) {
+            c -= D2; 
+        } else if (c >= 3) {
+            c -= D3p;
         }
+            
+        uint64_t n1, n2, n3p;
+        idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
+        double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
+        p = (c + gamma * p) / d;
     }
 
     return p;

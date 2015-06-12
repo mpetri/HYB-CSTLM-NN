@@ -621,7 +621,7 @@ TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying);
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying, false);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
     }
 }
