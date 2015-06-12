@@ -67,6 +67,9 @@ double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint
     return perplexity;
 }
 
+#if 0
+// this is superceded by kn.hpp and kn_modified.hpp
+
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
 // predicted given the previous values in the pattern.
@@ -340,3 +343,4 @@ double prob_kneser_ney_forward(const t_idx& idx,
     //LOG(INFO) << "PKN: returning " << probability;
     return probability;
 }
+#endif
