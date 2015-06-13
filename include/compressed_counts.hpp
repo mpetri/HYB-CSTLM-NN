@@ -90,7 +90,8 @@ public:
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
         // FIXME: this map could be replaced with a stack / vector, perhaps
-        std::map<uint64_t, std::pair<uint64_t, uint64_t>> node_counts;
+        //std::map<uint64_t, std::pair<uint64_t, uint64_t>> node_counts;
+        std::vector<std::pair<uint64_t, uint64_t>> stack;
         auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
         uint64_t num_syms = 0;
@@ -102,10 +103,12 @@ public:
             auto end = cst.end(child);
 
             while (itr != end) {
-                auto depth = cst.node_depth(*itr);
+                auto node = *itr;
+                auto depth = cst.node_depth(node);
+                //LOG(INFO) << "node id=" << cst.id(node) << " node-depth " << depth << " lb " << cst.lb(node) << " rb " << cst.rb(node);
+                //LOG(INFO) << "stack size=" << stack.size() << " values=" << stack;
 
                 if (itr.visit() == 2) {
-                    auto node = *itr;
                     auto node_id = cst.id(node);
 
                     auto str_depth = cst.depth(node);
@@ -115,26 +118,33 @@ public:
                         tmp_buffer_counts_b.push_back(num_syms);
                         tmp_bv[node_id] = 1;
                         if (mkn_counts) {
-                            auto f12 = node_counts[node_id];
+                            //auto &f12 = node_counts[node_id];
+                            auto &f12 = stack.back();
+                            //LOG(INFO) << "internal node id=" << node_id << " looking up value -> " << f12;
+                        
                             tmp_buffer_counts_f1.push_back(f12.first);
                             tmp_buffer_counts_f2.push_back(f12.second);
-                            node_counts.erase(node_id);
+                            //node_counts.erase(node_id);
+                            stack.pop_back();
                         }
                     }
                 } else {
                     /* first visit */
-                    auto node = *itr;
-
                     if (! cst.is_leaf(node) ) {
                         auto depth = cst.depth(node);
                         if (depth > max_node_depth) {
                             itr.skip_subtree();
+                            //LOG(INFO) << "node is too deep";
                         } 
                     }
                     
                     if (mkn_counts) {
                         int count = cst.size(node);
-                        auto &cs = node_counts[cst.id(cst.parent(node))];
+                        //LOG(INFO) << "node id=" << cst.id(node) << " parent id=" << cst.id(cst.parent(node)) << " count=" << count << " leaf?=" << cst.is_leaf(node);
+                        //auto &cs = node_counts[cst.id(cst.parent(node))];
+                        if (depth > last_node_depth)
+                            stack.push_back(std::make_pair(0ul, 0ul));
+                        auto &cs = stack.back();
                         cs.first += (count == 1);
                         cs.second += (count == 2);
                     }
