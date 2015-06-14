@@ -54,18 +54,11 @@ target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64)
 add_executable(create-collection.x src/create-collection.cpp)
 target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64)
 
-add_executable(create-byte-collection.x src/create-byte-collection.cpp)
-target_link_libraries(create-byte-collection.x sdsl pthread divsufsort divsufsort64)
-
 add_executable(query-index-knm.x src/query-index-knm.cpp)
 target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(query-index-stupid.x src/query-index-stupid.cpp)
 target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
-
-add_executable(check-query-file.x src/check-query-file.cpp)
-target_link_libraries(check-query-file.x sdsl pthread divsufsort divsufsort64)
-
 
 add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)

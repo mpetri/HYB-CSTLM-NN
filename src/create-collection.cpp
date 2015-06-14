@@ -8,19 +8,17 @@
 
 typedef struct cmdargs {
     std::string input_file;
-    std::string list_file;
     std::string collection_dir;
-    bool is_bytes;
+    bool byte_alphabet;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
     fprintf(stdout, "%s -i <input file>\n", program);
     fprintf(stdout, "where\n");
-    fprintf(stdout, "  -i <input file>  : the input file.\n");
-    fprintf(stdout, "  -l <input file file> : file containing list of file names.\n");
+    fprintf(stdout, "  -i <input file>      : the input file.\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
-    fprintf(stdout, "  -b : treat as stream of bytes.\n");
+    fprintf(stdout, "  -b                   : byte parsing.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -29,30 +27,42 @@ cmdargs_t parse_args(int argc, const char* argv[])
     int op;
     args.input_file = "";
     args.collection_dir = "";
-    args.list_file = "";
-    args.is_bytes = false;
-    while ((op = getopt(argc, (char* const*)argv, "i:c:l:b")) != -1) {
+    args.byte_alphabet = false;
+    while ((op = getopt(argc, (char* const*)argv, "i:c:")) != -1) {
         switch (op) {
-        case 'i':
-            args.input_file = optarg;
-            break;
-        case 'c':
-            args.collection_dir = optarg;
-            break;
-        case 'l':
-            args.list_file = optarg;
-            break;
-        case 'b':
-            args.is_bytes = true;
-            break;
+            case 'i':
+                args.input_file = optarg;
+                break;
+            case 'c':
+                args.collection_dir = optarg;
+                break;
+            case 'b':
+                args.byte_alphabet = true;
         }
     }
-    if (args.collection_dir == "" || (args.input_file == "" && args.list_file == "")) {
+    if (args.collection_dir == "" || args.input_file == "") {
         std::cerr << "Missing command line parameters.\n";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
     return args;
+}
+
+std::vector<std::string>
+parse_line(const std::string& line,bool byte) {
+    std::vector<std::string> line_tokens;
+    if(byte) {
+        for(const auto& chr : line) {
+            line_tokens.push_back(std::string(1,chr));
+        }
+    } else {
+        std::istringstream input(line);
+        std::string word;
+        while (std::getline(input, word, ' ')) {
+            line_tokens.push_back(word);
+        }
+    }
+    return line_tokens;
 }
 
 int main(int argc, const char* argv[])
@@ -63,88 +73,68 @@ int main(int argc, const char* argv[])
     /* create collection dir */
     utils::create_directory(args.collection_dir);
 
-    std::vector<std::string> input_filenames;
-    if (utils::file_exists(args.list_file)) {
-        std::ifstream ifile(args.list_file);
-        std::string line;
-        while (std::getline(ifile, line)) {
-            input_filenames.push_back(line);
-            assert(utils::file_exists(input_filenames.back()));
-        }
-    } else {
-        input_filenames.push_back(args.input_file);
-        assert(utils::file_exists(input_filenames.back()));
-    }
-
-    /* parse file and output to sdsl format */
-    /* create sdsl input file on disk */
-    std::string output_file = args.collection_dir + +"/" + KEY_PREFIX + KEY_TEXT;
-    std::cout << "writing to output file '" << output_file << "'" << std::endl;
+    /* (1) create dict */
+    std::unordered_map<std::string,uint64_t> dict;
+    std::vector<std::pair<uint64_t,std::string>> dict_ids;
+    size_t max_id = 0;
     {
-        sdsl::int_vector<> tmp;
-        std::ofstream ofs(output_file);
-        sdsl::serialize(tmp, ofs);
-    }
-    sdsl::int_vector_mapper<0, std::ios_base::out | std::ios_base::in> sdsl_input(output_file);
-    std::ifstream ifile(args.input_file);
-
-    std::unordered_map<std::string, uint64_t> vocab;
-
-    sdsl_input.push_back(EOS_SYM); // TODO added
-    for (auto input_file: input_filenames) {
-        std::cout << "reading input file '" << input_file << "'" << std::endl;
+        std::unordered_map<std::string,uint64_t> tdict;
+        std::ifstream ifs(args.input_file);
         std::string line;
-        uint64_t num;
-        std::ifstream ifile(input_file);
-        while (std::getline(ifile, line)) {
-            sdsl_input.push_back(PAT_START_SYM); // TODO added
-            if (!args.is_bytes) {
-                std::istringstream iss(line);
-                std::string word;
-                while (std::getline(iss, word, ' ')) {
-                    //uint64_t num = std::stoull(word);
-                    auto it = vocab.find(word);
-                    if (it != vocab.end())
-                        num = it->second;
-                    else {
-                        num = vocab.size() + NUM_SPECIAL_SYMS;
-                        vocab[word] = num;
-                    }
-                    sdsl_input.push_back(num);
-                }
-            } else { // process as bytes
-                std::istringstream iss(line);
-                char ch;
-                while (iss >> ch) {
-                    num = ch + NUM_SPECIAL_SYMS;
-                    sdsl_input.push_back(num);
-                }
+        while( std::getline(ifs,line) ) {
+            auto line_tokens = parse_line(line,args.byte_alphabet);
+            for(const auto& tok : line_tokens)
+                tdict[tok]++;
+        }
+        /* sort by freq */
+        for(const auto& did : tdict) {
+            dict_ids.emplace_back(did.second,did.first);
+        }
+        std::sort(dict_ids.begin(),dict_ids.end(),std::greater<std::pair<uint64_t,char>>());
+        /* create id mapping */
+        uint64_t cur_id = NUM_SPECIAL_SYMS;
+        for(const auto& did: dict_ids) {
+            dict[did.second] = cur_id;
+            max_id = cur_id;
+            cur_id++;
+        }
+    }
+    /* (2) 2nd pass to transform the integers */
+    {
+        auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir+"/"+ KEY_PREFIX + KEY_TEXT);
+        auto int_width = sdsl::bits::hi(max_id)+1;
+        buf.width(int_width);
+        std::ifstream ifs(args.input_file);
+        std::string line;
+        buf.push_back(EOS_SYM); // file starts with EOS_SYM
+        while( std::getline(ifs,line) ) {
+            buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
+            auto line_tokens = parse_line(line,args.byte_alphabet);
+            for(const auto& tok : line_tokens) {
+                auto itr = dict.find(tok);
+                auto num = itr->second;
+                buf.push_back(num);
             }
-            sdsl_input.push_back(PAT_END_SYM); // TODO added
-            sdsl_input.push_back(EOS_SYM);
+            buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
+        }
+        buf.push_back(EOF_SYM);
+    }
+    /* (3) write vocab file */ 
+    {
+        std::ofstream ofs(args.collection_dir+"/"+ KEY_PREFIX + KEY_VOCAB);
+        // write special symbols
+        ofs << "<EOF> 0\n";
+        ofs << "<EOS> 1\n";
+        ofs << "<UNK> 2\n";
+        ofs << "<S> 3\n";
+        ofs << "</S> 4\n";
+        // write the real vocab
+        uint64_t cur_id = NUM_SPECIAL_SYMS;
+        for(const auto& did: dict_ids) {
+            ofs << did.second << " " << cur_id << "\n";
+            cur_id++;
         }
     }
-    sdsl_input.push_back(EOF_SYM);
-    sdsl::util::bit_compress(sdsl_input);
-
-    if (args.is_bytes) {
-        for (int i = 0; i < 256; ++i) {
-            std::ostringstream oss;
-            oss << i;
-            vocab[oss.str()] = i + NUM_SPECIAL_SYMS;
-        }
-    }
-
-    std::string vocab_file = args.collection_dir + +"/" + KEY_PREFIX + KEY_VOCAB;
-    std::cout << "writing to vocab file '" << vocab_file << "'" << std::endl;
-    std::ofstream ofs(vocab_file);
-    ofs << "<EOF> 0\n";
-    ofs << "<EOS> 1\n";
-    ofs << "<UNK> 2\n";
-    ofs << "<S> 3\n";
-    ofs << "</S> 4\n";
-    for (auto wiit = vocab.begin(); wiit != vocab.end(); ++ wiit) 
-        ofs << wiit->first << ' ' << wiit->second << "\n";
 
     return 0;
 }
