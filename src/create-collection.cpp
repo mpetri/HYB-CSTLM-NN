@@ -90,7 +90,7 @@ int main(int argc, const char* argv[])
         for(const auto& did : tdict) {
             dict_ids.emplace_back(did.second,did.first);
         }
-        std::sort(dict_ids.begin(),dict_ids.end(),std::greater<std::pair<uint64_t,char>>());
+        std::sort(dict_ids.begin(),dict_ids.end(),std::greater<std::pair<uint64_t,std::string>>());
         /* create id mapping */
         uint64_t cur_id = NUM_SPECIAL_SYMS;
         for(const auto& did: dict_ids) {
