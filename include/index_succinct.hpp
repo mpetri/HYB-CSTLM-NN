@@ -33,7 +33,7 @@ public: // data
 
 public:
     index_succinct() = default;
-    index_succinct(collection& col, bool dodgy_discounts=false, bool use_mkn=false)
+    index_succinct(collection& col, bool use_mkn=false)
     {
         using clock = std::chrono::high_resolution_clock;
 
@@ -69,7 +69,7 @@ public:
 
         LOG(INFO) << "COMPUTE DISCOUNTS";
         start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts, use_mkn);
+        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, use_mkn);
         stop = clock::now();
         LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
                   << " sec)";

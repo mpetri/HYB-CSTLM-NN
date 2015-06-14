@@ -10,6 +10,20 @@
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
 
+struct lm_construct_timer {
+	watch::time_point start;
+	std::string name;
+	lm_construct_timer(const std::string& _n) : name(_n) {
+		LOG(INFO) << "START_CONSTRUCT(" << name << ")";
+		start = watch::now();
+	}
+	~lm_construct_timer() {
+		auto stop = watch::now();
+		auto time_spent = stop-start;
+		LOG(INFO) << "STOP_CONSTRUCT(" << name << ") - " << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec";
+	}
+};
+
 enum class timer_type {
 	N1PlusBack = 0,
 	N1PlusFront ,

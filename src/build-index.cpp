@@ -8,7 +8,6 @@
 
 typedef struct cmdargs {
     std::string collection_dir;
-    bool dodgy_discounts;
     bool use_mkn;
 } cmdargs_t;
 
@@ -17,7 +16,6 @@ void print_usage(const char* program)
     fprintf(stdout, "%s -c <collection dir>\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
-    fprintf(stdout, "  -d                   : use dodgy (fast) discount calculation (default = correct)\n");
     fprintf(stdout, "  -m                   : use modified kneser ney.\n");
 };
 
@@ -26,15 +24,11 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int op;
     args.collection_dir = "";
-    args.dodgy_discounts = false;
     args.use_mkn = false;
     while ((op = getopt(argc, (char* const*)argv, "c:dm")) != -1) {
         switch (op) {
         case 'c':
             args.collection_dir = optarg;
-            break;
-        case 'd':
-            args.dodgy_discounts = true;
             break;
         case 'm':
             args.use_mkn = true;
@@ -49,11 +43,11 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_idx> void create_and_store(collection& col, bool dodgy_discounts, bool use_mkn)
+template <class t_idx> void create_and_store(collection& col,bool use_mkn)
 {
     using clock = std::chrono::high_resolution_clock;
     auto start = clock::now();
-    t_idx idx(col, dodgy_discounts, use_mkn);
+    t_idx idx(col,use_mkn);
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
@@ -83,17 +77,17 @@ int main(int argc, const char* argv[])
     collection col(args.collection_dir);
 
     /* create indexes */
-    {
-        using index_type = index_succinct<default_cst_type>;
-        create_and_store<index_type>(col, args.dodgy_discounts, args.use_mkn);
-    }
-    {
-        using index_type = index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type>;
-        create_and_store<index_type>(col, args.dodgy_discounts, args.use_mkn);
-    }
+    // {
+    //     using index_type = index_succinct<default_cst_type>;
+    //     create_and_store<index_type>(col, args.use_mkn);
+    // }
+    // {
+    //     using index_type = index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type>;
+    //     create_and_store<index_type>(col, args.use_mkn);
+    // }
     {
         using index_type = index_succinct_store_n1fb<default_cst_type, default_cst_rev_type>;
-        create_and_store<index_type>(col, args.dodgy_discounts, args.use_mkn);
+        create_and_store<index_type>(col, args.use_mkn);
     }
 
     return 0;

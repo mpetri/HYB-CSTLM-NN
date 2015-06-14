@@ -6,6 +6,7 @@
 #include "precomputed_stats.hpp"
 #include "constants.hpp"
 #include "compressed_counts.hpp"
+#include "timings.hpp"
 //#include "sentinel_flag.hpp"
 
 #include <sdsl/suffix_arrays.hpp>
@@ -32,31 +33,12 @@ public: // data
     precomputed_stats m_precomputed;
     compressed_counts<> m_n1plusfrontback;
     vocab_type m_vocab;
-    // compressed_sentinel_flag<> m_csf, m_csf_rev; // trevor: temporary?
 public:
     index_succinct_store_n1fb() = default;
-    index_succinct_store_n1fb(collection& col, bool dodgy_discounts=false, bool is_mkn=false)
+    index_succinct_store_n1fb(collection& col,bool is_mkn=false)
     {
-        using clock = std::chrono::high_resolution_clock;
-
-        auto start = clock::now();
-        LOG(INFO) << "CONSTRUCT CST";
         {
-            sdsl::cache_config cfg;
-            cfg.delete_files = false;
-            cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMP";
-            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
-            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
-        }
-        auto stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "CONSTRUCT CST REV";
-        start = clock::now();
-        {
+            lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
@@ -65,48 +47,28 @@ public:
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "PRECOMPUTE N1PLUSFRONTBACK";
-        start = clock::now();
-        m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "COMPUTE DISCOUNTS";
-        start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, dodgy_discounts, is_mkn);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        // m_precomputed.print(false, 10);
-
-        LOG(INFO) << "CREATE VOCAB";
-        start = clock::now();
-        m_vocab = vocab_type(col);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        // perhaps temporary: this and the next block; interested in the relative timing cf
-        // 'precompute_statistics'
-        //        LOG(INFO) << "CREATE EDGE FLAG";
-        //        start = clock::now();
-        //        m_csf = compressed_sentinel_flag<>(m_cst);
-        //        stop = clock::now();
-        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() /
-        //        1000.0f << " sec)";
-        //
-        //        LOG(INFO) << "CREATE EDGE FLAG REV";
-        //        start = clock::now();
-        //        m_csf_rev = compressed_sentinel_flag<>(m_cst_rev);
-        //        stop = clock::now();
-        //        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() /
-        //        1000.0f << " sec)";
+        {
+            lm_construct_timer timer("DISCOUNTS");
+            m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, is_mkn);
+        }
+        {
+            lm_construct_timer timer("CST");
+            sdsl::cache_config cfg;
+            cfg.delete_files = false;
+            cfg.dir = col.path + "/tmp/";
+            cfg.id = "TMP";
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
+        }
+        {
+            lm_construct_timer timer("PRECOMPUTED_COUNTS");
+            m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
+        }
+        {
+            lm_construct_timer timer("VOCAB");
+            m_vocab = vocab_type(col);
+        }
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -116,15 +78,10 @@ public:
             = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
-        written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
-        // written_bytes += m_csf.serialize(out, child, "sentinel");
-        // written_bytes += m_csf_rev.serialize(out, child, "sentinel_rev");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
-
         sdsl::structure_tree::add_size(child, written_bytes);
-
         return written_bytes;
     }
 
@@ -134,8 +91,6 @@ public:
         m_cst_rev.load(in);
         sdsl::load(m_precomputed, in);
         sdsl::load(m_n1plusfrontback, in);
-        // sdsl::load(m_csf, in);
-        // sdsl::load(m_csf_rev, in);
         sdsl::load(m_vocab, in);
     }
 
@@ -143,11 +98,9 @@ public:
     {
         if (this != &a) {
             m_cst.swap(a.m_cst);
-            m_cst_rev.swap(a.m_cst_rev);
+            m_cst_rev.swap(a.m_cst);
             std::swap(m_precomputed, a.m_precomputed);
             std::swap(m_n1plusfrontback, a.m_n1plusfrontback);
-            // std::swap(m_csf, a.m_csf);
-            // std::swap(m_csf_rev, a.m_csf_rev);
             m_vocab.swap(a.m_vocab);
         }
     }

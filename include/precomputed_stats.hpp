@@ -3,6 +3,11 @@
 #include "constants.hpp"
 #include "collection.hpp"
 
+#include "sdsl/int_vector_mapper.hpp"
+
+template <uint8_t t_width = 0>
+using read_only_mapper = const sdsl::int_vector_mapper<t_width,std::ios_base::in>;
+
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
     uint64_t max_ngram_count;
@@ -28,7 +33,7 @@ struct precomputed_stats {
     precomputed_stats() = default;
 
     template <typename t_cst>
-    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts=false, bool is_mkn=false);
+    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool is_mkn=false);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -136,56 +141,23 @@ struct precomputed_stats {
     }
 
 private:
-    template <typename t_cst> void ncomputer(const t_cst& cst_rev, bool dodgy_discounts);
+    template <typename t_cst> void ncomputer(collection& col,const t_cst& cst_rev);
+
+
+template<class t_cst>
+typename t_cst::char_type
+emulate_edge(read_only_mapper<>& SAREV,read_only_mapper<>& TREV,const t_cst& cst,
+    const typename t_cst::node_type& node,const typename t_cst::size_type& offset)
+{
+    auto i = cst.lb(node);
+    auto text_offset = SAREV[i];
+    return TREV[text_offset+offset-1];
+}
+
 };
 
-// template<class t_cst>
-// precomputed_stats
-// precompute_statistics(collection& col,const t_cst& cst,uint64_t max_ngram_len) {
-// 	precomputed_stats ps(max_ngram_len);
-
-//     // use the DFS iterator to traverse `cst`
-//     for (auto it=cst.begin(); it!=cst.end(); ++it) {
-//         if (it.visit() == 1) {  // node visited the first time
-//             auto v = *it;       // get the node by dereferencing the iterator
-//         	auto parent = cst.parent(v);
-//         	auto parent_depth = cst.depth(v);
-//             auto num_occ = cst.size(v);
-//             if(num_occ == 1) {
-//             	/* leaf. for all n-grams between parent and MAX -> +1 */
-//             	for(size_t i=parent_depth+1;i<=max_ngram_len;i++) {
-//             		d.n1[i]++;
-//             	}
-//             } else {
-//             	/* non leaf */
-//             	uint64_t node_depth = cst.depth(v);
-//             	if(parent_depth < max_ngram_count) {
-//             		auto stop = std::min(node_depth,max_ngram_count);
-//                        for ... {
-// 	            	    switch num_occ {
-// 	            		case 2:
-// 	            			d.n2[node_depth]++;
-// 	            		case 3:
-// 	            			d.n3[node_depth]++;
-// 	            		case 4:
-// 	            			d.n4[node_depth]++;
-// 	            	    }
-//                        }
-// 	            	if(node_depth == 2) {
-// 	            		d.N1PlusPlus++;
-// 	            	}
-// 	            } else {
-// 	            	it.skip_subtree();
-// 	            }
-//             }
-//         }
-//     }
-
-// 	return ps;
-// }
-
 template <typename t_cst>
-precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool dodgy_discounts, bool ismkn)
+precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint64_t max_ngram_len,bool )
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
@@ -209,7 +181,7 @@ precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t
     D3_cnt.resize(size);
 
     // compute the counts & continuation counts from the CST (reversed)
-    ncomputer(cst_rev, dodgy_discounts);
+    ncomputer(col,cst_rev);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
@@ -232,9 +204,14 @@ precomputed_stats::precomputed_stats(collection&, const t_cst& cst_rev, uint64_t
     }
 }
 
+
 template <class t_cst>
-void precomputed_stats::ncomputer(const t_cst& cst_rev, bool dodgy_discounts)
+void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 {
+    /* load SAREV and TREV to speed up edge call */
+    read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
+    read_only_mapper<> TREV(col.file_map[KEY_TEXTREV]);
+    /* iterate over all nodes */
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {
             auto node = *it;
@@ -249,7 +226,7 @@ void precomputed_stats::ncomputer(const t_cst& cst_rev, bool dodgy_discounts)
 
             for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
                 // edge call is slow: dodgy discounts skips this by faking the symbol with a regular token 
-                auto symbol = (dodgy_discounts) ? NUM_SPECIAL_SYMS+1 : cst_rev.edge(node, n);
+                auto symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
                 // don't count ngrams including these sentinels, including extensions
                 if (symbol == EOF_SYM || symbol == EOS_SYM) {
                     it.skip_subtree();

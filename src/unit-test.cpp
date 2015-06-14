@@ -6,9 +6,8 @@
 
 #include <unordered_set>
 
-typedef testing::Types<index_succinct<default_cst_type>,
-                       index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>,
-                       index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type> 
+typedef testing::Types<
+index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
 struct triplet {
@@ -50,7 +49,7 @@ protected:
         // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
         {
             col = collection(col_path);
-            idx = t_idx(col, false, true);
+            idx = t_idx(col,true);
         }
 
         {
