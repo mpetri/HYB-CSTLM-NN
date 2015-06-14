@@ -33,28 +33,10 @@ public: // data
 
 public:
     index_succinct() = default;
-    index_succinct(collection& col, bool use_mkn=false)
+    index_succinct(collection& col, bool is_mkn=false)
     {
-        using clock = std::chrono::high_resolution_clock;
-
-        auto start = clock::now();
-        LOG(INFO) << "CONSTRUCT CST";
         {
-            sdsl::cache_config cfg;
-            cfg.delete_files = false;
-            cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMP";
-            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
-            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
-        }
-        auto stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "CONSTRUCT CST REV";
-        start = clock::now();
-        {
+            lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
@@ -63,25 +45,24 @@ public:
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "COMPUTE DISCOUNTS";
-        start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, use_mkn);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        //m_precomputed.print(false, 10);
-
-        LOG(INFO) << "CREATE VOCAB";
-        start = clock::now();
-        m_vocab = vocab_type(col);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
+        {
+            lm_construct_timer timer("DISCOUNTS");
+            m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, is_mkn);
+        }
+        {
+            lm_construct_timer timer("CST");
+            sdsl::cache_config cfg;
+            cfg.delete_files = false;
+            cfg.dir = col.path + "/tmp/";
+            cfg.id = "TMP";
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
+        }
+        {
+            lm_construct_timer timer("VOCAB");
+            m_vocab = vocab_type(col);
+        }
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -123,8 +104,8 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack_from_forward(const node_type &node,
-            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    uint64_t N1PlusBack_from_forward(const node_type &,
+            pattern_iterator , pattern_iterator ) const
     {
         // not implemented
         return 0ULL;
@@ -235,8 +216,8 @@ public:
         }
     }
 
-    uint64_t N1PlusFrontBack_from_forward(const node_type &node,
-            pattern_iterator pattern_begin, pattern_iterator pattern_end) const {
+    uint64_t N1PlusFrontBack_from_forward(const node_type &,
+            pattern_iterator , pattern_iterator ) const {
         // not implemented
         return 0ULL;
     }
@@ -266,9 +247,9 @@ public:
         return N1plus_front;
     }
 
-    void N123PlusFront(const node_type &node,
-                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
-                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    void N123PlusFront(const node_type &,
+                       pattern_iterator , pattern_iterator ,
+                       uint64_t &, uint64_t &, uint64_t &) const
     {
         assert(false && "not implemented");
     }

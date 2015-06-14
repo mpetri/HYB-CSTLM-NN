@@ -32,28 +32,10 @@ public: // data
 
 public:
     index_succinct_compute_n1fb() = default;
-    index_succinct_compute_n1fb(collection& col,bool use_mkn=false)
+    index_succinct_compute_n1fb(collection& col,bool is_mkn=false)
     {
-        using clock = std::chrono::high_resolution_clock;
-
-        auto start = clock::now();
-        LOG(INFO) << "CONSTRUCT CST";
         {
-            sdsl::cache_config cfg;
-            cfg.delete_files = false;
-            cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMP";
-            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
-            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
-        }
-        auto stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "CONSTRUCT CST REV";
-        start = clock::now();
-        {
+            lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
@@ -62,25 +44,24 @@ public:
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
         }
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        LOG(INFO) << "COMPUTE DISCOUNTS";
-        start = clock::now();
-        m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, use_mkn);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
-
-        // m_precomputed.print(false, 10);
-
-        LOG(INFO) << "CREATE VOCAB";
-        start = clock::now();
-        m_vocab = vocab_type(col);
-        stop = clock::now();
-        LOG(INFO) << "DONE (" << duration_cast<milliseconds>(stop - start).count() / 1000.0f
-                  << " sec)";
+        {
+            lm_construct_timer timer("DISCOUNTS");
+            m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, is_mkn);
+        }
+        {
+            lm_construct_timer timer("CST");
+            sdsl::cache_config cfg;
+            cfg.delete_files = false;
+            cfg.dir = col.path + "/tmp/";
+            cfg.id = "TMP";
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+            construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
+        }
+        {
+            lm_construct_timer timer("VOCAB");
+            m_vocab = vocab_type(col);
+        }
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -146,7 +127,7 @@ public:
     }
 
     uint64_t N1PlusBack_from_forward(const node_type &node,
-            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+            pattern_iterator pattern_begin, pattern_iterator ) const
     {
         static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);

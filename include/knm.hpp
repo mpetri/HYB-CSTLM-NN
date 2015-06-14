@@ -24,7 +24,7 @@
         //t_pat_iter pattern_end, uint64_t ngramsize);
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& M, uint64_t ngramsize, bool fast_index, bool ismkn)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize, bool fast_index, bool ismkn)
 {
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
