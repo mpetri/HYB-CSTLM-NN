@@ -99,6 +99,15 @@ double prob_mod_kneser_ney_dual(const t_idx& idx,
     return p;
 }
 
+void print(const std::vector<uint64_t>::iterator& pattern_begin,
+           const std::vector<uint64_t>::iterator& pattern_end)
+{
+    for (auto it = pattern_begin; it != pattern_end; it++) {
+        cout << *it << " ";
+    }
+    cout << endl;
+}
+
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
 // predicted given the previous values in the pattern.
@@ -122,9 +131,11 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
 
         // update the two searches into the CST
         if (ok) {
+            cout<<"**start is: "<<*start<<endl;
             ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
         }
         if (i >= 2) {
+            cout<<"*start is: "<<*start<<endl;
             if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0)
                 break;
         }
@@ -136,21 +147,28 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
+	    cout<<"idx.m_cst.size(node_incl) is: "<<idx.m_cst.size(node_incl)<<endl;
             d = idx.m_cst.size(node_excl);
+            cout<<"Highest Level: "<<c<<endl;
         } else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.m_precomputed.N1plus_dotdot;
+            cout<<"Lowest Level: "<<c<<endl;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
+            cout<<"Lower Level: "<<c<<endl;
         }
 
         // update the running probability
         if (c == 1) {
+            cout<<"D1 is: "<<D1<<endl;
             c -= D1;
         } else if (c == 2) {
+            cout<<"D2 is: "<<D2<<endl;
             c -= D2; 
         } else if (c >= 3) {
+            cout<<"D3p is: "<<D3p<<endl;
             c -= D3p;
         }
             
@@ -158,6 +176,12 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
+        cout<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
+        cout<<"gamma = "<<gamma<<endl;
+        cout<<"Pattern is: ";
+        print(pattern_begin,pattern_end);
+        cout<<"probability is: "<<p<<endl;
+        cout<<"----------------------------------"<<endl;
     }
 
     return p;
