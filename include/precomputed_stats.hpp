@@ -11,8 +11,10 @@ using read_only_mapper = const sdsl::int_vector_mapper<t_width,std::ios_base::in
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
     uint64_t max_ngram_count;
-    double N1plus_dotdot;
-    double N3plus_dot;
+    uint64_t N1plus_dotdot;
+    uint64_t N3plus_dot;
+    uint64_t N1_dot;
+    uint64_t N2_dot;
     std::vector<double> n1;
     std::vector<double> n2;
     std::vector<double> n3;
@@ -43,8 +45,10 @@ struct precomputed_stats {
         size_type written_bytes = 0;
 
         sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
-        sdsl::write_member(N1plus_dotdot, out, child, "N1PlusPlus");
+        sdsl::write_member(N1plus_dotdot, out, child, "N1Plus_dotdot");
         sdsl::write_member(N3plus_dot, out, child, "N3PlusPlus");
+        sdsl::write_member(N1_dot, out, child, "N1_dot");
+        sdsl::write_member(N2_dot, out, child, "N2_dot");
         sdsl::serialize(n1, out, child, "n1");
         sdsl::serialize(n2, out, child, "n2");
         sdsl::serialize(n3, out, child, "n3");
@@ -73,6 +77,8 @@ struct precomputed_stats {
         sdsl::read_member(max_ngram_count, in);
         sdsl::read_member(N1plus_dotdot, in);
         sdsl::read_member(N3plus_dot, in);
+        sdsl::read_member(N1_dot, in);
+        sdsl::read_member(N2_dot, in);
 
         sdsl::load(n1, in);
         sdsl::load(n2, in);
@@ -135,7 +141,12 @@ struct precomputed_stats {
             display_vec("D3c", D3_cnt, ngramsize);
         }
         LOG(INFO) << "------------------------------------------------";
-        LOG(INFO) << "N1+(.., ngramsize) = " << N1plus_dotdot;
+        LOG(INFO) << "N1+(..) = " << N1plus_dotdot;
+        if(ismkn){
+            LOG(INFO) << "N1(.) = " << N1_dot;
+            LOG(INFO) << "N2(.) = " << N2_dot;
+            LOG(INFO) << "N3+(.) = " << N3plus_dot;
+        }
         LOG(INFO) << "------------------------------------------------";
         LOG(INFO) << "------------------------------------------------";
     }
@@ -161,6 +172,9 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
+    , N1_dot(0)
+    , N2_dot(0)
+
 {
     auto size = max_ngram_count + 1;
     n1.resize(size);
@@ -208,6 +222,7 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 {
+
     /* load SAREV and TREV to speed up edge call */
     read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
     read_only_mapper<> TREV(col.file_map[KEY_TEXTREV]);
@@ -237,9 +252,13 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
+		    if(n == 1)
+			N1_dot++; 
                     break;
                 case 2:
                     n2[n] += 1;
+		    if(n == 1)
+			N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
@@ -253,7 +272,7 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                     N1plus_dotdot++;
                 if (freq >= 3 && n == 1)
                     N3plus_dot++;
-
+		
                 // update continuation counts
                 uint64_t n1plus_back = 0ULL;
                 if (symbol == PAT_START_SYM)

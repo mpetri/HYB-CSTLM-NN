@@ -56,7 +56,7 @@ double prob_mod_kneser_ney_dual(const t_idx& idx,
 
         // compute the numerator and denominator
         double D1, D2, D3p;
-        idx.mkn_discount(ngramsize, D1, D2, D3p, i == 1 || i != ngramsize);
+        idx.mkn_discount(i, D1, D2, D3p, i == 1 || i != ngramsize);
 
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
@@ -121,7 +121,7 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
 
         // compute the count and normaliser
         double D1, D2, D3p;
-        idx.mkn_discount(ngramsize, D1, D2, D3p, i == 1 || i != ngramsize);
+        idx.mkn_discount(i, D1, D2, D3p, i == 1 || i != ngramsize);
 
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
