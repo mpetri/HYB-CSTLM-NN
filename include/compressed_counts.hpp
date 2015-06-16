@@ -89,8 +89,6 @@ public:
         sdsl::bit_vector tmp_bv(cst.nodes());
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
-        // FIXME: this map could be replaced with a stack / vector, perhaps
-        //std::map<uint64_t, std::pair<uint64_t, uint64_t>> node_counts;
         std::vector<std::pair<uint64_t, uint64_t>> stack;
         auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
@@ -118,13 +116,11 @@ public:
                         tmp_buffer_counts_b.push_back(num_syms);
                         tmp_bv[node_id] = 1;
                         if (mkn_counts) {
-                            //auto &f12 = node_counts[node_id];
                             auto &f12 = stack.back();
                             //LOG(INFO) << "internal node id=" << node_id << " looking up value -> " << f12;
                         
                             tmp_buffer_counts_f1.push_back(f12.first);
                             tmp_buffer_counts_f2.push_back(f12.second);
-                            //node_counts.erase(node_id);
                             stack.pop_back();
                         }
                     }
@@ -141,7 +137,6 @@ public:
                     if (mkn_counts) {
                         int count = cst.size(node);
                         //LOG(INFO) << "node id=" << cst.id(node) << " parent id=" << cst.id(cst.parent(node)) << " count=" << count << " leaf?=" << cst.is_leaf(node);
-                        //auto &cs = node_counts[cst.id(cst.parent(node))];
                         if (depth > last_node_depth)
                             stack.push_back(std::make_pair(0ul, 0ul));
                         auto &cs = stack.back();
@@ -153,7 +148,6 @@ public:
                 last_node_depth = depth;
             }        
         }
-        assert(node_counts.size() == 1u);
         m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_counts_f1 = vector_type(tmp_buffer_counts_f1);

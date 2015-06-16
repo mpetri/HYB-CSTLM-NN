@@ -120,6 +120,44 @@ int main(int argc, const char* argv[])
     std::ranlux24_base rng;
     // FIXME: allow seeding
 
+    index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> idx;
+    index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> idx_store;
+
+    /* load index */
+    vocab_uncompressed vocab;
+    if (!args.isstored) {
+
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx.print_params(args.ismkn, args.ngramsize);
+        vocab = idx.m_vocab;
+
+    } else {
+
+        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
+                          + ".sdsl";
+        if (utils::file_exists(index_file)) {
+            LOG(INFO) << "loading index from file '" << index_file << "'";
+            sdsl::load_from_file(idx_store, index_file);
+        } else {
+            LOG(FATAL) << "index does not exist. build it first";
+            return EXIT_FAILURE;
+        }
+
+        /* print precomputed parameters */
+        idx_store.print_params(args.ismkn, args.ngramsize);
+        vocab = idx_store.m_vocab;
+    }
+
     /* load patterns */
     std::vector<std::vector<uint64_t> > patterns;
     if (utils::file_exists(args.pattern_file)) {
@@ -131,7 +169,7 @@ int main(int argc, const char* argv[])
             std::istringstream iss(line);
             std::string word;
             while (std::getline(iss, word, ' ')) {
-                uint64_t num = std::stoull(word);
+                uint64_t num = vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
             patterns.push_back(tokens);
@@ -140,40 +178,14 @@ int main(int argc, const char* argv[])
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
-    /* load index */
+    /* run sampling */
     if (!args.isstored) {
 
-        index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
-                          + ".sdsl";
-        if (utils::file_exists(index_file)) {
-            LOG(INFO) << "loading index from file '" << index_file << "'";
-            sdsl::load_from_file(idx, index_file);
-        } else {
-            LOG(FATAL) << "index does not exist. build it first";
-            return EXIT_FAILURE;
-        }
-
-        /* print precomputed parameters */
-        idx.print_params(args.ismkn, args.ngramsize);
         run_sampling(idx, patterns, args.ngramsize, rng);
 
     } else {
 
-        index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
-                          + ".sdsl";
-        if (utils::file_exists(index_file)) {
-            LOG(INFO) << "loading index from file '" << index_file << "'";
-            sdsl::load_from_file(idx, index_file);
-        } else {
-            LOG(FATAL) << "index does not exist. build it first";
-            return EXIT_FAILURE;
-        }
-
-        /* print precomputed parameters */
-        idx.print_params(args.ismkn, args.ngramsize);
-        run_sampling(idx, patterns, args.ngramsize, rng);
+        run_sampling(idx_store, patterns, args.ngramsize, rng);
     }
 
     return EXIT_SUCCESS;

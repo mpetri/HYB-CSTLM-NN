@@ -36,6 +36,8 @@ uint64_t _sample_next_symbol(const t_idx& idx,
     typedef typename t_idx::cst_type::node_type t_node;
     size_t size = std::distance(pattern_begin, pattern_end);
 
+    LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end) << " ctxsize " << ctxsize;
+
     // attempt a longer match
     uint64_t next = EOF_SYM;
     if (ctxsize < size) {
@@ -55,7 +57,7 @@ uint64_t _sample_next_symbol(const t_idx& idx,
     auto i = ctxsize + 1;
     double D = idx.discount(i, i == 1 || i != ngramsize);
     double d;
-    auto start = (pattern_end-i);
+    auto start = (pattern_end-i+1);
     if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
         d = idx.m_cst.size(node);
     } else if (i == 1 || ngramsize == 1) {
@@ -64,19 +66,31 @@ uint64_t _sample_next_symbol(const t_idx& idx,
         d = idx.N1PlusFrontBack_from_forward(node, start, pattern_end);
     }
 
+    LOG(INFO) << "\tctxsize " << ctxsize << " start " << *start << " d " << d;
+
     if (i > 1) {
-        double q = idx.N1PlusFront(node, start, pattern_end - 1);
-        double stay = d / D * q - 1;
+        double q = idx.N1PlusFront(node, start, pattern_end);
+        double stay = 1.0 - (D * q) / d;
+        LOG(INFO) << "\tq " << q << " stay " << stay;
 
         std::uniform_real_distribution<> uniform(0, 1);
         double r = uniform(rng);
+        LOG(INFO) << "\tflip " << r;
         if (r < stay) {
-            uint64_t r = uniform(rng) * d;
+            double r = uniform(rng) * (d - D * q);
+            LOG(INFO) << "\tchild " << r << " of " << d;
             // read off the symbol from the corresponding edge
-            auto child = idx.m_cst.child(node, 1);
+            auto child = idx.m_cst.select_child(node, 1);
             while (child != idx.m_cst.root())
             {
-                r -= idx.m_cst.size() - D;
+                if ((i == ngramsize) || (*start == PAT_START_SYM)) // condition seems fishy
+                    r -= idx.m_cst.size() - D;
+                else {
+                    // augmented pattern is a bit fishy, may overrun memory
+                    r -= idx.N1PlusBack_from_forward(node, start, pattern_end+1) - D;
+                }
+
+                LOG(INFO) << "\t\tr now " << r << " after child " << child << " of size " << idx.m_cst.size();
                 if (r <= 0) {
                     next = idx.m_cst.edge(child, i);
                     break;
@@ -86,6 +100,7 @@ uint64_t _sample_next_symbol(const t_idx& idx,
             assert(false && "you shouldn't reach this line");
         } else {
             // backoff
+            LOG(INFO) << "\tbacking off";
             next = EOF_SYM;
         }
     } else {
@@ -94,7 +109,9 @@ uint64_t _sample_next_symbol(const t_idx& idx,
         static std::discrete_distribution<uint64_t> unigrams(unigrams_cs.begin(), unigrams_cs.end());
         unigrams_cs.clear();
         next = unigrams(rng);
+        LOG(INFO) << "\tsampled unigram";
     }
+    LOG(INFO) << "next is " << next;
 
     return next;
 }
@@ -106,7 +123,13 @@ std::vector<uint64_t> unigram_counts(const t_idx &idx)
     auto root = idx.m_cst.root();
     std::vector<uint64_t> pattern(1, NUM_SPECIAL_SYMS); // place-holder pattern
     std::vector<uint64_t> weights;
-    for (const auto& child : idx.m_cst.children(root))
-        weights.push_back(idx.N1PlusBack_from_forward(child, pattern.begin(), pattern.end()));
+    int i = 0;
+    for (const auto& child : idx.m_cst.children(root)) {
+        if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM)
+            weights.push_back(idx.N1PlusBack_from_forward(child, pattern.begin(), pattern.end()));
+        else 
+            weights.push_back(0);
+        ++i;
+    }
     return weights;
 }

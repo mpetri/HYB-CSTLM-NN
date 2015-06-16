@@ -68,6 +68,15 @@ public:
         return itr->second;
     }
 
+    uint64_t token2id(const std::string& token, uint64_t defaul) const
+    {
+        auto itr = m_t2i.find(token);
+        if (itr == m_t2i.end()) {
+            return defaul;
+        }
+        return itr->second;
+    }
+
     void load(std::istream& in)
     {
         std::vector<uint8_t> token_data;
