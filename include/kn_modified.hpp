@@ -80,7 +80,17 @@ double prob_mod_kneser_ney_dual(const t_idx& idx,
         }
             
         uint64_t n1, n2, n3p;
-        idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
+         // if it's the unigram level, the gamma can be computed using
+         // precomputed quantities N1(.), N2(.), N3+(.)
+	 if (i == 1 || ngramsize == 1) {
+            n1 = idx.m_precomputed.N1_dot;
+            n2 = idx.m_precomputed.N2_dot;
+            n3p = idx.m_precomputed.N3plus_dot;
+        }else{
+            idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
+        }
+
+//        idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
 
         p = (c + gamma * p) / d;
