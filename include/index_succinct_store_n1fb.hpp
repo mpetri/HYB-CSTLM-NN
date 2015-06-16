@@ -37,7 +37,8 @@ public:
     index_succinct_store_n1fb() = default;
     index_succinct_store_n1fb(collection& col,bool is_mkn=false)
     {
-        {
+        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
+        if(! utils::file_exists(cst_rev_file) ) {
             lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -46,12 +47,20 @@ public:
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
+            sdsl::store_to_file(m_cst_rev,cst_rev_file);
+        } else {
+            sdsl::load_from_file(m_cst_rev,cst_rev_file);
         }
-        {
+        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
+        if(! utils::file_exists(discounts_file) ) {
             lm_construct_timer timer("DISCOUNTS");
             m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, is_mkn);
+            sdsl::store_to_file(m_precomputed,discounts_file);
+        } else {
+            sdsl::load_from_file(m_precomputed,discounts_file);
         }
-        {
+        auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
+        if(! utils::file_exists(cst_file) ) {
             lm_construct_timer timer("CST");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -60,10 +69,17 @@ public:
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
+            sdsl::store_to_file(m_cst,cst_file);
+        } else {
+            sdsl::load_from_file(m_cst,cst_file);
         }
-        {
+        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_n1plusfrontback) + ".sdsl";
+        if(! utils::file_exists(precomputed_file) ) {
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
             m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
+            sdsl::store_to_file(m_n1plusfrontback,precomputed_file);
+        } else {
+            sdsl::load_from_file(m_n1plusfrontback,precomputed_file);
         }
         {
             lm_construct_timer timer("VOCAB");
@@ -78,6 +94,7 @@ public:
             = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
+        written_bytes += m_cst_rev.serialize(out, child, "CST_REV");
         written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
