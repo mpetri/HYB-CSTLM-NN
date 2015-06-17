@@ -117,6 +117,12 @@ int main(int argc, const char* argv[])
                 buf.push_back(num);
             }
             buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
+            buf.push_back(EOS_SYM);
+        }
+        {   // special 'UNK' sentence to ensure symbol included in CST
+            buf.push_back(PAT_START_SYM); 
+            buf.push_back(UNKNOWN_SYM);
+            buf.push_back(PAT_END_SYM); 
         }
         buf.push_back(EOF_SYM);
     }

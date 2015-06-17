@@ -11,12 +11,16 @@
 
 using namespace std::chrono;
 
-template <class t_cst, class t_vocab = vocab_uncompressed, uint32_t t_max_ngram_count = 10>
+template <
+class t_cst,
+class t_cst_rev,
+class t_vocab = vocab_uncompressed, 
+uint32_t t_max_ngram_count = 10>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
-    typedef t_cst cst_rev_type;
+    typedef t_cst_rev cst_rev_type;
     typedef t_vocab vocab_type;
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::node_type node_type;
@@ -27,7 +31,7 @@ public:
 
 public: // data
     t_cst m_cst;
-    t_cst m_cst_rev;
+    t_cst_rev m_cst_rev;
     precomputed_stats m_precomputed;
     vocab_type m_vocab;
 
@@ -35,7 +39,7 @@ public:
     index_succinct() = default;
     index_succinct(collection& col, bool is_mkn=false)
     {
-        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
+        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst_rev) + ".sdsl";
         if(! utils::file_exists(cst_rev_file) ) {
             lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;

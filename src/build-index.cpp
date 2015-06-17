@@ -78,7 +78,7 @@ int main(int argc, const char* argv[])
 
     /* create indexes */
     {
-        using index_type = index_succinct<default_cst_type>;
+        using index_type = index_succinct<default_cst_type,default_cst_rev_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
     {

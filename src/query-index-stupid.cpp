@@ -184,7 +184,7 @@ int main(int argc, const char* argv[])
         /* load SADA based index */
         using csa_type = sdsl::csa_sada_int<>;
         using cst_type = sdsl::cst_sct3<csa_type>;
-        index_succinct<cst_type> idx;
+        index_succinct<cst_type,cst_type> idx;
 
         run_queries(idx, args.collection_dir, patterns);
     }
@@ -193,7 +193,7 @@ int main(int argc, const char* argv[])
         /* load WT based index */
         using csa_type = sdsl::csa_wt_int<>;
         using cst_type = sdsl::cst_sct3<csa_type>;
-        index_succinct<cst_type> idx;
+        index_succinct<cst_type,cst_type> idx;
 
         run_queries(idx, args.collection_dir, patterns);
     }

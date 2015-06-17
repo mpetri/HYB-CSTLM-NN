@@ -49,15 +49,18 @@ struct precomputed_stats {
         sdsl::write_member(N3plus_dot, out, child, "N3PlusPlus");
         sdsl::write_member(N1_dot, out, child, "N1_dot");
         sdsl::write_member(N2_dot, out, child, "N2_dot");
+
         sdsl::serialize(n1, out, child, "n1");
         sdsl::serialize(n2, out, child, "n2");
         sdsl::serialize(n3, out, child, "n3");
         sdsl::serialize(n4, out, child, "n4");
+
         sdsl::serialize(Y, out, child, "Y");
         sdsl::serialize(Y_cnt, out, child, "Y_cnt");
         sdsl::serialize(D1, out, child, "D1");
         sdsl::serialize(D2, out, child, "D2");
         sdsl::serialize(D3, out, child, "D3");
+
         sdsl::serialize(n1_cnt, out, child, "n1_cnt");
         sdsl::serialize(n2_cnt, out, child, "n2_cnt");
         sdsl::serialize(n3_cnt, out, child, "n3_cnt");
@@ -252,13 +255,11 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
-		    if(n == 1)
-			N1_dot++; 
+        		    if(n == 1) N1_dot++; 
                     break;
                 case 2:
                     n2[n] += 1;
-		    if(n == 1)
-			N2_dot++;
+		            if(n == 1) N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
