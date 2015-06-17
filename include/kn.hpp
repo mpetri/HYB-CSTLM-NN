@@ -96,6 +96,9 @@ double prob_kneser_ney_single(const t_idx& idx,
     bool unk = (*(pattern_end-1) == UNKNOWN_SYM);
     bool ok = !unk;
 
+    //LOG(INFO) << "prob_kneser_ney_single for pattern: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
+    //LOG(INFO) << "as numbers: " << std::vector<uint64_t>(pattern_begin, pattern_end);
+
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end-i;
         if (i > 1 && *start == UNKNOWN_SYM) 
@@ -132,6 +135,8 @@ double prob_kneser_ney_single(const t_idx& idx,
             p = c / d;
         }
     }
+
+    //LOG(INFO) << "prob_kneser_ney_single returning: " << p;
 
     return p;
 }

@@ -8,7 +8,7 @@
 
 typedef testing::Types<
 //index_succinct<default_cst_type,default_cst_rev_type>,
-//index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
+index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
 index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
@@ -64,7 +64,7 @@ protected:
                 std::vector<std::string> x2 = split(x[0], ' ');
                 std::vector<uint64_t> pattern;
                 for (std::string word : x2) {
-                    pattern.push_back(std::stoi(word));
+                    pattern.push_back(idx.m_vocab.token2id(word, UNKNOWN_SYM));
                 }
                 tri.pattern = pattern;
                 tri.order = std::stoi(x[1]);

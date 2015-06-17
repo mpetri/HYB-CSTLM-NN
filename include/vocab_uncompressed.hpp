@@ -68,6 +68,15 @@ public:
         return itr->second;
     }
 
+    template <class t_pat_iter>
+    std::vector<std::string> id2token(t_pat_iter begin, t_pat_iter end) const
+    {
+        std::vector<std::string> ret;
+        for (t_pat_iter it = begin; it != end; ++it)
+            ret.push_back(id2token(*it));
+        return ret;
+    }
+
     uint64_t token2id(const std::string& token, uint64_t defaul) const
     {
         auto itr = m_t2i.find(token);
