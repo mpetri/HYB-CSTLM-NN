@@ -25,6 +25,7 @@ typedef struct cmdargs {
     int ngramsize;
     bool ismkn;
     bool isstored;
+    bool byte_alphabet;
 } cmdargs_t;
 
 void print_usage(const char* program)
@@ -37,6 +38,7 @@ void print_usage(const char* program)
     fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
     fprintf(stdout, "  -s : use fastest index lookup using pre-stored counts.\n");
+    fprintf(stdout, "  -1 : byte parsing.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -48,23 +50,27 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.ismkn = false;
     args.ngramsize = 1;
     args.isstored = false;
-    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs")) != -1) {
+    args.byte_alphabet = false;
+    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs1")) != -1) {
         switch (op) {
-        case 'p':
-            args.pattern_file = optarg;
-            break;
-        case 'c':
-            args.collection_dir = optarg;
-            break;
-        case 'm':
-            args.ismkn = true;
-            break;
-        case 'n':
-            args.ngramsize = atoi(optarg);
-            break;
-        case 's':
-            args.isstored = true;
-            break;
+            case 'p':
+                args.pattern_file = optarg;
+                break;
+            case 'c':
+                args.collection_dir = optarg;
+                break;
+            case 'm':
+                args.ismkn = true;
+                break;
+            case 'n':
+                args.ngramsize = atoi(optarg);
+                break;
+            case 's':
+                args.isstored = true;
+                break;
+            case '1':
+                args.byte_alphabet = true;
+                break;
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
@@ -75,13 +81,29 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
+std::vector<std::string>
+parse_line(const std::string& line,bool byte) {
+    std::vector<std::string> line_tokens;
+    if(byte) {
+        for(const auto& chr : line) {
+            line_tokens.push_back(std::string(1,chr));
+        }
+    } else {
+        std::istringstream input(line);
+        std::string word;
+        while (std::getline(input, word, ' ')) {
+            line_tokens.push_back(word);
+        }
+    }
+    return line_tokens;
+}
+
 template <class t_idx, class t_rng>
 int load_data_and_sample(cmdargs_t &args, t_rng &rng) 
 {
     /* load index */
     t_idx idx;
-    auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
-                      + ".sdsl";
+    auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
         LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
@@ -101,10 +123,9 @@ int load_data_and_sample(cmdargs_t &args, t_rng &rng)
         LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
+            auto line_tokens = parse_line(line,args.byte_alphabet);
             std::vector<uint64_t> tokens;
-            std::istringstream iss(line);
-            std::string word;
-            while (std::getline(iss, word, ' ')) {
+            for (const auto &word: line_tokens) {
                 uint64_t num = vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
@@ -119,7 +140,6 @@ int load_data_and_sample(cmdargs_t &args, t_rng &rng)
     std::chrono::nanoseconds total_time(0);
     lm_bench::reset();
     for (std::vector<uint64_t> pattern : patterns) {
-        uint64_t pattern_size = pattern.size();
         //pattern.push_back(PAT_END_SYM);
         pattern.insert(pattern.begin(), PAT_START_SYM);
 

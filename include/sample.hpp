@@ -145,7 +145,7 @@ uint64_t sample_next_symbol2(const t_idx& idx,
         t_rng &rng)
 {
     typedef typename t_idx::cst_type::node_type t_node;
-    size_t size = std::distance(pattern_begin, pattern_end);
+    //size_t size = std::distance(pattern_begin, pattern_end);
 
     LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end);
 

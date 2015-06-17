@@ -18,7 +18,7 @@ void print_usage(const char* program)
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -i <input file>      : the input file.\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
-    fprintf(stdout, "  -b                   : byte parsing.\n");
+    fprintf(stdout, "  -1                   : byte parsing.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -28,7 +28,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.input_file = "";
     args.collection_dir = "";
     args.byte_alphabet = false;
-    while ((op = getopt(argc, (char* const*)argv, "i:c:")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "i:c:1")) != -1) {
         switch (op) {
             case 'i':
                 args.input_file = optarg;
@@ -36,8 +36,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 'c':
                 args.collection_dir = optarg;
                 break;
-            case 'b':
+            case '1':
                 args.byte_alphabet = true;
+                break;
         }
     }
     if (args.collection_dir == "" || args.input_file == "") {
