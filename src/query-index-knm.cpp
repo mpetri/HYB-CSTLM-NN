@@ -235,51 +235,18 @@ int execute(const cmdargs_t &args)
                 tokens.push_back(num);
             }
             patterns.push_back(tokens);
+            //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
         }
     } else {
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
+        return EXIT_FAILURE;
     }
 
-<<<<<<< HEAD
     /* run the querying or reranking */
     if(args.isreranking)
         run_reranker(idx, patterns, args.ngramsize, (!args.isbackward && !args.isstored), args.ismkn);
     else
         run_queries(idx, patterns, args.ngramsize, (!args.isbackward && !args.isstored), args.ismkn);
-=======
-    /* load index */
-    if (!args.isbackward && !args.isstored) {
-        index_succinct<default_cst_type, default_cst_rev_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
-                          + ".sdsl";
-        if (utils::file_exists(index_file)) {
-            LOG(INFO) << "loading index from file '" << index_file << "'";
-            sdsl::load_from_file(idx, index_file);
-        } else {
-            LOG(FATAL) << "index does not exist. build it first";
-            return EXIT_FAILURE;
-        }
-
-        /* print precomputed parameters */
-        idx.print_params(args.ismkn, args.ngramsize);
-        if(args.isreranking)
-    	    run_reranker(idx, patterns, args.ngramsize, false, args.ismkn);
-	else
-            run_queries(idx, patterns, args.ngramsize, false, args.ismkn);
-
-    } else if (args.isbackward && !args.isstored) {
-
-        index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> idx;
-        auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
-                          + ".sdsl";
-        if (utils::file_exists(index_file)) {
-            LOG(INFO) << "loading index from file '" << index_file << "'";
-            sdsl::load_from_file(idx, index_file);
-        } else {
-            LOG(FATAL) << "index does not exist. build it first";
-            return EXIT_FAILURE;
-        }
->>>>>>> 501a9864f169bc4496664b78a76caf707d7ba15c
 
     return EXIT_SUCCESS;
 }

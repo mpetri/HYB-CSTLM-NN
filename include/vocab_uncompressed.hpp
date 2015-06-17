@@ -19,7 +19,7 @@ public:
         std::ifstream vfs(vocab_file);
         std::string line;
         while (std::getline(vfs, line)) {
-            auto sep_pos = line.find(' ');
+            auto sep_pos = line.rfind(' ');
             auto word = line.substr(0, sep_pos);
             auto str_id = line.substr(sep_pos);
             uint64_t id = std::strtoull(str_id.c_str(), NULL, 10);
