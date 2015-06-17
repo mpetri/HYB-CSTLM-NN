@@ -146,24 +146,25 @@ int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
 
+    /* types in use */
+    typedef index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> t_idx_compute;
+    typedef index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> t_idx_store;
+    typedef std::ranlux24_base t_rng;
+
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
     assert(!args.ismkn && "not supported yet");
 
     /* seed random number generator */
-    typedef std::ranlux24_base t_rng;
     t_rng rng;
     auto now = std::chrono::system_clock::now();
     rng.seed(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
 
-    /* create collection dir */
-    utils::create_directory(args.collection_dir);
-
     /* load data, sample */
     if (!args.isstored) {
-        return load_data_and_sample<index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type>, t_rng>(args, rng);
+        return load_data_and_sample<t_idx_compute, t_rng>(args, rng);
     } else {
-        return load_data_and_sample<index_succinct_store_n1fb<default_cst_type, default_cst_rev_type>, t_rng>(args, rng);
+        return load_data_and_sample<t_idx_store, t_rng>(args, rng);
     }
 }
 
