@@ -84,14 +84,15 @@ uint64_t _sample_next_symbol(const t_idx& idx,
             while (child != idx.m_cst.root())
             {
                 if ((i == ngramsize) || (*start == PAT_START_SYM)) // condition seems fishy
-                    r -= idx.m_cst.size() - D;
+                    r -= idx.m_cst.size(child) - D;
                 else {
                     // augmented pattern is a bit fishy, may overrun memory
-                    r -= idx.N1PlusBack_from_forward(node, start, pattern_end+1) - D;
+                    r -= idx.N1PlusBack_from_forward(child, start, pattern_end+1) - D;
                 }
 
                 LOG(INFO) << "\t\tr now " << r << " after child " << child << " of size " << idx.m_cst.size();
                 if (r <= 0) {
+                    // is i the right index or are we off by one? think this is ok, as it's 1-indexed
                     next = idx.m_cst.edge(child, i);
                     break;
                 }
@@ -125,11 +126,46 @@ std::vector<uint64_t> unigram_counts(const t_idx &idx)
     std::vector<uint64_t> weights;
     int i = 0;
     for (const auto& child : idx.m_cst.children(root)) {
-        if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM)
+        if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM) {
+            pattern[0] = i;
             weights.push_back(idx.N1PlusBack_from_forward(child, pattern.begin(), pattern.end()));
-        else 
+        } else {
             weights.push_back(0);
+        }
         ++i;
     }
     return weights;
+}
+
+template <class t_idx, class t_pat_iter, class t_rng>
+uint64_t sample_next_symbol2(const t_idx& idx, 
+        t_pat_iter pattern_begin, 
+        t_pat_iter pattern_end, 
+        uint64_t ngramsize,
+        t_rng &rng)
+{
+    typedef typename t_idx::cst_type::node_type t_node;
+    size_t size = std::distance(pattern_begin, pattern_end);
+
+    LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end);
+
+    std::vector<double> probs;
+    std::vector<uint64_t> pattern(pattern_begin, pattern_end);
+    pattern.push_back(EOF_SYM);
+    double total = 0;
+    for (uint64_t next = 0; next < idx.m_vocab.size(); ++next) {
+        if (next >= NUM_SPECIAL_SYMS || next == PAT_END_SYM || next == UNKNOWN_SYM) {
+            pattern.back() = next;
+            auto prob = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+            total += prob;
+        } else {
+            probs.push_back(0);
+        }
+    }
+
+    std::discrete_distribution<uint64_t> pr_next(probs.begin(), probs.end());
+    auto next = pr_next(rng);
+    LOG(INFO) << "next is " << next;
+
+    return next;
 }
