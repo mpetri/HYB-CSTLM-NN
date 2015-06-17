@@ -28,8 +28,8 @@ public:
     static const bool supports_forward_querying = true;
 
 public: // data
-    t_cst m_cst;
-    t_cst_rev m_cst_rev;
+    cst_type m_cst;
+    cst_rev_type m_cst_rev;
     precomputed_stats m_precomputed;
     compressed_counts<> m_n1plusfrontback;
     vocab_type m_vocab;
@@ -37,7 +37,7 @@ public:
     index_succinct_store_n1fb() = default;
     index_succinct_store_n1fb(collection& col,bool is_mkn=false)
     {
-        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
+        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst_rev) + ".sdsl";
         if(! utils::file_exists(cst_rev_file) ) {
             lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;

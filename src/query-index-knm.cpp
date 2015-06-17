@@ -214,7 +214,7 @@ int main(int argc, const char* argv[])
 
     /* load index */
     if (!args.isbackward && !args.isstored) {
-        index_succinct<default_cst_type> idx;
+        index_succinct<default_cst_type, default_cst_rev_type> idx;
         auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx)
                           + ".sdsl";
         if (utils::file_exists(index_file)) {

@@ -164,6 +164,7 @@ public:
             = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
+        written_bytes += sdsl::serialize(m_bv_rank, out, child, "bv_rank");
         written_bytes += sdsl::serialize(m_counts_fb, out, child, "counts_fb");
         written_bytes += sdsl::serialize(m_counts_b, out, child, "counts_b");
         written_bytes += sdsl::serialize(m_counts_f1, out, child, "counts_f1");

@@ -7,6 +7,8 @@
 #include <unordered_set>
 
 typedef testing::Types<
+//index_succinct<default_cst_type,default_cst_rev_type>,
+//index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
 index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
