@@ -26,6 +26,8 @@
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize, bool fast_index, bool ismkn)
 {
+    //LOG(INFO) << "sentence_logprob_kneser_ney for: " << idx.m_vocab.id2token(word_vec.begin(), word_vec.end());
+    //LOG(INFO) << "\tfast: " << fast_index << " mkn: " << ismkn;
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
@@ -59,6 +61,7 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
         final_score += log10(score);
 
     }
+    //LOG(INFO) << "sentence_logprob_kneser_ney returning: " << final_score;
     return final_score;
 }
 

@@ -244,9 +244,9 @@ int execute(const cmdargs_t &args)
 
     /* run the querying or reranking */
     if(args.isreranking)
-        run_reranker(idx, patterns, args.ngramsize, (!args.isbackward && !args.isstored), args.ismkn);
+        run_reranker(idx, patterns, args.ngramsize, args.isbackward, args.ismkn);
     else
-        run_queries(idx, patterns, args.ngramsize, (!args.isbackward && !args.isstored), args.ismkn);
+        run_queries(idx, patterns, args.ngramsize, args.isbackward, args.ismkn);
 
     return EXIT_SUCCESS;
 }
