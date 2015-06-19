@@ -90,7 +90,8 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
     for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
         std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher> ngram_counts;
         /* compute c-gram stats */
-        for (size_t i = 0; i < text.size() - (cgram - 1); i++) {
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+        for (size_t i = 0; i < (text.size()-3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -146,7 +147,8 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
-        for (size_t i = 0; i < text.size() - (cgram - 1); i++) {
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+        for (size_t i = 0; i < (text.size() -3 ) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -189,7 +191,8 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
                 } else {
                     // special case: ngram starts with PAT_START_SYM
                     size_t cnt = 0;
-                    for (size_t i = 0; i < text.size() - (cng.size() - 1); i++) {
+                    // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+                    for (size_t i = 0; i < (text.size()-3) - (cng.size() - 1); i++) {
                         if (std::equal(cng.begin(), cng.end(), text.begin() + i)) {
                             cnt++;
                         }
@@ -230,7 +233,8 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
               std::back_inserter(text));
     std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher> uniq_bigrams;
     /* compute c-gram stats */
-    for (size_t i = 0; i < text.size() - 1; i++) {
+    // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+    for (size_t i = 0; i < (text.size() -3) - 1; i++) {
         std::vector<uint64_t> cur_gram(2);
         auto beg = text.begin() + i;
         std::copy(beg, beg + 2, cur_gram.begin());
@@ -254,7 +258,8 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
               std::back_inserter(text));
     std::unordered_map<uint64_t, uint64_t> unigram_freqs;
     /* compute c-gram stats */
-    for (size_t i = 0; i < text.size(); i++) {
+    // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+    for (size_t i = 0; i < (text.size()-3); i++) {
         auto sym = text[i];
         if (sym != EOS_SYM && sym != EOF_SYM)
             unigram_freqs[sym]++;
@@ -282,6 +287,7 @@ TYPED_TEST(LMTest, N1PlusBack)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 0; i < (text.size() -3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
@@ -339,6 +345,7 @@ TYPED_TEST(LMTest, N1PlusBack_from_forward)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 0; i < (text.size()-3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
@@ -394,6 +401,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 1; i < (text.size() -3 ) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
@@ -457,6 +465,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack_from_forward)
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 1; i < (text.size()-3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
@@ -512,6 +521,7 @@ TYPED_TEST(LMTest, N1PlusFront)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 0; i < (text.size()-3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
@@ -563,7 +573,8 @@ TYPED_TEST(LMTest, N123PlusFront)
         typedef std::map<uint64_t, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
-        for (size_t i = 0; i < text.size() - cgram; i++) {
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+        for (size_t i = 0; i < (text.size()-3) - cgram; i++) {//FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
