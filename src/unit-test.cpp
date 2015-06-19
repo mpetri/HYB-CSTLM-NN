@@ -282,7 +282,7 @@ TYPED_TEST(LMTest, N1PlusBack)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
-        for (size_t i = 0; i < text.size() - (cgram - 1); i++) {
+        for (size_t i = 0; i < (text.size() -3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -339,7 +339,7 @@ TYPED_TEST(LMTest, N1PlusBack_from_forward)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
-        for (size_t i = 0; i < text.size() - (cgram - 1); i++) {
+        for (size_t i = 0; i < (text.size()-3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -394,7 +394,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
-        for (size_t i = 1; i < text.size() - cgram; i++) {
+        for (size_t i = 1; i < (text.size() -3 ) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -457,7 +457,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack_from_forward)
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
-        for (size_t i = 1; i < text.size() - cgram; i++) {
+        for (size_t i = 1; i < (text.size()-3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -512,7 +512,7 @@ TYPED_TEST(LMTest, N1PlusFront)
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
-        for (size_t i = 0; i < text.size() - cgram; i++) {
+        for (size_t i = 0; i < (text.size()-3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
