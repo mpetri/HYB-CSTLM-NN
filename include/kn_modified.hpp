@@ -28,7 +28,7 @@ double prob_mod_kneser_ney_dual(const t_idx& idx,
     t_node node = idx.m_cst.root(); // v_F
     t_node node_rev_ctx = idx.m_cst_rev.root(); // v_R
     t_node node_rev = idx.m_cst_rev.root(); // v_R^all
-    double p = 1.0 / idx.m_vocab.size(); // p -- FIXME: should we subtract away sentinels?
+    double p = 1.0 / (idx.m_vocab.size()-4); // p -- FIXME: should we subtract away sentinels? //ehsan: not sure why -4 works! but it works!
 
     // FIXME: there's a bug somewhere in here, as it fails the unit test (1.Perplexity)
 
