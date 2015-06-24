@@ -247,7 +247,11 @@ public:
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             } else {
-                return m_n1plusfrontback.lookup_fb(m_cst, node);
+                if (pattern_size <= t_max_ngram_count) {
+                    return m_n1plusfrontback.lookup_fb(m_cst, node);
+                } else {
+                    return compute_contexts(m_cst, node);
+                }
             }
         } else {
             // special case, only one way of extending this pattern to the right
@@ -276,7 +280,11 @@ public:
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
             } else {
-                return m_n1plusfrontback.lookup_fb(m_cst, node);
+                if (pattern_size <= t_max_ngram_count) {
+                    return m_n1plusfrontback.lookup_fb(m_cst, node);
+                } else {
+                    return compute_contexts(m_cst, node);
+                }
             }
         } else {
             // special case, only one way of extending this pattern to the right
@@ -359,5 +367,36 @@ public:
                     n3p += 1;
             } 
         }
+    }
+
+    uint32_t compute_contexts(const t_cst& cst, const node_type &node) const
+    {
+        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+        auto lb = cst.lb(node);
+        auto rb = cst.rb(node);
+        typename t_cst::csa_type::size_type num_syms = 0;
+        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left,
+                               right);
+        auto total_contexts = 0;
+        auto node_depth = cst.depth(node);
+        for (size_t i = 0; i < num_syms; i++) {
+            auto new_lb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + left[i];
+            auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
+            if (new_lb == new_rb) {
+                total_contexts++;
+            } else {
+                auto new_node = cst.node(new_lb, new_rb);
+
+                if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
+                    total_contexts++;
+                } else {
+                    auto deg = cst.degree(new_node);
+                    total_contexts += deg;
+                }
+            }
+        }
+        return total_contexts;
     }
 };
