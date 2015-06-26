@@ -233,52 +233,69 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
     uint64_t counter = 0;
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {
+            ++counter;
+
+            if (counter == 1) {
+                continue;
+            } else if (counter <= 3) {
+                it.skip_subtree();
+                continue;
+            }
+
             auto node = *it;
             auto parent = cst_rev.parent(node);
             auto parent_depth = cst_rev.depth(parent);
             // this next call is expensive for leaves, but we don't care in this case
             // as the for loop below will terminate on the <S> symbol
             auto depth = (!cst_rev.is_leaf(node)) ? cst_rev.depth(node) : (max_ngram_count + 12345);
-
             auto freq = cst_rev.size(node);
             assert(parent_depth < max_ngram_count);
-            LOG(INFO) << "node " << node << " depth " << depth << " parent depth " << parent_depth;
+            LOG(INFO) << "ncomputer: node " << node << " depth " << depth << " parent depth " << parent_depth;
 
-            ++counter;
-            bool special_node = (2 <= counter && counter <= 6);
+            uint64_t max_n = 0;
+            bool last_is_pat_start = false;
+            if (4 <= counter && counter <= 6)
+                max_n = 1;
+            else if (counter >= 7) {
+                for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
+                    auto symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
+                    max_n = n;
+                    if (symbol == PAT_START_SYM) {
+                        last_is_pat_start = true;
+                        break;
+                    }
+                }
+            }
+            LOG(INFO) << "\tmax_n " << max_n << " last is start " << last_is_pat_start;
 
-            for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
+            //max_n = std::min(max_ngram_count, depth)
+            for (auto n = parent_depth + 1; n <= max_n; ++n) {
                 // edge call is slow: dodgy discounts skips this by faking the symbol with a regular token 
                 uint64_t symbol = NUM_SPECIAL_SYMS;
-                if (special_node) {
+                if (2 <= counter && counter <= 6) {
                     switch (counter) {
-                        case 2: symbol = 0; break;
-                        case 3: symbol = 1; break;
-                        case 4: symbol = ((n == 1) ? 2 : 1); break;
-                        case 5: symbol = ((n == 1) ? 3 : 1); break;
-                        case 6: symbol = 4; break;
+                        //case 2: symbol = EOF_SYM; break; // quits straight away
+                        //case 3: symbol = EOS_SYM; break; // quits straight away
+                        case 4: symbol = UNKNOWN_SYM; break; // quits after one pass; next is EOS
+                        case 5: symbol = PAT_START_SYM; break; // quits after one pass; next is EOS
+                        case 6: symbol = PAT_END_SYM; break; // quits after one pass
                     }
                 } else {
-                    symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
+                    symbol = (last_is_pat_start && n == max_n) ? PAT_START_SYM : NUM_SPECIAL_SYMS;
+                    //symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
                 }
                 LOG(INFO) << "ncomputer: node " << node << " n " << n << " depth " << depth << " symbol " << symbol << " really " << emulate_edge(SAREV,TREV,cst_rev,node,n);
-                LOG(INFO) << "\tspecial_node " << special_node << " counter " << counter;
-                // don't count ngrams including these sentinels, including extensions
-                if (symbol == EOF_SYM || symbol == EOS_SYM) {
-                    LOG(INFO) << "ncomputer:\tstopping before doing anything";
-                    it.skip_subtree();
-                    break;
-                }
+                LOG(INFO) << "\tcounter " << counter;
 
                 // update frequency counts
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
-        		    if(n == 1) N1_dot++; 
+                    if(n == 1) N1_dot++; 
                     break;
                 case 2:
                     n2[n] += 1;
-		            if(n == 1) N2_dot++;
+                    if(n == 1) N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
@@ -305,23 +322,16 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                     n1plus_back = 1;
 
                 switch (n1plus_back) {
-                case 1:
-                    n1_cnt[n] += 1;
-                    break;
-                case 2:
-                    n2_cnt[n] += 1;
-                    break;
-                case 3:
-                    n3_cnt[n] += 1;
-                    break;
-                case 4:
-                    n4_cnt[n] += 1;
-                    break;
+                case 1: n1_cnt[n] += 1; break;
+                case 2: n2_cnt[n] += 1; break;
+                case 3: n3_cnt[n] += 1; break;
+                case 4: n4_cnt[n] += 1; break;
                 }
 
                 // can skip next evaluations if we know the EOS symbol is coming up next
-                if (symbol == PAT_START_SYM) {
-                    LOG(INFO) << "ncomputer:\tstopping after counting (<s>)";
+                //if (symbol == PAT_START_SYM) {
+                if (counter <= 5 || symbol == PAT_START_SYM) { // counter = 6 (i.e., ending with </s>) needs to continue
+                    LOG(INFO) << "\tstopping after counting";
                     it.skip_subtree();
                     break;
                 }
