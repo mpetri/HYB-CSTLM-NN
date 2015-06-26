@@ -32,6 +32,10 @@ struct precomputed_stats {
     std::vector<double> D2_cnt;
     std::vector<double> D3_cnt;
 
+    // FIXME: make these class or constructor template arguments
+    typedef sdsl::rank_support_v<1> t_rank_bv;
+    typedef sdsl::bit_vector::select_1_type t_select_bv;
+
     precomputed_stats() = default;
 
     template <typename t_cst>
@@ -168,6 +172,23 @@ emulate_edge(read_only_mapper<>& SAREV,read_only_mapper<>& TREV,const t_cst& cst
     return TREV[text_offset+offset-1];
 }
 
+template<class t_cst>
+typename t_cst::size_type
+distance_to_sentinel(read_only_mapper<> &SAREV,
+        t_rank_bv &sentinel_rank, t_select_bv &sentinel_select,
+        const t_cst& cst, const typename t_cst::node_type& node, 
+        const typename t_cst::size_type &offset) const
+{
+    auto i = cst.lb(node);
+    auto text_offset = SAREV[i];
+
+    // find count (rank) of 1s in text from [0, offset]
+    auto rank = sentinel_rank(text_offset + offset);
+    // find the location of the next 1 in the text, this will be the sentence start symbol <S>
+    auto sentinel = sentinel_select(rank + 1); 
+    return sentinel - text_offset;
+}
+
 };
 
 template <typename t_cst>
@@ -225,16 +246,28 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 {
-
-    /* load SAREV and TREV to speed up edge call */
+    /* load SAREV to speed up edge call */
     read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
+
+    // load up reversed text and store in a bitvector for locating sentinel symbols
     read_only_mapper<> TREV(col.file_map[KEY_TEXTREV]);
+    sdsl::bit_vector sentinel_bv(TREV.size());
+    for (uint64_t i = 0; i < TREV.size(); ++i) {
+        auto symbol = TREV[i];
+        if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM)
+            sentinel_bv[i] = 1;
+    }
+    t_rank_bv sentinel_rank(&sentinel_bv);
+    t_select_bv sentinel_select(&sentinel_bv);
+
     /* iterate over all nodes */
     uint64_t counter = 0;
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {
             ++counter;
-
+            // corner cases for counters 1..6, above which are "real" n-grams
+            // corresponding to 1 = root; 2 = EOF; 3 = EOS; 4 = UNK; 5 = <S>; 6 = </S>
+            // we need to count for 4, 5 & 6; skip subtree for cases 1 -- 5.
             if (counter == 1) {
                 continue;
             } else if (counter <= 3) {
@@ -250,42 +283,36 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
             auto depth = (!cst_rev.is_leaf(node)) ? cst_rev.depth(node) : (max_ngram_count + 12345);
             auto freq = cst_rev.size(node);
             assert(parent_depth < max_ngram_count);
-            LOG(INFO) << "ncomputer: node " << node << " depth " << depth << " parent depth " << parent_depth;
 
             uint64_t max_n = 0;
             bool last_is_pat_start = false;
-            if (4 <= counter && counter <= 6)
+            if (4 <= counter && counter <= 6) {
+                // only need to consider one symbol for UNK, <S>, </S> edges 
                 max_n = 1;
-            else if (counter >= 7) {
-                for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
-                    auto symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
-                    max_n = n;
-                    if (symbol == PAT_START_SYM) {
-                        last_is_pat_start = true;
-                        break;
-                    }
+            } else if (counter >= 7) {
+                // need to consider several symbols -- minimum of 
+                // 1) edge length; 2) threshold; 3) reaching the <S> token
+                auto distance = distance_to_sentinel(SAREV,sentinel_rank,sentinel_select,cst_rev,node,parent_depth) + 1;
+                max_n = std::min(max_ngram_count, depth);
+                if (distance <= max_n) {
+                    max_n = distance;
+                    last_is_pat_start = true;
                 }
             }
-            LOG(INFO) << "\tmax_n " << max_n << " last is start " << last_is_pat_start;
 
-            //max_n = std::min(max_ngram_count, depth)
             for (auto n = parent_depth + 1; n <= max_n; ++n) {
-                // edge call is slow: dodgy discounts skips this by faking the symbol with a regular token 
                 uint64_t symbol = NUM_SPECIAL_SYMS;
                 if (2 <= counter && counter <= 6) {
                     switch (counter) {
-                        //case 2: symbol = EOF_SYM; break; // quits straight away
-                        //case 3: symbol = EOS_SYM; break; // quits straight away
-                        case 4: symbol = UNKNOWN_SYM; break; // quits after one pass; next is EOS
-                        case 5: symbol = PAT_START_SYM; break; // quits after one pass; next is EOS
-                        case 6: symbol = PAT_END_SYM; break; // quits after one pass
+                        //cases 2 & 3 (EOF, EOS) handled above
+                        case 4: symbol = UNKNOWN_SYM; break; 
+                        case 5: symbol = PAT_START_SYM; break;
+                        case 6: symbol = PAT_END_SYM; break; 
                     }
                 } else {
+                    // edge call is slow, but in these cases all we need to know is if it's <S> or a regular token
                     symbol = (last_is_pat_start && n == max_n) ? PAT_START_SYM : NUM_SPECIAL_SYMS;
-                    //symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
                 }
-                LOG(INFO) << "ncomputer: node " << node << " n " << n << " depth " << depth << " symbol " << symbol << " really " << emulate_edge(SAREV,TREV,cst_rev,node,n);
-                LOG(INFO) << "\tcounter " << counter;
 
                 // update frequency counts
                 switch (freq) {
@@ -328,17 +355,14 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 case 4: n4_cnt[n] += 1; break;
                 }
 
-                // can skip next evaluations if we know the EOS symbol is coming up next
-                //if (symbol == PAT_START_SYM) {
-                if (counter <= 5 || symbol == PAT_START_SYM) { // counter = 6 (i.e., ending with </s>) needs to continue
-                    LOG(INFO) << "\tstopping after counting";
+                // can skip subtree if we know the EOS symbol is coming next
+                if (counter <= 5 || symbol == PAT_START_SYM) { 
                     it.skip_subtree();
                     break;
                 }
             }
 
             if (depth >= max_ngram_count) {
-                LOG(INFO) << "ncomputer:\tskipping over subtree, too deep";
                 it.skip_subtree();
             }
         }
