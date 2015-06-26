@@ -230,6 +230,7 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
     read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
     read_only_mapper<> TREV(col.file_map[KEY_TEXTREV]);
     /* iterate over all nodes */
+    uint64_t counter = 0;
     for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
         if (it.visit() == 1) {
             auto node = *it;
@@ -241,12 +242,30 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 
             auto freq = cst_rev.size(node);
             assert(parent_depth < max_ngram_count);
+            LOG(INFO) << "node " << node << " depth " << depth << " parent depth " << parent_depth;
+
+            ++counter;
+            bool special_node = (2 <= counter && counter <= 6);
 
             for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
                 // edge call is slow: dodgy discounts skips this by faking the symbol with a regular token 
-                auto symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
+                uint64_t symbol = NUM_SPECIAL_SYMS;
+                if (special_node) {
+                    switch (counter) {
+                        case 2: symbol = 0; break;
+                        case 3: symbol = 1; break;
+                        case 4: symbol = ((n == 1) ? 2 : 1); break;
+                        case 5: symbol = ((n == 1) ? 3 : 1); break;
+                        case 6: symbol = 4; break;
+                    }
+                } else {
+                    symbol = emulate_edge(SAREV,TREV,cst_rev,node,n);
+                }
+                LOG(INFO) << "ncomputer: node " << node << " n " << n << " depth " << depth << " symbol " << symbol << " really " << emulate_edge(SAREV,TREV,cst_rev,node,n);
+                LOG(INFO) << "\tspecial_node " << special_node << " counter " << counter;
                 // don't count ngrams including these sentinels, including extensions
                 if (symbol == EOF_SYM || symbol == EOS_SYM) {
+                    LOG(INFO) << "ncomputer:\tstopping before doing anything";
                     it.skip_subtree();
                     break;
                 }
@@ -302,12 +321,14 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 
                 // can skip next evaluations if we know the EOS symbol is coming up next
                 if (symbol == PAT_START_SYM) {
+                    LOG(INFO) << "ncomputer:\tstopping after counting (<s>)";
                     it.skip_subtree();
                     break;
                 }
             }
 
             if (depth >= max_ngram_count) {
+                LOG(INFO) << "ncomputer:\tskipping over subtree, too deep";
                 it.skip_subtree();
             }
         }
