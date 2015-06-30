@@ -12,7 +12,11 @@ rm -rf ../collections/reranking
 ./build-index.x -c ../collections/reranking/
 ./query-index-knm.x -c ../collections/reranking/ -p $nbestlist -m -n $order -b -r
 
-
+perl detokenizer.perl -l en <output.rrank >output.rrank_detok
+rm output.rrank
+mv output.rrank_detok output.rrank
+perl wrap-xml.perl $language $srcsgm "SDSL" < output.rrank > output.sgm
+perl multi-bleu.perl output.sgm< $srcsgm 
 
 
 
