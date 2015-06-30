@@ -237,12 +237,15 @@ int execute(const cmdargs_t &args)
             std::vector<uint64_t> tokens;
             std::vector<std::string> orig_tokens;
             for (const auto &word: line_tokens) {
-		orig_tokens.push_back(word);
+		if(args.isreranking)
+			orig_tokens.push_back(word);
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
-	    orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
-	    orig_patterns.push_back(orig_tokens);
+	    if(args.isreranking) {
+	    	orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
+	    	orig_patterns.push_back(orig_tokens);
+	    }
             patterns.push_back(tokens);
             //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
         }
