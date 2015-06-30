@@ -67,7 +67,7 @@ public:
     
     template <class t_cst> compressed_counts(t_cst& cst, uint64_t max_node_depth, bool mkn_counts)
     {
-	if (mkn_counts)
+	if (!mkn_counts)
 	    initialise_kneser_ney(cst, max_node_depth);
 	else
 	    initialise_modified_kneser_ney(cst, max_node_depth);
@@ -141,22 +141,24 @@ public:
 		    auto deg = cst.degree(new_node);
 		    total_contexts += deg;
 		    // need to know how many of the children have cst.size(new_node) == 1 or 2
+                    uint64_t delta1 = 0, delta2 = 0;
 		    if (is_precomputed(cst, new_node)) {
 			// efficient way to compute based on earlier pass computing f1 and f2 values
-			uint64_t delta1 = 0, delta2 = 0;
 			lookup_f12(cst, new_node, delta1, delta2);
-			count1 += delta1;
-			count2 += delta2;
-		    } else {
+                        //LOG(INFO) << " LOOKUP        node " << new_node << " delta1 " << delta1 << " delta2 " << delta2;
+                    } else {
 			// inefficient way
 			for (const auto& child : cst.children(new_node)) {
 			    auto size = cst.size(child);
 			    if (size == 1)
-				count1++;
+				delta1++;
 			    else if (size == 2)
-				count2++;
+				delta2++;
 			}
-		    }
+                        //LOG(INFO) << " INEFF; node " << new_node << " delta1 " << delta1 << " delta2 " << delta2;
+                    }
+                    count1 += delta1;
+                    count2 += delta2;
 		}
 	    }
 	}
@@ -206,6 +208,8 @@ public:
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_bv = bv_type(tmp_bv);
         m_bv_rank.set_vector(&m_bv);
+
+        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
     }
 
     // specific MKN implementation, 2-pass
@@ -216,6 +220,8 @@ public:
         auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
         std::vector<std::pair<uint64_t, uint64_t>> stack;
+
+        //LOG(INFO) << "initialise_modified_kneser_ney: pass 1";
 
         // pass 1: initialise f1 and f2 counts
         uint32_t last_node_depth = 0;
@@ -266,6 +272,9 @@ public:
         m_bv = bv_type(tmp_bv);
         m_bv_rank.set_vector(&m_bv);
 
+        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
+        //LOG(INFO) << "initialise_modified_kneser_ney: pass 2";
+
         // pass 2: compute front-back (fb, fb1, fb2), back (b) and front (f1, f2) counts
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
@@ -306,6 +315,7 @@ public:
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_counts_fb1 = vector_type(tmp_buffer_counts_fb1);
         m_counts_fb2 = vector_type(tmp_buffer_counts_fb2);
+        //LOG(INFO) << "initialise_modified_kneser_ney: done";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -326,6 +336,8 @@ public:
         return written_bytes;
     }
 
+    // FIXME: could do this a bit more efficiently, without decompressing m_bv
+    // e.g., if its depth <= max_node_depth (but beware querying this for leaves)
     template <class t_cst, class t_node_type>
     bool is_precomputed(t_cst& cst, t_node_type node) const
     {
