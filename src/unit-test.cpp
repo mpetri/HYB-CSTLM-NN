@@ -43,9 +43,30 @@ std::vector<std::string> split(const std::string& s, char delim)
 
 template <class t_idx> class LMTest : public testing::Test {
 protected:
-    const char* srilm_path = "../UnitTestData/srilm_output/output_srilm_mkn";
-    std::vector<triplet> sdsl_triplets;
-    std::vector<triplet> srilm_triplets;
+    const char* srilm_path = "../UnitTestData/srilm_output/output_srilm";
+    const char* srilm_mkn_path = "../UnitTestData/srilm_output/output_srilm_mkn";
+    std::vector<triplet> srilm_triplets, srilm_triplets_mkn;
+
+    void load_srilm(const std::string &path, std::vector<triplet> &out) 
+    {
+        std::ifstream file(path);
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream iss(line);
+            std::vector<std::string> x = split(line, '@');
+            triplet tri;
+            std::vector<std::string> x2 = split(x[0], ' ');
+            std::vector<uint64_t> pattern;
+            for (std::string word : x2) {
+                pattern.push_back(idx.m_vocab.token2id(word, UNKNOWN_SYM));
+            }
+            tri.pattern = pattern;
+            tri.order = std::stoi(x[1]);
+            tri.perplexity = std::stod(x[2]);
+            out.push_back(tri);
+        }
+    }
+
     virtual void SetUp()
     {
         // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
@@ -54,24 +75,8 @@ protected:
             idx = t_idx(col,true);
         }
 
-        {
-            std::ifstream file(srilm_path);
-            std::string line;
-            while (std::getline(file, line)) {
-                std::istringstream iss(line);
-                std::vector<std::string> x = split(line, '@');
-                triplet tri;
-                std::vector<std::string> x2 = split(x[0], ' ');
-                std::vector<uint64_t> pattern;
-                for (std::string word : x2) {
-                    pattern.push_back(idx.m_vocab.token2id(word, UNKNOWN_SYM));
-                }
-                tri.pattern = pattern;
-                tri.order = std::stoi(x[1]);
-                tri.perplexity = std::stod(x[2]);
-                srilm_triplets.push_back(tri);
-            }
-        }
+        load_srilm(srilm_path, srilm_triplets);
+        load_srilm(srilm_mkn_path, srilm_triplets_mkn);
     }
     t_idx idx;
     collection col;
@@ -507,7 +512,6 @@ TYPED_TEST(LMTest, N1PlusFrontBack_from_forward)
     }
 }
 
-
 TYPED_TEST(LMTest, N1PlusFront)
 {
     // (1) get the text
@@ -632,6 +636,15 @@ TYPED_TEST(LMTest, N123PlusFront)
 TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
+        auto srilm = this->srilm_triplets[i];
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying, false);
+        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
+    }
+}
+
+TYPED_TEST(LMTest, PerplexityMKN)
+{
+    for (unsigned int i = 0; i < this->srilm_triplets_mkn.size(); i++) {
         auto srilm = this->srilm_triplets[i];
         double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying, true);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
