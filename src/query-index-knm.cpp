@@ -136,30 +136,36 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 
 template <class t_idx>
 void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
-                 uint64_t ngramsize, bool fast_index, bool ismkn)
+		  const std::vector<std::vector<std::string> > orig_patterns,
+                  uint64_t ngramsize, bool fast_index, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
     double min = 1000000;
-    uint64_t min_candidate_idx = 0;
+    //uint64_t min_candidate_idx = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    uint64_t candidate_idx = 1;//line number to find the unconverted sentence
+    //uint64_t candidate_idx = 1;//line number to find the unconverted sentence
     uint64_t source_idx=0;
     lm_bench::reset();
+    std::vector<uint64_t> best;
+    uint64_t index = 0;
     for (std::vector<uint64_t> pattern : patterns) {
         if(pattern[0]!=source_idx)
 	{
-	      std::cout<<"--------------------------------------------------------------"<<endl;
-	      std::cout<<" for source_id: "<<source_idx<<
-                         " the best candidate is translation number: "<<min_candidate_idx<<
-                         " with perplexity: "<<min<<endl;
-              std::cout<<"--------------------------------------------------------------"<<endl;
-              min= 1000000;
-	      min_candidate_idx = 0;
+	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[index].begin(),orig_patterns[index].end());
+
+	//      std::cout<<"--------------------------------------------------------------"<<endl;
+	//      std::cout<<" for source_id: "<<source_idx<<
+        //                 " the best candidate is translation number: "<<min_candidate_idx<<
+        //                 " with perplexity: "<<min<<endl;
+        //      std::cout<<"--------------------------------------------------------------"<<endl;
+                min= 1000000;
+		best.clear();
+	//      min_candidate_idx = 0;
   	}
         source_idx = pattern[0];//stores the source sentence id in n-best submission
-	pattern.erase(pattern.begin(), pattern.begin() + 1); //removes sentence_index 
+	pattern.erase(pattern.begin(), pattern.begin() + 2); //removes sentence_index, and |||
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M = pattern_size + 1; // +1 for adding </s>
@@ -179,8 +185,10 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         if(perplexity < min)
 	{
 		min = perplexity;
-		min_candidate_idx = candidate_idx;
+//		best(pattern.begin() + 1, pattern.end());
+	//	min_candidate_idx = candidate_idx;
 	}
+	index++;
         total_time += (stop - start);
     }
     lm_bench::print();
@@ -223,6 +231,7 @@ int execute(const cmdargs_t &args)
 
     /* load patterns */
     std::vector<std::vector<uint64_t> > patterns;
+    std::vector<std::vector<std::string> > orig_patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
         LOG(INFO) << "reading input file '" << args.pattern_file << "'";
@@ -230,10 +239,14 @@ int execute(const cmdargs_t &args)
         while (std::getline(ifile, line)) {
             auto line_tokens = parse_line(line,args.byte_alphabet);
             std::vector<uint64_t> tokens;
+            std::vector<std::string> orig_tokens;
             for (const auto &word: line_tokens) {
+		orig_tokens.push_back(word);
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
+	    orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
+	    orig_patterns.push_back(orig_tokens);
             patterns.push_back(tokens);
             //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
         }
@@ -244,7 +257,7 @@ int execute(const cmdargs_t &args)
 
     /* run the querying or reranking */
     if(args.isreranking)
-        run_reranker(idx, patterns, args.ngramsize, args.isbackward, args.ismkn);
+        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.isbackward, args.ismkn);
     else
         run_queries(idx, patterns, args.ngramsize, args.isbackward, args.ismkn);
 
