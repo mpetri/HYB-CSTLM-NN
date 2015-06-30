@@ -123,11 +123,11 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
 
         // update the two searches into the CST
         if (ok) {
-            LOG(INFO)<<"**start is: "<<idx.m_vocab.id2token(*start)<<endl;
+        //    LOG(INFO)<<"**start is: "<<idx.m_vocab.id2token(*start)<<endl;
             ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
         }
         if (i >= 2) {
-            LOG(INFO)<<"*start is: "<<idx.m_vocab.id2token(*start)<<endl;
+        //    LOG(INFO)<<"*start is: "<<idx.m_vocab.id2token(*start)<<endl;
             if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0)
                 break;
         }
@@ -139,31 +139,31 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
-	    LOG(INFO)<<"idx.m_cst.size(node_incl) is: "<<idx.m_cst.size(node_incl)<<endl;
+	   // LOG(INFO)<<"idx.m_cst.size(node_incl) is: "<<idx.m_cst.size(node_incl)<<endl;
             d = idx.m_cst.size(node_excl);
-	    LOG(INFO)<<"denominator: "<<d<<endl;
-            LOG(INFO)<<"Highest Level: "<<c<<endl;
+	   // LOG(INFO)<<"denominator: "<<d<<endl;
+           // LOG(INFO)<<"Highest Level: "<<c<<endl;
         } else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.m_precomputed.N1plus_dotdot;
-            LOG(INFO)<<"denominator: "<<d<<endl;
-            LOG(INFO)<<"Lowest Level: "<<c<<endl;
+          //  LOG(INFO)<<"denominator: "<<d<<endl;
+          //  LOG(INFO)<<"Lowest Level: "<<c<<endl;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
-            LOG(INFO)<<"denominator: "<<d<<endl;
-            LOG(INFO)<<"Lower Level: "<<c<<endl;
+          //  LOG(INFO)<<"denominator: "<<d<<endl;
+          //  LOG(INFO)<<"Lower Level: "<<c<<endl;
         }
 
         // update the running probability
         if (c == 1) {
-            LOG(INFO)<<"D1 is: "<<D1<<endl;
+           // LOG(INFO)<<"D1 is: "<<D1<<endl;
             c -= D1;
         } else if (c == 2) {
-            LOG(INFO)<<"D2 is: "<<D2<<endl;
+           // LOG(INFO)<<"D2 is: "<<D2<<endl;
             c -= D2; 
         } else if (c >= 3) {
-            LOG(INFO)<<"D3p is: "<<D3p<<endl;
+           // LOG(INFO)<<"D3p is: "<<D3p<<endl;
             c -= D3p;
         }
             
@@ -183,13 +183,13 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
-        LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
-	LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
-        LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
-	LOG(INFO) << "pattern is: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
-        LOG(INFO)<<"Pattern is: "<<std::vector<u_int64_t>(pattern_begin,pattern_end);
-        LOG(INFO)<<"probability is: "<<p<<" log10(probability) is: "<<log10(p)<<endl;
-        LOG(INFO)<<"----------------------------------"<<endl;
+        //LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
+	//LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
+        //LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
+	//LOG(INFO) << "pattern is: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
+        //LOG(INFO)<<"Pattern is: "<<std::vector<u_int64_t>(pattern_begin,pattern_end);
+        //LOG(INFO)<<"probability is: "<<p<<" log10(probability) is: "<<log10(p)<<endl;
+        //LOG(INFO)<<"----------------------------------"<<endl;
     }
 
     return p;
