@@ -1,0 +1,4 @@
+Example:
+
+./reranking.sh ../../../corpus/reranking/gigaword.4Ed_proc/afe ../../../corpus/compiled/en/cz-en/aalto/cz-en.nbest 2 ../../../corpus/reranking/compiled/en/cz-en/aalto/en.sgm en
+

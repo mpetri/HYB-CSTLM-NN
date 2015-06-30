@@ -142,19 +142,27 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
     double min = 1000000;
-    uint64_t best_idx = -1;
+    uint64_t best_idx = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
     //uint64_t candidate_idx = 1;//line number to find the unconverted sentence
-    uint64_t source_idx=0;
+    uint64_t source_idx=idx.m_vocab.token2id("0");
     lm_bench::reset();
+    std::vector<uint64_t> best;
     uint64_t index = 0;
+    std::ofstream output;
+    output.open("output.rrank");
     for (std::vector<uint64_t> pattern : patterns) {
         if(pattern[0]!=source_idx)
 	{
-	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end());
+	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end())<<" pplx = "<<min<<endl;
+		std::ostringstream sp("", std::ios_base::ate);
+                std::copy(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end(),std::ostream_iterator<std::string>(sp," "));
+		output<<sp.str()<<endl;
+
                 min= 1000000;
-		best_idx = -1;
+		best.clear();
+		best_idx = 0;
   	}
         source_idx = pattern[0];//stores the source sentence id in n-best submission
 	pattern.erase(pattern.begin(), pattern.begin() + 2); //removes sentence_index, and |||
@@ -172,11 +180,13 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         if(perplexity < min)
 	{
 		min = perplexity;
+		cout<<"pplx "<<min<<endl;
 		best_idx = index;
 	}
 	index++;
         total_time += (stop - start);
     }
+    output.close();
     lm_bench::print();
     LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
 }
@@ -227,18 +237,12 @@ int execute(const cmdargs_t &args)
             std::vector<uint64_t> tokens;
             std::vector<std::string> orig_tokens;
             for (const auto &word: line_tokens) {
-		if(args.isreranking) 
-	        {
-			orig_tokens.push_back(word);
-		}
+		orig_tokens.push_back(word);
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
-            if(args.isreranking)
-	    {
-	    	orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
-	    	orig_patterns.push_back(orig_tokens);
-	    }
+	    orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
+	    orig_patterns.push_back(orig_tokens);
             patterns.push_back(tokens);
             //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
         }
