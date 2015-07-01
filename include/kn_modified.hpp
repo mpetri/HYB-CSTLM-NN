@@ -155,7 +155,7 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
                 // lowest level
                 d = idx.m_precomputed.N1plus_dotdot; // not sure this is the right denominator
                 n1 = idx.m_precomputed.n1_cnt[1];
-                n2 = idx.m_precomputed.n2_cnt[2];
+                n2 = idx.m_precomputed.n2_cnt[1];
                 n3p = idx.m_precomputed.N3plus_dot;
             } else {
                 // mid level (most cases arrive here)
@@ -185,7 +185,8 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
-        LOG(INFO) << "adjusted c=" << c << " gamma=" << gamma << " p=" << p;
+        LOG(INFO) << "adjusted c=" << c << " gamma=" << gamma << " gamma/d=" << (gamma/d) << " p=" << p << " log(p)=" << log10(p);
+        LOG(INFO) << "\tdiscounts: D1=" << D1 << " D2=" << D2 << " D3p=" << D3p;
         //LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
 	//LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
         //LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
