@@ -67,11 +67,11 @@ public:
     
     template <class t_cst> compressed_counts(t_cst& cst, uint64_t max_node_depth, bool mkn_counts)
     {
+	m_is_mkn = mkn_counts;
 	if (!mkn_counts)
 	    initialise_kneser_ney(cst, max_node_depth);
 	else
 	    initialise_modified_kneser_ney(cst, max_node_depth);
-	m_is_mkn = mkn_counts;
     }
     
     template <class t_cst, class t_node_type>

@@ -12,11 +12,7 @@ struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
     uint64_t max_ngram_count;
     uint64_t N1plus_dotdot;
-    uint64_t N1_dotdot;
-    uint64_t N2_dotdot;
     uint64_t N3plus_dot;
-    uint64_t N1_dot;
-    uint64_t N2_dot;
     std::vector<double> n1;
     std::vector<double> n2;
     std::vector<double> n3;
@@ -52,11 +48,7 @@ struct precomputed_stats {
 
         sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
         sdsl::write_member(N1plus_dotdot, out, child, "N1Plus_dotdot");
-        sdsl::write_member(N1_dotdot, out, child, "N1_dotdot");
-        sdsl::write_member(N2_dotdot, out, child, "N2_dotdot");
-        sdsl::write_member(N3plus_dot, out, child, "N3PlusPlus");
-        sdsl::write_member(N1_dot, out, child, "N1_dot");
-        sdsl::write_member(N2_dot, out, child, "N2_dot");
+        sdsl::write_member(N3plus_dot, out, child, "N3Plus_dot");
 
         sdsl::serialize(n1, out, child, "n1");
         sdsl::serialize(n2, out, child, "n2");
@@ -87,11 +79,7 @@ struct precomputed_stats {
     {
         sdsl::read_member(max_ngram_count, in);
         sdsl::read_member(N1plus_dotdot, in);
-        sdsl::read_member(N1_dotdot, in);
-        sdsl::read_member(N2_dotdot, in);
         sdsl::read_member(N3plus_dot, in);
-        sdsl::read_member(N1_dot, in);
-        sdsl::read_member(N2_dot, in);
 
         sdsl::load(n1, in);
         sdsl::load(n2, in);
@@ -156,10 +144,6 @@ struct precomputed_stats {
         LOG(INFO) << "------------------------------------------------";
         LOG(INFO) << "N1+(..) = " << N1plus_dotdot;
         if(ismkn){
-            LOG(INFO) << "N1(..) = " << N1_dotdot;
-            LOG(INFO) << "N2(..) = " << N2_dotdot;
-            LOG(INFO) << "N1(.) = " << N1_dot;
-            LOG(INFO) << "N2(.) = " << N2_dot;
             LOG(INFO) << "N3+(.) = " << N3plus_dot;
         }
         LOG(INFO) << "------------------------------------------------";
@@ -203,11 +187,7 @@ template <typename t_cst>
 precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint64_t max_ngram_len,bool )
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
-    , N1_dotdot(0)
-    , N2_dotdot(0)
     , N3plus_dot(0)
-    , N1_dot(0)
-    , N2_dot(0)
 
 {
     auto size = max_ngram_count + 1;
@@ -328,11 +308,9 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
-                    if(n == 1) N1_dot++; 
                     break;
                 case 2:
                     n2[n] += 1;
-                    if(n == 1) N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
@@ -342,16 +320,8 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                     break;
                 }
 
-                if (n == 2) {
+                if (n == 2)
                     N1plus_dotdot++;
-                    if (freq == 1) {
-                        N1_dotdot++;
-                    } else if (freq == 2) {
-                        N2_dotdot++;
-                    }
-                }
-                if (freq >= 3 && n == 1)
-                    N3plus_dot++;
 		
                 // update continuation counts
                 uint64_t n1plus_back = 0ULL;
@@ -371,6 +341,10 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 case 4: n4_cnt[n] += 1; break;
                 }
 
+                if (n == 1 && n1plus_back >= 3) {
+                    N3plus_dot++;
+                }
+
                 // can skip subtree if we know the EOS symbol is coming next
                 if (counter <= 5 || symbol == PAT_START_SYM) { 
                     it.skip_subtree();
@@ -383,4 +357,9 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
             }
         }
     }
+
+    // offset for appended UNK token
+    n1[1] -= 1;
+    n1_cnt[1] -= 1;
+    N3plus_dot -= 1; // ???
 }

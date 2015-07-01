@@ -153,10 +153,10 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             if (i == 1 || ngramsize == 1) {
                 // lowest level
-                d = idx.m_precomputed.N1plus_dotdot;
-                n1 = idx.m_precomputed.N1_dotdot;
-                n2 = idx.m_precomputed.N2_dotdot;
-                n3p = d - n1 - n2;
+                d = idx.m_precomputed.N1plus_dotdot; // not sure this is the right denominator
+                n1 = idx.m_precomputed.n1_cnt[1];
+                n2 = idx.m_precomputed.n2_cnt[2];
+                n3p = idx.m_precomputed.N3plus_dot;
             } else {
                 // mid level (most cases arrive here)
                 d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);

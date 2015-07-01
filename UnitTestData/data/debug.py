@@ -22,14 +22,14 @@ for s in tr:
         unigrams[s[i]] += 1
 
 print 'Unigram statistics'
-print 'n1 ', len([key for key, value in unigrams.items() if value >= 1])
-print 'n2 ', len([key for key, value in unigrams.items() if value >= 2])
+print 'n1 ', len([key for key, value in unigrams.items() if value == 1])
+print 'n2 ', len([key for key, value in unigrams.items() if value == 2])
 print 'n3+', len([key for key, value in unigrams.items() if value >= 3])
 
-things = collections.Counter()
+n1plus = collections.Counter()
 for (w1, w2), value in bigrams.items():
-    things[w2] += 1
-print 'Thing statistics'
-print 'n1 ', len([key for key, value in things.items() if value >= 1])
-print 'n2 ', len([key for key, value in things.items() if value >= 2])
-print 'n3+', len([key for key, value in things.items() if value >= 3])
+    n1plus[w2] += 1
+print 'N1+(. word) statistics'
+print 'n1 ', len([key for key, value in n1plus.items() if value == 1])
+print 'n2 ', len([key for key, value in n1plus.items() if value == 2])
+print 'n3+', len([key for key, value in n1plus.items() if value >= 3])
