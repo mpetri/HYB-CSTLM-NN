@@ -219,7 +219,8 @@ public:
         sdsl::bit_vector tmp_bv(cst.nodes());
         auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
-        std::vector<std::pair<uint64_t, uint64_t>> stack;
+        //std::vector<std::pair<uint64_t, uint64_t>> stack;
+        std::map<uint64_t, std::pair<uint64_t, uint64_t>> child_hist;
 
         //LOG(INFO) << "initialise_modified_kneser_ney: pass 1";
 
@@ -240,12 +241,22 @@ public:
                     auto str_depth = cst.depth(node);
                     if (str_depth <= max_node_depth) {
                         tmp_bv[node_id] = 1;
-                        auto &f12 = stack.back();
+                        //auto &f12 = stack.back();
+                        auto &f12 = child_hist[node_id];
+                        assert(cst.degree(node) >= f12.first + f12.second);
                         
                         tmp_buffer_counts_f1.push_back(f12.first);
                         tmp_buffer_counts_f2.push_back(f12.second);
-                        stack.pop_back();
-                    }
+
+                        //{
+                            //std::vector<uint64_t> edge;
+                            //for (uint64_t i = 1; i <= cst.depth(node); ++i) 
+                                //edge.push_back(cst.edge(node, i));
+                            //LOG(INFO) << "storing for node labelled " << edge << " with degree " << cst.degree(node) << " child counts " << f12;
+                        //}
+                    } 
+                    //stack.pop_back();
+                    child_hist.erase(node_id);
                 } else {
                     /* first visit */
                     if (! cst.is_leaf(node) ) {
@@ -256,11 +267,14 @@ public:
                     }
                     
                     int count = cst.size(node);
-                    if (depth > last_node_depth)
-                        stack.push_back(std::make_pair(0ul, 0ul));
-                    auto &cs = stack.back();
-                    cs.first += (count == 1);
-                    cs.second += (count == 2);
+                    //if (depth > last_node_depth)
+                    //    stack.push_back(std::make_pair(0ul, 0ul));
+                    //auto &cs = stack.back();
+                    auto parent_id = cst.id(cst.parent(node));
+                    if (count == 1)
+                        child_hist[parent_id].first += 1;
+                    else if (count == 2)
+                        child_hist[parent_id].second += 1;
                 }
                 ++itr;
                 last_node_depth = depth;

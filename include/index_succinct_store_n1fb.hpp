@@ -431,9 +431,10 @@ public:
         n1 = n2 = n3p = 0;
         if (full_match) {
             if (pattern_size <= t_max_ngram_count) {
-                // FIXME: this bit is currently broken
                 m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
                 n3p = m_cst.degree(node) - n1 - n2;
+                //LOG(INFO) << "N123PlusFront -- full, lookup n1=" << n1 << " n2=" << n2 << " degree=" << m_cst.degree(node);
+                //LOG(INFO) << "cached? " << m_n1plusfrontback.is_precomputed(m_cst, node);
             } else {
                 // loop over the children
                 auto child = m_cst.select_child(node, 1); 
@@ -447,6 +448,7 @@ public:
                         n3p += 1;
                     child = m_cst.sibling(child);
                 }
+                //LOG(INFO) << "N123PlusFront -- full, iteration n1=" << n1 << " n2=" << n2 << " n3p=" << n3p << " degree=" << m_cst.degree(node);
             }
         } else {
             // pattern is part of the edge label
@@ -459,7 +461,9 @@ public:
                     n2 += 1;
                 else if (c >= 3)
                     n3p += 1;
+                //LOG(INFO) << "N123PlusFront -- partial c=" << c << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
             } 
+            //LOG(INFO) << "N123PlusFront -- partial but ends with </s>;" << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
         }
     }
 
