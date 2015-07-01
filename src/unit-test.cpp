@@ -73,6 +73,7 @@ protected:
         {
             col = collection(col_path);
             idx = t_idx(col,true);
+            idx.print_params(true, 10);
         }
 
         load_srilm(srilm_path, srilm_triplets);
