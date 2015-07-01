@@ -790,7 +790,7 @@ TYPED_TEST(LMTest, PerplexityMKN)
 
 int main(int argc, char* argv[])
 {
-    log::start_log(argc, (const char**)argv, false);
+    log::start_log(argc, (const char**)argv);
 
     ::testing::InitGoogleTest(&argc, argv);
 

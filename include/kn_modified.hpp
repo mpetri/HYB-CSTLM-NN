@@ -88,7 +88,8 @@ double prob_mod_kneser_ney_dual(const t_idx& idx,
             n1 = idx.m_precomputed.n1_cnt[1];
             n2 = idx.m_precomputed.n2_cnt[1];
             n3p = (idx.vocab_size()-2)-(n1 + n2);
-        }else{
+        } else {
+            // FIXME: need N1PlusFrontBack for middle orders
             idx.N123PlusFront(node, start, pattern_end - 1, n1, n2, n3p);
         }
 
@@ -121,15 +122,20 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         if (i > 1 && *start == UNKNOWN_SYM) 
             break;
 
+        LOG(INFO) << "pattern is: " << idx.m_vocab.id2token(start, pattern_end);
+
         // update the two searches into the CST
         if (ok) {
         //    LOG(INFO)<<"**start is: "<<idx.m_vocab.id2token(*start)<<endl;
             ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
+            LOG(INFO) << "\tpattern lookup, ok=" << ok;
         }
         if (i >= 2) {
         //    LOG(INFO)<<"*start is: "<<idx.m_vocab.id2token(*start)<<endl;
-            if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0)
+            if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0) {
+                LOG(INFO) << "\tfailed context lookup; quitting";
                 break;
+            }
         }
 
         // compute the count and normaliser
@@ -137,22 +143,24 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         idx.mkn_discount(i, D1, D2, D3p, i == 1 || i != ngramsize);
 
         double c, d;
+        uint64_t n1 = 0, n2 = 0, n3p = 0;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
-	   // LOG(INFO)<<"idx.m_cst.size(node_incl) is: "<<idx.m_cst.size(node_incl)<<endl;
             d = idx.m_cst.size(node_excl);
-	   // LOG(INFO)<<"denominator: "<<d<<endl;
-           // LOG(INFO)<<"Highest Level: "<<c<<endl;
-        } else if (i == 1 || ngramsize == 1) {
-            c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
-            d = idx.m_precomputed.N1plus_dotdot;
-          //  LOG(INFO)<<"denominator: "<<d<<endl;
-          //  LOG(INFO)<<"Lowest Level: "<<c<<endl;
+            idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p); // does this work for node_excl = root?
+            LOG(INFO) << "highest level c=" << c << " d=" << d << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
-            d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
-          //  LOG(INFO)<<"denominator: "<<d<<endl;
-          //  LOG(INFO)<<"Lower Level: "<<c<<endl;
+            if (i == 1 || ngramsize == 1) {
+                d = idx.m_precomputed.N1plus_dotdot;
+                n1 = idx.m_precomputed.N1_dotdot;
+                n2 = idx.m_precomputed.N2_dotdot;
+                n3p = d - n1 - n2;
+            } else {
+                d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
+                idx.N123PlusFrontBack_from_forward(node_excl, start, pattern_end - 1, n1, n2, n3p);
+            }
+            LOG(INFO) << "mid/low level c=" << c << " d=" << d << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
         }
 
         // update the running probability
@@ -167,22 +175,15 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
             c -= D3p;
         }
             
-        uint64_t n1, n2, n3p;
         //if it's the unigram level, the gamma can be computed using
         // n1_cnt, n2_cnt, vocab_size
 	// have a look at ModKneserNey::lowerOrderWeight function of srilm in
         // Discount.cc 
-        if (i == 1 || ngramsize == 1) {
-            n1 = idx.m_precomputed.n1_cnt[1];
-            n2 = idx.m_precomputed.n2_cnt[1];
-            n3p = (idx.vocab_size()-2)-(n1 + n2);
-        }else{
-            idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
-        }
 
         //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
+        LOG(INFO) << "adjusted c=" << c << " gamma=" << gamma << " p=" << p;
         //LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
 	//LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
         //LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
