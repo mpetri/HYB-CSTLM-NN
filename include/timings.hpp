@@ -26,8 +26,11 @@ struct lm_construct_timer {
 
 enum class timer_type {
 	N1PlusBack = 0,
-	N1PlusFront ,
+	N123PlusBack,
+	N1PlusFront,
+	N123PlusFront,
 	N1PlusFrontBack,
+	N123PlusFrontBack,
 	forward_search ,
 	backward_search,
 	highestorder,
@@ -41,8 +44,11 @@ timer_type_to_str(int type) {
 	timer_type t = static_cast<timer_type>(type);
     switch(t) {
          case timer_type::N1PlusBack      : return "N1PlusBack";
+	 case timer_type::N123PlusBack      : return "N123PlusBack";
          case timer_type::N1PlusFront     : return "N1PlusFront";
+	 case timer_type::N123PlusFront     : return "N123PlusFront";
          case timer_type::N1PlusFrontBack : return "N1PlusFrontBack";
+	 case timer_type::N123PlusFrontBack : return "N123PlusFrontBack";
          case timer_type::forward_search  : return "forward_search";
          case timer_type::backward_search : return "backward_search";
          case timer_type::highestorder    : return "highestorder";

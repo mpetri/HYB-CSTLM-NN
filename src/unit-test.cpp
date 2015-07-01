@@ -8,7 +8,7 @@
 
 typedef testing::Types<
 //index_succinct<default_cst_type,default_cst_rev_type>,
-index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
+//index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
 index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
@@ -448,6 +448,73 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                                 this->idx.m_cst_rev.node(lb_rev, rb_rev), 
                                 cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
+                }
+            }
+        }
+    }
+}
+
+TYPED_TEST(LMTest, N123PlusFrontBack)
+{
+    // (1) get the text
+    std::vector<uint64_t> text;
+    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+              std::back_inserter(text));
+
+    // (2) for all n-gram sizes
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+        // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
+        std::unordered_map<std::vector<uint64_t>,
+                           std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher>,
+                           uint64_vector_hasher> ngram_counts;
+        /* compute N1PlusFrontBack c-gram stats */
+        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
+        for (size_t i = 1; i < (text.size() -3 ) - cgram; i++) {
+            std::vector<uint64_t> cur_gram(cgram);
+            auto beg = text.begin() + i;
+            std::copy(beg, beg + cgram, cur_gram.begin());
+
+            if (!((text[i - 1] == EOS_SYM) && (text[i + cgram] == EOS_SYM))) {
+                auto &ctx_counts = ngram_counts[cur_gram];
+                std::vector<uint64_t> ctx{ text[i - 1], text[i + cgram] };
+                ctx_counts[ctx] += 1;
+            } else {
+                if (ngram_counts.find(cur_gram) == ngram_counts.end())
+                    ngram_counts[cur_gram]
+                        = std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher>();
+            }
+        }
+
+        // (4) for all valid ngrams, query the index
+        for (const auto& ngc : ngram_counts) {
+            const auto& cng = ngc.first;
+            uint64_t expected_n1 = 0, expected_n2 = 0, expected_n3p = 0;
+            for (const auto& item : ngc.second) {
+                if (item.second == 1)
+                    expected_n1 += 1;
+                else if (item.second == 2)
+                    expected_n2 += 1;
+                else
+                    expected_n3p += 1;
+            }
+
+            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
+                && std::none_of(cng.cbegin(), cng.cend(),
+                                [](uint64_t i) { return i == EOF_SYM; })) {
+                // (1) perform backward search on reverse csa to get the node [lb,rb]
+                uint64_t lb, rb;
+                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
+                                           cng.begin(), cng.end(), lb, rb);
+
+                EXPECT_TRUE(cnt > 0);
+                if (cnt > 0) {
+                    uint64_t actual_n1, actual_n2, actual_n3p;
+                    this->idx.N123PlusFrontBack_from_forward(this->idx.m_cst.node(lb, rb), 
+                            cng.begin(), cng.end(),
+                            actual_n1, actual_n2, actual_n3p);
+                    EXPECT_EQ(actual_n1, expected_n1);
+                    EXPECT_EQ(actual_n2, expected_n2);
+                    EXPECT_EQ(actual_n3p, expected_n3p);
                 }
             }
         }
