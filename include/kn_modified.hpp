@@ -140,6 +140,7 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
 
         // compute the count and normaliser
         double D1, D2, D3p;
+        LOG(INFO) << "test for continuation counts: " << (i == 1 || i != ngramsize) << " i: " << i << " ngramsize: " << ngramsize;
         idx.mkn_discount(i, D1, D2, D3p, i == 1 || i != ngramsize);
 
         double c, d;
@@ -153,36 +154,23 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             if (i == 1 || ngramsize == 1) {
                 // lowest level
-                d = idx.m_precomputed.N1plus_dotdot; // not sure this is the right denominator
+                d = idx.m_precomputed.N1plus_dotdot;
                 n1 = idx.m_precomputed.n1_cnt[1];
                 n2 = idx.m_precomputed.n2_cnt[1];
                 n3p = idx.m_precomputed.N3plus_dot;
             } else {
                 // mid level (most cases arrive here)
-                d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
+                d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1); // is this right?
                 idx.N123PlusFrontBack_from_forward(node_excl, start, pattern_end - 1, n1, n2, n3p);
             }
             LOG(INFO) << "mid/low level c=" << c << " d=" << d << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
         }
 
         // update the running probability
-        if (c == 1) {
-           // LOG(INFO)<<"D1 is: "<<D1<<endl;
-            c -= D1;
-        } else if (c == 2) {
-           // LOG(INFO)<<"D2 is: "<<D2<<endl;
-            c -= D2; 
-        } else if (c >= 3) {
-           // LOG(INFO)<<"D3p is: "<<D3p<<endl;
-            c -= D3p;
-        }
-            
-        //if it's the unigram level, the gamma can be computed using
-        // n1_cnt, n2_cnt, vocab_size
-	// have a look at ModKneserNey::lowerOrderWeight function of srilm in
-        // Discount.cc 
+        if (c == 1) { c -= D1; } 
+        else if (c == 2) { c -= D2; } 
+        else if (c >= 3) { c -= D3p; }
 
-        //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
         LOG(INFO) << "adjusted c=" << c << " gamma=" << gamma << " gamma/d=" << (gamma/d) << " p=" << p << " log(p)=" << log10(p);
@@ -195,6 +183,8 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         //LOG(INFO)<<"probability is: "<<p<<" log10(probability) is: "<<log10(p)<<endl;
         //LOG(INFO)<<"----------------------------------"<<endl;
     }
+
+    LOG(INFO) << "FINAL prob " << p;
 
     return p;
 }

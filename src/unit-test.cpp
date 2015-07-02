@@ -43,7 +43,7 @@ std::vector<std::string> split(const std::string& s, char delim)
 
 template <class t_idx> class LMTest : public testing::Test {
 protected:
-    const char* srilm_path = "../UnitTestData/srilm_output/output_srilm";
+    const char* srilm_path = "../UnitTestData/srilm_output/output_srilm_kn";
     const char* srilm_mkn_path = "../UnitTestData/srilm_output/output_srilm_mkn";
     std::vector<triplet> srilm_triplets, srilm_triplets_mkn;
 
@@ -783,7 +783,7 @@ TYPED_TEST(LMTest, Perplexity)
 TYPED_TEST(LMTest, PerplexityMKN)
 {
     for (unsigned int i = 0; i < this->srilm_triplets_mkn.size(); i++) {
-        auto srilm = this->srilm_triplets[i];
+        auto srilm = this->srilm_triplets_mkn[i];
         double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying, true);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
     }
