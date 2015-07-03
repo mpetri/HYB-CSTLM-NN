@@ -212,23 +212,49 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
     ncomputer(col,cst_rev);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
-        if (n1[size] != 0)
+        if (n1[size] != 0 && n2[size] != 0) {
+            Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
+        } else {
+            LOG(WARNING) << "computed KN discount is invalid; using 0.5";
+            Y[size] = D1[size] = D2[size] = D3[size] = 0.5;
+            continue;
+        }
+
+        bool discounts_ok = false;
+        if (n1[size] != 0 && n2[size] != 0 && n3[size] != 0 && n4[size] != 0) {
             D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
-        if (n2[size] != 0)
             D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
-        if (n3[size] != 0)
             D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
+            discounts_ok = (D1[size] >= 0 && D2[size] >= 0 && D3[size] >= 0);
+        }
+
+        if (!discounts_ok) {
+            LOG(WARNING) << "computed MKN discounts are invalid; using KN discounts";
+            D1[size] = D2[size] = D3[size] = Y[size];
+        }
     }
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
-        if (n1_cnt[size] != 0)
+        if (n1_cnt[size] != 0 && n2_cnt[size] != 0) {
+            Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
+        } else {
+            LOG(WARNING) << "computed KN discount is invalid; using 0.5";
+            Y_cnt[size] = D1_cnt[size] = D2_cnt[size] = D3_cnt[size] = 0.5;
+            continue;
+        }
+
+        bool discounts_ok = false;
+        if (n1_cnt[size] != 0 && n2_cnt[size] != 0 && n3_cnt[size] != 0 && n3_cnt[size] != 0) {
             D1_cnt[size] = 1 - 2 * Y_cnt[size] * (double)n2_cnt[size] / n1_cnt[size];
-        if (n2_cnt[size] != 0)
             D2_cnt[size] = 2 - 3 * Y_cnt[size] * (double)n3_cnt[size] / n2_cnt[size];
-        if (n3_cnt[size] != 0)
             D3_cnt[size] = 3 - 4 * Y_cnt[size] * (double)n4_cnt[size] / n3_cnt[size];
+            discounts_ok = (D1_cnt[size] >= 0 && D2_cnt[size] >= 0 && D3_cnt[size] >= 0);
+        }
+
+        if (!discounts_ok) {
+            LOG(WARNING) << "computed MKN discounts are invalid; using KN discounts";
+            D1_cnt[size] = D2_cnt[size] = D3_cnt[size] = Y_cnt[size];
+        }
     }
 }
 
