@@ -16,7 +16,7 @@ do
     param=""
     if (($i==2))
     then
-		param="-gt1min 0 -gt2min 0"
+        param="-gt1min 0 -gt2min 0"
     elif (($i==3))
     then
         param="-gt1min 0 -gt2min 0 -gt3min 0"
@@ -41,8 +41,12 @@ do
     fi
 
     mkdir $experimentdir/$i
-    ./ngram-count -order $i -text $datadir/training.data -write $experimentdir/$i/training.ngrams
-    ./ngram-count -order $i -read $experimentdir/$i/training.ngrams -lm $experimentdir/$i/training.binary -interpolate -ukndiscount -unk $param -write-binary-lm
+    $SRILM/bin/macosx/ngram-count -order $i -text $datadir/training.data -write $experimentdir/$i/training.ngrams
+    # KN
+    $SRILM/bin/macosx/ngram-count -order $i -read $experimentdir/$i/training.ngrams -lm $experimentdir/$i/training.binary -interpolate -ukndiscount -unk $param -write-binary-lm
+    
+    # modified KN
+    #$SRILM/bin/macosx/ngram-count -order $i -read $experimentdir/$i/training.ngrams -lm $experimentdir/$i/training.binary -interpolate -kndiscount -unk $param -write-binary-lm
 
 	while read -r pattern
 	do
