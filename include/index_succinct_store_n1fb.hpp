@@ -325,7 +325,51 @@ public:
         }
         return N1plus_front;
     }
-    
+     
+    // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of MKN
+    void N123PlusFront_lower(const node_type &node,
+                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    {
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
+        n1 = n2 = n3p = 0;
+	uint64_t all=0;
+        if (full_match) {
+            // pattern matches the edge label
+            auto child = m_cst.select_child(node, 1);
+	    while (child != m_cst.root()) {
+		uint64_t symbol = m_cst.edge(child, pattern_size + 1);
+		auto lb = m_cst.lb(child);
+		auto rb = m_cst.rb(child);
+
+		static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+	        static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+        	static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+            	typename t_cst::csa_type::size_type num_syms = 0;
+            	sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+		if(num_syms==1) n1++;
+		if(num_syms==2) n2++;
+		all++;
+                child = m_cst.sibling(child);
+            }
+        } else {
+            // pattern is part of the edge label
+		auto lb = m_cst.lb(node);
+                auto rb = m_cst.rb(node);
+
+                static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+                static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+                static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+                typename t_cst::csa_type::size_type num_syms = 0;
+                sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+		if(num_syms==1) n1++;
+		if(num_syms==2) n2++;
+		all++;
+        }
+	n3p=all-n1-n2;
+    }
+
     // Computes N_1( abc * ), N_2( abc * ), N_3+( abc * ); needed for modified Kneser-Ney smoothing
     void N123PlusFront(const node_type &node,
                        pattern_iterator pattern_begin, pattern_iterator pattern_end,
@@ -336,6 +380,7 @@ public:
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
         n1 = n2 = n3p = 0;
         if (full_match) {
+	/*
             if (pattern_size <= t_max_ngram_count) {
                 // FIXME: this bit is currently broken
                 m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
@@ -354,6 +399,22 @@ public:
                     child = m_cst.sibling(child);
                 }
             }
+	*/
+	    // ehsan: replaced the above block with this
+	    // pattern matches the edge label
+            auto child = m_cst.select_child(node, 1);
+            while (child != m_cst.root()) {
+                auto c = m_cst.size(child);
+                //LOG(INFO) << "\ttop -- child " << child << " count " << c;
+                if (c == 1)
+                    n1 += 1;
+                else if (c == 2)
+                    n2 += 1;
+                else if (c >= 3)
+                    n3p += 1;
+                child = m_cst.sibling(child);
+            }
+
         } else {
             // pattern is part of the edge label
             uint64_t symbol = *(pattern_end - 1);

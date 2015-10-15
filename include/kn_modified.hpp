@@ -141,18 +141,18 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
 	   // LOG(INFO)<<"idx.m_cst.size(node_incl) is: "<<idx.m_cst.size(node_incl)<<endl;
             d = idx.m_cst.size(node_excl);
-	   // LOG(INFO)<<"denominator: "<<d<<endl;
-           // LOG(INFO)<<"Highest Level: "<<c<<endl;
+	    LOG(INFO)<<"denominator: "<<d<<endl;
+            LOG(INFO)<<"Highest Level: "<<c<<endl;
         } else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.m_precomputed.N1plus_dotdot;
-          //  LOG(INFO)<<"denominator: "<<d<<endl;
-          //  LOG(INFO)<<"Lowest Level: "<<c<<endl;
+            LOG(INFO)<<"denominator: "<<d<<endl;
+            LOG(INFO)<<"Lowest Level: "<<c<<endl;
         } else {
             c = (ok) ? idx.N1PlusBack_from_forward(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1);
-          //  LOG(INFO)<<"denominator: "<<d<<endl;
-          //  LOG(INFO)<<"Lower Level: "<<c<<endl;
+            LOG(INFO)<<"denominator: "<<d<<endl;
+            LOG(INFO)<<"Lower Level: "<<c<<endl;
         }
 
         // update the running probability
@@ -172,24 +172,26 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
         // n1_cnt, n2_cnt, vocab_size
 	// have a look at ModKneserNey::lowerOrderWeight function of srilm in
         // Discount.cc 
-        if (i == 1 || ngramsize == 1) {
+	if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM) ) {
+            idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
+        }else if (i == 1 || ngramsize == 1) {
             n1 = idx.m_precomputed.n1_cnt[1];
             n2 = idx.m_precomputed.n2_cnt[1];
             n3p = (idx.vocab_size()-2)-(n1 + n2);
         }else{
-            idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
+            idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p);//FIXME
         }
-
+	
         //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
-        //LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
-	//LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
-        //LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
-	//LOG(INFO) << "pattern is: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
-        //LOG(INFO)<<"Pattern is: "<<std::vector<u_int64_t>(pattern_begin,pattern_end);
-        //LOG(INFO)<<"probability is: "<<p<<" log10(probability) is: "<<log10(p)<<endl;
-        //LOG(INFO)<<"----------------------------------"<<endl;
+        LOG(INFO)<<"n1 = "<<n1<<" n2 = "<<n2<<" n3p = "<<n3p<<endl;
+	LOG(INFO)<<"D1 = "<<D1<<" D2 = "<<D2<<" D3p = "<<D3p<<endl;
+        LOG(INFO)<<"gamma = "<<gamma/d<<" log10(gamma)= "<<log10(gamma/d)<<endl;
+	LOG(INFO) << "pattern is: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
+       // LOG(INFO)<<"Pattern is: "<<std::vector<u_int64_t>(pattern_begin,pattern_end);
+        LOG(INFO)<<"probability is: "<<p<<" log10(probability) is: "<<log10(p)<<endl;
+        LOG(INFO)<<"----------------------------------"<<endl;
     }
 
     return p;
