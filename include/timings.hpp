@@ -19,15 +19,17 @@ struct lm_construct_timer {
 	}
 	~lm_construct_timer() {
 		auto stop = watch::now();
-		auto time_spent = stop-start;
 		LOG(INFO) << "STOP_CONSTRUCT(" << name << ") - " << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec";
 	}
 };
 
 enum class timer_type {
 	N1PlusBack = 0,
-	N1PlusFront ,
+	N123PlusBack,
+	N1PlusFront,
+	N123PlusFront,
 	N1PlusFrontBack,
+	N123PlusFrontBack,
 	forward_search ,
 	backward_search,
 	highestorder,
@@ -41,8 +43,11 @@ timer_type_to_str(int type) {
 	timer_type t = static_cast<timer_type>(type);
     switch(t) {
          case timer_type::N1PlusBack      : return "N1PlusBack";
+	 case timer_type::N123PlusBack      : return "N123PlusBack";
          case timer_type::N1PlusFront     : return "N1PlusFront";
+	 case timer_type::N123PlusFront     : return "N123PlusFront";
          case timer_type::N1PlusFrontBack : return "N1PlusFrontBack";
+	 case timer_type::N123PlusFrontBack : return "N123PlusFrontBack";
          case timer_type::forward_search  : return "forward_search";
          case timer_type::backward_search : return "backward_search";
          case timer_type::highestorder    : return "highestorder";
@@ -102,7 +107,7 @@ public:
 
 //factored out for timing
 template<class t_cst>
-typename t_cst::size_type
+bool
 forward_search_wrapper(
     const t_cst& cst,
     typename t_cst::node_type& v,
@@ -112,12 +117,13 @@ forward_search_wrapper(
 )
 {
     auto timer = lm_bench::bench(timer_type::forward_search);
-    return forward_search(cst, v, d, c, char_pos);
+    auto ok = forward_search(cst, v, d, c, char_pos);
+    return (ok != 0);
 }
 
 // factored out for timing
 template<class t_csa>
-typename t_csa::size_type 
+bool
 backward_search_wrapper(
     const t_csa& csa,
     typename t_csa::size_type l,
@@ -133,7 +139,7 @@ backward_search_wrapper(
 
 // convenience function
 template<class t_cst>
-typename t_cst::size_type 
+bool
 backward_search_wrapper(
     const t_cst& cst,
     typename t_cst::node_type& v,
@@ -142,7 +148,7 @@ backward_search_wrapper(
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     typename t_cst::size_type l = cst.lb(v), r = cst.rb(v);
-    auto output = backward_search(cst.csa, l, r, c, l, r);
-    v = cst.node(l, r);
-    return output;
+    backward_search(cst.csa, l, r, c, l, r);
+    if (r >= l) v = cst.node(l, r);
+    return (r >= l);
 }
