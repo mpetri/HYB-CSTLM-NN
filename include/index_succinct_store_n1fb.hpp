@@ -33,12 +33,13 @@ public: // data
     precomputed_stats m_precomputed;
     compressed_counts<> m_n1plusfrontback;
     vocab_type m_vocab;
+
 public:
     index_succinct_store_n1fb() = default;
-    index_succinct_store_n1fb(collection& col,bool is_mkn=false)
+    index_succinct_store_n1fb(collection& col, bool is_mkn = false)
     {
         auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(m_cst_rev) + ".sdsl";
-        if(! utils::file_exists(cst_rev_file) ) {
+        if (!utils::file_exists(cst_rev_file)) {
             lm_construct_timer timer("CST_REV");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -47,20 +48,20 @@ public:
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
-            sdsl::store_to_file(m_cst_rev,cst_rev_file);
+            sdsl::store_to_file(m_cst_rev, cst_rev_file);
         } else {
-            sdsl::load_from_file(m_cst_rev,cst_rev_file);
+            sdsl::load_from_file(m_cst_rev, cst_rev_file);
         }
         auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
-        if(! utils::file_exists(discounts_file) ) {
+        if (!utils::file_exists(discounts_file)) {
             lm_construct_timer timer("DISCOUNTS");
             m_precomputed = precomputed_stats(col, m_cst_rev, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_precomputed,discounts_file);
+            sdsl::store_to_file(m_precomputed, discounts_file);
         } else {
-            sdsl::load_from_file(m_precomputed,discounts_file);
+            sdsl::load_from_file(m_precomputed, discounts_file);
         }
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
-        if(! utils::file_exists(cst_file) ) {
+        if (!utils::file_exists(cst_file)) {
             lm_construct_timer timer("CST");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -69,17 +70,17 @@ public:
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
-            sdsl::store_to_file(m_cst,cst_file);
+            sdsl::store_to_file(m_cst, cst_file);
         } else {
-            sdsl::load_from_file(m_cst,cst_file);
+            sdsl::load_from_file(m_cst, cst_file);
         }
         auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_n1plusfrontback) + ".sdsl";
-        if(! utils::file_exists(precomputed_file) ) {
+        if (!utils::file_exists(precomputed_file)) {
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
             m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_n1plusfrontback,precomputed_file);
+            sdsl::store_to_file(m_n1plusfrontback, precomputed_file);
         } else {
-            sdsl::load_from_file(m_n1plusfrontback,precomputed_file);
+            sdsl::load_from_file(m_n1plusfrontback, precomputed_file);
         }
         {
             lm_construct_timer timer("VOCAB");
@@ -127,8 +128,8 @@ public:
         return m_cst.csa.sigma - 2; // -2 for excluding 0, and 1
     }
 
-    uint64_t N1PlusBack_from_forward(const node_type &node,
-            pattern_iterator pattern_begin, pattern_iterator ) const
+    uint64_t N1PlusBack_from_forward(const node_type& node,
+                                     pattern_iterator pattern_begin, pattern_iterator) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
 
@@ -157,8 +158,8 @@ public:
             auto lb = m_cst.lb(node);
             auto rb = m_cst.rb(node);
             typename t_cst::csa_type::size_type num_syms = 0;
-            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, 
-                    left, right);
+            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms,
+                                   left, right);
             n1plus_back = num_syms;
         }
 
@@ -173,13 +174,13 @@ public:
         return n1plus_back;
     }
 
-    uint64_t N1PlusBack(const node_type &node_rev,
-            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    uint64_t N1PlusBack(const node_type& node_rev,
+                        pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
 
         // FIXME: if pattern is longer than t_max_ngram_count we may not have prestored counts so we should compute them explicitly.
-        
+
         // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
 
@@ -202,18 +203,18 @@ public:
     {
         // trim to the maximum computed length, assuming that
         // discounts stay flat beyond this (a reasonable guess)
-        level = std::min(level, (uint64_t) t_max_ngram_count);
+        level = std::min(level, (uint64_t)t_max_ngram_count);
         if (cnt)
             return m_precomputed.Y_cnt[level];
         else
             return m_precomputed.Y[level];
     }
 
-    void mkn_discount(uint64_t level, double &D1, double &D2, double &D3p, bool cnt = false) const
+    void mkn_discount(uint64_t level, double& D1, double& D2, double& D3p, bool cnt = false) const
     {
         // trim to the maximum computed length, assuming that
         // discounts stay flat beyond this (a reasonable guess)
-        level = std::min(level, (uint64_t) t_max_ngram_count);
+        level = std::min(level, (uint64_t)t_max_ngram_count);
         if (cnt) {
             D1 = m_precomputed.D1_cnt[level];
             D2 = m_precomputed.D2_cnt[level];
@@ -225,7 +226,6 @@ public:
         }
     }
 
-
     void print_params(bool ismkn, uint32_t ngramsize) const
     {
         m_precomputed.print(ismkn, ngramsize);
@@ -235,7 +235,7 @@ public:
     //  n1plus_front = value of N1+( * abc ) (for some following symbol 'c')
     //  if this is N_1+( * ab ) = 1 then we know the only following symbol is 'c'
     //  and thus N1+( * ab * ) is the same as N1+( * abc ), stored in n1plus_back
-    uint64_t N1PlusFrontBack(const node_type &node, const node_type &node_rev,
+    uint64_t N1PlusFrontBack(const node_type& node, const node_type& node_rev,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
@@ -268,8 +268,8 @@ public:
         }
     }
 
-    uint64_t N1PlusFrontBack_from_forward(const node_type &node,
-                             pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    uint64_t N1PlusFrontBack_from_forward(const node_type& node,
+                                          pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
 
@@ -302,8 +302,8 @@ public:
     }
 
     // Computes N_1+( abc * )
-    uint64_t N1PlusFront(const node_type &node, 
-            pattern_iterator pattern_begin, pattern_iterator pattern_end) const
+    uint64_t N1PlusFront(const node_type& node,
+                         pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusFront);
 
@@ -325,62 +325,66 @@ public:
         }
         return N1plus_front;
     }
-     
+
     // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of MKN
-    void N123PlusFront_lower(const node_type &node,
-                       pattern_iterator pattern_begin, pattern_iterator pattern_end,
-                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+    void N123PlusFront_lower(const node_type& node,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                             uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
     {
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
         n1 = n2 = n3p = 0;
-	uint64_t all=0;
+        uint64_t all = 0;
         if (full_match) {
             // pattern matches the edge label
             auto child = m_cst.select_child(node, 1);
-	    while (child != m_cst.root()) {
-		uint64_t symbol = m_cst.edge(child, pattern_size + 1);
-		auto lb = m_cst.lb(child);
-		auto rb = m_cst.rb(child);
-
-		static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
-	        static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
-        	static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
-            	typename t_cst::csa_type::size_type num_syms = 0;
-            	sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-		if(num_syms==1) n1++;
-		if(num_syms==2) n2++;
-		all++;
-                child = m_cst.sibling(child);
-            }
-        } else {
-            // pattern is part of the edge label
-		auto lb = m_cst.lb(node);
-                auto rb = m_cst.rb(node);
+            while (child != m_cst.root()) {
+                uint64_t symbol = m_cst.edge(child, pattern_size + 1);
+                auto lb = m_cst.lb(child);
+                auto rb = m_cst.rb(child);
 
                 static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
                 static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
                 static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
                 typename t_cst::csa_type::size_type num_syms = 0;
                 sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-		if(num_syms==1) n1++;
-		if(num_syms==2) n2++;
-		all++;
+                if (num_syms == 1)
+                    n1++;
+                if (num_syms == 2)
+                    n2++;
+                all++;
+                child = m_cst.sibling(child);
+            }
+        } else {
+            // pattern is part of the edge label
+            auto lb = m_cst.lb(node);
+            auto rb = m_cst.rb(node);
+
+            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+            typename t_cst::csa_type::size_type num_syms = 0;
+            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+            if (num_syms == 1)
+                n1++;
+            if (num_syms == 2)
+                n2++;
+            all++;
         }
-	n3p=all-n1-n2;
+        n3p = all - n1 - n2;
     }
 
     // Computes N_1( abc * ), N_2( abc * ), N_3+( abc * ); needed for modified Kneser-Ney smoothing
-    void N123PlusFront(const node_type &node,
+    void N123PlusFront(const node_type& node,
                        pattern_iterator pattern_begin, pattern_iterator pattern_end,
-                       uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
+                       uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
     {
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
         n1 = n2 = n3p = 0;
         if (full_match) {
-	/*
+            /*
             if (pattern_size <= t_max_ngram_count) {
                 // FIXME: this bit is currently broken
                 m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
@@ -400,8 +404,8 @@ public:
                 }
             }
 	*/
-	    // ehsan: replaced the above block with this
-	    // pattern matches the edge label
+            // ehsan: replaced the above block with this
+            // pattern matches the edge label
             auto child = m_cst.select_child(node, 1);
             while (child != m_cst.root()) {
                 auto c = m_cst.size(child);
@@ -426,11 +430,11 @@ public:
                     n2 += 1;
                 else if (c >= 3)
                     n3p += 1;
-            } 
+            }
         }
     }
 
-    uint32_t compute_contexts(const t_cst& cst, const node_type &node) const
+    uint32_t compute_contexts(const t_cst& cst, const node_type& node) const
     {
         static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);

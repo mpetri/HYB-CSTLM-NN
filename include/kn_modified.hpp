@@ -179,7 +179,7 @@ double prob_mod_kneser_ney_single(const t_idx& idx,
             n2 = idx.m_precomputed.n2_cnt[1];
             n3p = (idx.vocab_size()-2)-(n1 + n2);
         }else{
-            idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p);//FIXME
+            idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p);
         }
 	
         //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
