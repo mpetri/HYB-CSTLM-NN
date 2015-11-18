@@ -8,8 +8,8 @@
 
 typedef testing::Types<
 //index_succinct<default_cst_type,default_cst_rev_type>,
-index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>
-//index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
+index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
+index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
 struct triplet {
@@ -632,6 +632,7 @@ TYPED_TEST(LMTest, N123PlusFront)
     }
 }
 
+#if 0
 TYPED_TEST(LMTest, N123PlusBack)
 {
     // (1) get the text
@@ -765,7 +766,7 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
         }
     }
 }
-
+#endif
 
 // checks whether perplexities match
 // precision of comparison is set to 1e-4
@@ -774,7 +775,7 @@ TYPED_TEST(LMTest, Perplexity)
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
         double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, this->idx.supports_forward_querying, false);
-        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-1);
+        EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
 }
 
@@ -789,7 +790,7 @@ TYPED_TEST(LMTest, PerplexityMKN)
 
 int main(int argc, char* argv[])
 {
-    log::start_log(argc, (const char**)argv);
+    log::start_log(argc, (const char**)argv,false);
 
     ::testing::InitGoogleTest(&argc, argv);
 
