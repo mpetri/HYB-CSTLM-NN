@@ -125,7 +125,7 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom &symbol)
             } else {
                 // mid level (most cases arrive here)
                 d = m_idx->N1PlusFrontBack_from_forward(node_excl, start, pattern_end - 1); // is this right?
-                m_idx->N123PlusFrontBack_from_forward(node_excl, start, pattern_end - 1, n1, n2, n3p);
+                m_idx->N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
             }
             //LOG(INFO) << "mid/low level c=" << c << " d=" << d << " n1=" << n1 << " n2=" << n2 << " n3p=" << n3p;
         }

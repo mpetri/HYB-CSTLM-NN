@@ -329,7 +329,6 @@ public:
             // pattern matches the edge label
             auto child = m_cst.select_child(node, 1);
             while (child != m_cst.root()) {
-                uint64_t symbol = m_cst.edge(child, pattern_size + 1);
                 auto lb = m_cst.lb(child);
                 auto rb = m_cst.rb(child);
 

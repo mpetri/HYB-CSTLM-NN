@@ -13,6 +13,8 @@ struct precomputed_stats {
     uint64_t max_ngram_count;
     uint64_t N1plus_dotdot;
     uint64_t N3plus_dot;
+    uint64_t N1_dot;
+    uint64_t N2_dot;
     std::vector<double> n1;
     std::vector<double> n2;
     std::vector<double> n3;
@@ -48,7 +50,9 @@ struct precomputed_stats {
 
         sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
         sdsl::write_member(N1plus_dotdot, out, child, "N1Plus_dotdot");
-        sdsl::write_member(N3plus_dot, out, child, "N3Plus_dot");
+        sdsl::write_member(N3plus_dot, out, child, "N3PlusPlus");
+        sdsl::write_member(N1_dot, out, child, "N1_dot");
+        sdsl::write_member(N2_dot, out, child, "N2_dot");
 
         sdsl::serialize(n1, out, child, "n1");
         sdsl::serialize(n2, out, child, "n2");
@@ -80,6 +84,8 @@ struct precomputed_stats {
         sdsl::read_member(max_ngram_count, in);
         sdsl::read_member(N1plus_dotdot, in);
         sdsl::read_member(N3plus_dot, in);
+        sdsl::read_member(N1_dot, in);
+        sdsl::read_member(N2_dot, in);
 
         sdsl::load(n1, in);
         sdsl::load(n2, in);
@@ -144,6 +150,8 @@ struct precomputed_stats {
         LOG(INFO) << "------------------------------------------------";
         LOG(INFO) << "N1+(..) = " << N1plus_dotdot;
         if(ismkn){
+            LOG(INFO) << "N1(.) = " << N1_dot;
+            LOG(INFO) << "N2(.) = " << N2_dot;
             LOG(INFO) << "N3+(.) = " << N3plus_dot;
         }
         LOG(INFO) << "------------------------------------------------";
@@ -188,6 +196,8 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
+    , N1_dot(0)
+    , N2_dot(0)
 
 {
     auto size = max_ngram_count + 1;
@@ -212,49 +222,23 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
     ncomputer(col,cst_rev);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        if (n1[size] != 0 && n2[size] != 0) {
-            Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
-        } else {
-            LOG(WARNING) << "computed KN discount is invalid; using 0.5";
-            Y[size] = D1[size] = D2[size] = D3[size] = 0.5;
-            continue;
-        }
-
-        bool discounts_ok = false;
-        if (n1[size] != 0 && n2[size] != 0 && n3[size] != 0 && n4[size] != 0) {
+        Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
+        if (n1[size] != 0)
             D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
+        if (n2[size] != 0)
             D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
+        if (n3[size] != 0)
             D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
-            discounts_ok = (D1[size] >= 0 && D2[size] >= 0 && D3[size] >= 0);
-        }
-
-        if (!discounts_ok) {
-            LOG(WARNING) << "computed MKN discounts are invalid; using KN discounts";
-            D1[size] = D2[size] = D3[size] = Y[size];
-        }
     }
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        if (n1_cnt[size] != 0 && n2_cnt[size] != 0) {
-            Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
-        } else {
-            LOG(WARNING) << "computed KN discount is invalid; using 0.5";
-            Y_cnt[size] = D1_cnt[size] = D2_cnt[size] = D3_cnt[size] = 0.5;
-            continue;
-        }
-
-        bool discounts_ok = false;
-        if (n1_cnt[size] != 0 && n2_cnt[size] != 0 && n3_cnt[size] != 0 && n3_cnt[size] != 0) {
+        Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
+        if (n1_cnt[size] != 0)
             D1_cnt[size] = 1 - 2 * Y_cnt[size] * (double)n2_cnt[size] / n1_cnt[size];
+        if (n2_cnt[size] != 0)
             D2_cnt[size] = 2 - 3 * Y_cnt[size] * (double)n3_cnt[size] / n2_cnt[size];
+        if (n3_cnt[size] != 0)
             D3_cnt[size] = 3 - 4 * Y_cnt[size] * (double)n4_cnt[size] / n3_cnt[size];
-            discounts_ok = (D1_cnt[size] >= 0 && D2_cnt[size] >= 0 && D3_cnt[size] >= 0);
-        }
-
-        if (!discounts_ok) {
-            LOG(WARNING) << "computed MKN discounts are invalid; using KN discounts";
-            D1_cnt[size] = D2_cnt[size] = D3_cnt[size] = Y_cnt[size];
-        }
     }
 }
 
@@ -334,9 +318,11 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
+                    if(n == 1) N1_dot++; 
                     break;
                 case 2:
                     n2[n] += 1;
+                    if(n == 1) N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
@@ -348,6 +334,8 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
 
                 if (n == 2)
                     N1plus_dotdot++;
+                if (freq >= 3 && n == 1)
+                    N3plus_dot++;
 		
                 // update continuation counts
                 uint64_t n1plus_back = 0ULL;
@@ -367,10 +355,6 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 case 4: n4_cnt[n] += 1; break;
                 }
 
-                if (n == 1 && n1plus_back >= 3) {
-                    N3plus_dot++;
-                }
-
                 // can skip subtree if we know the EOS symbol is coming next
                 if (counter <= 5 || symbol == PAT_START_SYM) { 
                     it.skip_subtree();
@@ -383,9 +367,4 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
             }
         }
     }
-
-    // offset for appended UNK token
-    n1[1] -= 1;
-    n1_cnt[1] -= 1;
-    N3plus_dot -= 1; // ???
 }

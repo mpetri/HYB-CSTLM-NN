@@ -8,8 +8,8 @@
 
 typedef testing::Types<
 //index_succinct<default_cst_type,default_cst_rev_type>,
-//index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>,
-index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
+index_succinct_compute_n1fb<default_cst_type,default_cst_rev_type>
+//index_succinct_store_n1fb<default_cst_type,default_cst_rev_type>
  > Implementations;
 
 struct triplet {
@@ -684,7 +684,7 @@ TYPED_TEST(LMTest, N123PlusBack)
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t n1, n2, n3p, n1p;
-                    this->idx.N123PlusBack_from_forward(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
+                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
                     n1p = this->idx.N1PlusBack_from_forward(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
@@ -752,9 +752,7 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t actual_n1, actual_n2, actual_n3p, actual_n1p;
-                    this->idx.N123PlusFrontBack_from_forward(this->idx.m_cst.node(lb, rb), 
-                            cng.begin(), cng.end(),
-                            actual_n1, actual_n2, actual_n3p);
+                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), actual_n1, actual_n2, actual_n3p);
                     actual_n1p = this->idx.N1PlusFrontBack_from_forward(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
 
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());

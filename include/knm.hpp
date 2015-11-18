@@ -22,15 +22,6 @@
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize, bool fast_index, bool ismkn)
 {
-    // use new state-based container for evaluating sentence probability -- see query.hpp
-    if (fast_index && ismkn) {
-        double final_score = 0;
-        LMQueryMKN<t_idx,typename t_pattern::value_type> query(&idx, ngramsize);
-        for (const auto& word : word_vec)
-            final_score += log10(query.append_symbol(word));
-        return final_score;
-    }
-
     //LOG(INFO) << "sentence_logprob_kneser_ney for: " << idx.m_vocab.id2token(word_vec.begin(), word_vec.end());
     //LOG(INFO) << "\tfast: " << fast_index << " mkn: " << ismkn;
     double final_score = 0;
@@ -55,7 +46,6 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
                 score = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
             else
                 score = prob_mod_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
-
         } else {
             //score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
             if (!ismkn)

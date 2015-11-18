@@ -339,7 +339,6 @@ public:
             // pattern matches the edge label
             auto child = m_cst.select_child(node, 1);
             while (child != m_cst.root()) {
-                uint64_t symbol = m_cst.edge(child, pattern_size + 1);
                 auto lb = m_cst.lb(child);
                 auto rb = m_cst.rb(child);
 
@@ -384,7 +383,7 @@ public:
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
         n1 = n2 = n3p = 0;
         if (full_match) {
-            /*
+            
             if (pattern_size <= t_max_ngram_count) {
                 // FIXME: this bit is currently broken
                 m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
@@ -403,7 +402,7 @@ public:
                     child = m_cst.sibling(child);
                 }
             }
-	*/
+		/*	
             // ehsan: replaced the above block with this
             // pattern matches the edge label
             auto child = m_cst.select_child(node, 1);
@@ -418,7 +417,7 @@ public:
                     n3p += 1;
                 child = m_cst.sibling(child);
             }
-
+		*/
         } else {
             // pattern is part of the edge label
             uint64_t symbol = *(pattern_end - 1);
