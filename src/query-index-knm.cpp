@@ -41,8 +41,6 @@ void print_usage(const char* program)
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
     fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
-    fprintf(stdout, "  -b : use faster index lookup using only backward search (default = forward+backward).\n");
-    fprintf(stdout, "  -s : use fastest index lookup using pre-stored counts (implies -b).\n");
     fprintf(stdout, "  -r : doing reranking (default = language modelling).\n");
     fprintf(stdout, "  -1 : byte parsing.\n");
 };
@@ -55,8 +53,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.collection_dir = "";
     args.ismkn = false;
     args.ngramsize = 1;
-    args.isbackward = false;
-    args.isstored = false;
     args.isreranking = false;
     args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbsr1")) != -1) {
@@ -72,13 +68,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
                 break;
             case 'n':
                 args.ngramsize = atoi(optarg);
-                break;
-            case 'b':
-                args.isbackward = true;
-                break;
-            case 's':
-                args.isstored = true;
-                args.isbackward = true;
                 break;
             case 'r':
                 args.isreranking = true;
@@ -100,7 +89,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 //            = false -- use N1+Back/FrontBack using reverse CST & forward search
 template <class t_idx>
 void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
-                 uint64_t ngramsize, bool fast_index, bool ismkn)
+                 uint64_t ngramsize, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -117,7 +106,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
         auto stop = clock::now();
 
         //std::ostringstream sp("", std::ios_base::ate);
@@ -137,7 +126,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 template <class t_idx>
 void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
 		  const std::vector<std::vector<std::string> > orig_patterns,
-                  uint64_t ngramsize, bool fast_index, bool ismkn)
+                  uint64_t ngramsize, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -173,7 +162,7 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, fast_index, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
         auto stop = clock::now();
 
         perplexity = pow(10,-sentenceprob/M);
@@ -237,8 +226,8 @@ int execute(const cmdargs_t &args)
             std::vector<uint64_t> tokens;
             std::vector<std::string> orig_tokens;
             for (const auto &word: line_tokens) {
-		if(args.isreranking)
-			orig_tokens.push_back(word);
+		          if(args.isreranking)
+			     orig_tokens.push_back(word);
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
@@ -256,9 +245,9 @@ int execute(const cmdargs_t &args)
 
     /* run the querying or reranking */
     if(args.isreranking)
-        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.isbackward, args.ismkn);
+        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn);
     else
-        run_queries(idx, patterns, args.ngramsize, args.isbackward, args.ismkn);
+        run_queries(idx, patterns, args.ngramsize, args.ismkn);
 
     return EXIT_SUCCESS;
 }
@@ -271,11 +260,6 @@ int main(int argc, const char* argv[])
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
-    typedef index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> t_idx_compute;
-    typedef index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> t_idx_store;
-
-    if (!args.isstored) 
-        return execute<t_idx_compute>(args);
-    else
-        return execute<t_idx_store>(args);
+    typedef index_succinct<default_cst_type> index_type;
+    execute<index_type>(args);
 }

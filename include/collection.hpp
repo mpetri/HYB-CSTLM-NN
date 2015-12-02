@@ -57,28 +57,6 @@ struct collection {
                 LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
         }
-        /* create stuff we are missing */
-        if (file_map.count(KEY_TEXTREV) == 0) {
-            lm_construct_timer timer(KEY_TEXTREV);
-            auto textrev_path = path + "/" + KEY_PREFIX + KEY_TEXTREV;
-            const sdsl::int_vector_mapper<0, std::ios_base::in> sdsl_input(file_map[KEY_TEXT]);
-            {
-                sdsl::int_vector<> tmp;
-                std::ofstream ofs(textrev_path);
-                sdsl::serialize(tmp, ofs);
-            }
-            sdsl::int_vector_mapper<0, std::ios_base::out | std::ios_base::in> sdsl_revinput(
-                textrev_path);
-            sdsl_revinput.resize(sdsl_input.size());
-            // don't copy the last two values, sentinels (EOS, EOF)
-            std::reverse_copy(std::begin(sdsl_input), std::end(sdsl_input) - 2,
-                              std::begin(sdsl_revinput));
-            sdsl_revinput[sdsl_input.size() - 2] = EOS_SYM;
-            sdsl_revinput[sdsl_input.size() - 1] = EOF_SYM;
-            sdsl::util::bit_compress(sdsl_revinput);
-            file_map[KEY_TEXTREV] = textrev_path;
-        }
-
         if (file_map.count(KEY_SA) == 0) {
             lm_construct_timer timer(KEY_SA);
             sdsl::int_vector<> sa;
@@ -87,13 +65,5 @@ struct collection {
             sdsl::store_to_file(sa, sa_path);
             file_map[KEY_SA] = sa_path;
         }
-         if (file_map.count(KEY_SAREV) == 0) {
-            lm_construct_timer timer(KEY_SAREV);
-            sdsl::int_vector<> sarev;
-            sdsl::qsufsort::construct_sa(sarev, file_map[KEY_TEXTREV].c_str(), 0);
-            auto sarev_path = path + "/" + KEY_PREFIX + KEY_SAREV;
-            sdsl::store_to_file(sarev, sarev_path);
-            file_map[KEY_SAREV] = sarev_path;
-         }
     }
 };

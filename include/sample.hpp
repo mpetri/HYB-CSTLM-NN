@@ -62,7 +62,7 @@ uint64_t _sample_next_symbol(const t_idx& idx,
     } else if (i == 1 || ngramsize == 1) {
         d = idx.m_precomputed.N1plus_dotdot;
     } else {
-        d = idx.N1PlusFrontBack_from_forward(node, start, pattern_end);
+        d = idx.N1PlusFrontBack(node, start, pattern_end);
     }
 
     LOG(INFO) << "\tctxsize " << ctxsize << " start " << *start << " d " << d;
@@ -86,7 +86,7 @@ uint64_t _sample_next_symbol(const t_idx& idx,
                     r -= idx.m_cst.size(child) - D;
                 else {
                     // augmented pattern is a bit fishy, may overrun memory
-                    r -= idx.N1PlusBack_from_forward(child, start, pattern_end+1) - D;
+                    r -= idx.N1PlusBack(child, start, pattern_end+1) - D;
                 }
 
                 LOG(INFO) << "\t\tr now " << r << " after child " << child << " of size " << idx.m_cst.size();
@@ -127,7 +127,7 @@ std::vector<uint64_t> unigram_counts(const t_idx &idx)
     for (const auto& child : idx.m_cst.children(root)) {
         if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM) {
             pattern[0] = i;
-            weights.push_back(idx.N1PlusBack_from_forward(child, pattern.begin(), pattern.end()));
+            weights.push_back(idx.N1PlusBack(child, pattern.begin(), pattern.end()));
         } else {
             weights.push_back(0);
         }

@@ -37,7 +37,6 @@ void print_usage(const char* program)
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
     fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
-    fprintf(stdout, "  -s : use fastest index lookup using pre-stored counts.\n");
     fprintf(stdout, "  -1 : byte parsing.\n");
 };
 
@@ -49,7 +48,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.collection_dir = "";
     args.ismkn = false;
     args.ngramsize = 1;
-    args.isstored = false;
     args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs1")) != -1) {
         switch (op) {
@@ -64,9 +62,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
                 break;
             case 'n':
                 args.ngramsize = atoi(optarg);
-                break;
-            case 's':
-                args.isstored = true;
                 break;
             case '1':
                 args.byte_alphabet = true;
@@ -166,9 +161,7 @@ int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
 
-    /* types in use */
-    typedef index_succinct_compute_n1fb<default_cst_type, default_cst_rev_type> t_idx_compute;
-    typedef index_succinct_store_n1fb<default_cst_type, default_cst_rev_type> t_idx_store;
+    typedef index_succinct<default_cst_type> index_type;
     typedef std::ranlux24_base t_rng;
 
     /* parse command line */
@@ -181,11 +174,7 @@ int main(int argc, const char* argv[])
     rng.seed(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
 
     /* load data, sample */
-    if (!args.isstored) {
-        return load_data_and_sample<t_idx_compute, t_rng>(args, rng);
-    } else {
-        return load_data_and_sample<t_idx_store, t_rng>(args, rng);
-    }
+    return load_data_and_sample<index_type, t_rng>(args, rng);
 }
 
 std::string as_string(const std::vector<uint64_t> &wids, const vocab_uncompressed &vocab) 

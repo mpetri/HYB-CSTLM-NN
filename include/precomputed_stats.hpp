@@ -5,6 +5,8 @@
 
 #include "sdsl/int_vector_mapper.hpp"
 
+#include "index_types.hpp"
+
 template <uint8_t t_width = 0>
 using read_only_mapper = const sdsl::int_vector_mapper<t_width,std::ios_base::in>;
 
@@ -38,8 +40,7 @@ struct precomputed_stats {
 
     precomputed_stats() = default;
 
-    template <typename t_cst>
-    precomputed_stats(collection&, const t_cst& cst_rev, uint64_t max_ngram_len, bool is_mkn=false);
+    precomputed_stats(collection& col,uint64_t max_ngram_len, bool is_mkn=false);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -191,8 +192,7 @@ distance_to_sentinel(read_only_mapper<> &SAREV,
 
 };
 
-template <typename t_cst>
-precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint64_t max_ngram_len,bool )
+precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool )
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
@@ -200,6 +200,57 @@ precomputed_stats::precomputed_stats(collection& col, const t_cst& cst_rev, uint
     , N2_dot(0)
 
 {
+    /* create the reverse CST here as this is the only place we still need it */
+    {
+        /* create stuff we are missing */
+        if (col.file_map.count(KEY_TEXTREV) == 0) {
+            lm_construct_timer timer(KEY_TEXTREV);
+            auto textrev_path = col.path + "/" + KEY_PREFIX + KEY_TEXTREV;
+            const sdsl::int_vector_mapper<0, std::ios_base::in> sdsl_input(col.file_map[KEY_TEXT]);
+            {
+                sdsl::int_vector<> tmp;
+                std::ofstream ofs(textrev_path);
+                sdsl::serialize(tmp, ofs);
+            }
+            sdsl::int_vector_mapper<0, std::ios_base::out | std::ios_base::in> sdsl_revinput(
+                textrev_path);
+            sdsl_revinput.resize(sdsl_input.size());
+            // don't copy the last two values, sentinels (EOS, EOF)
+            std::reverse_copy(std::begin(sdsl_input), std::end(sdsl_input) - 2,
+                              std::begin(sdsl_revinput));
+            sdsl_revinput[sdsl_input.size() - 2] = EOS_SYM;
+            sdsl_revinput[sdsl_input.size() - 1] = EOF_SYM;
+            sdsl::util::bit_compress(sdsl_revinput);
+            col.file_map[KEY_TEXTREV] = textrev_path;
+        }
+        
+         if (col.file_map.count(KEY_SAREV) == 0) {
+            lm_construct_timer timer(KEY_SAREV);
+            sdsl::int_vector<> sarev;
+            sdsl::qsufsort::construct_sa(sarev, col.file_map[KEY_TEXTREV].c_str(), 0);
+            auto sarev_path = col.path + "/" + KEY_PREFIX + KEY_SAREV;
+            sdsl::store_to_file(sarev, sarev_path);
+            col.file_map[KEY_SAREV] = sarev_path;
+         }
+    }
+    default_cst_type cst_rev;
+    {
+        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(cst_rev) + ".sdsl";
+        if (!utils::file_exists(cst_rev_file)) {
+            lm_construct_timer timer("CST_REV");
+            sdsl::cache_config cfg;
+            cfg.delete_files = false;
+            cfg.dir = col.path + "/tmp/";
+            cfg.id = "TMPREV";
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
+            construct(cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
+            sdsl::store_to_file(cst_rev, cst_rev_file);
+        } else {
+            sdsl::load_from_file(cst_rev, cst_rev_file);
+        }
+    }
+
     auto size = max_ngram_count + 1;
     n1.resize(size);
     n2.resize(size);
