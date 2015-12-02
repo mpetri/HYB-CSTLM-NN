@@ -408,7 +408,7 @@ public:
     }
 
     void N123PlusBack_from_forward(const node_type &node,
-		      pattern_iterator pattern_begin, pattern_iterator pattern_end,
+		      pattern_iterator pattern_begin, pattern_iterator ,
 		      uint64_t &n1, uint64_t &n2, uint64_t &n3p) const
     {
 	auto timer = lm_bench::bench(timer_type::N1PlusBack);

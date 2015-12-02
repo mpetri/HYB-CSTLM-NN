@@ -33,7 +33,6 @@ uint64_t _sample_next_symbol(const t_idx& idx,
         uint64_t ctxsize,
         t_rng &rng)
 {
-    typedef typename t_idx::cst_type::node_type t_node;
     size_t size = std::distance(pattern_begin, pattern_end);
 
     LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end) << " ctxsize " << ctxsize;
@@ -124,7 +123,7 @@ std::vector<uint64_t> unigram_counts(const t_idx &idx)
     auto root = idx.m_cst.root();
     std::vector<uint64_t> pattern(1, NUM_SPECIAL_SYMS); // place-holder pattern
     std::vector<uint64_t> weights;
-    int i = 0;
+    uint64_t i = 0;
     for (const auto& child : idx.m_cst.children(root)) {
         if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM) {
             pattern[0] = i;
@@ -144,7 +143,6 @@ uint64_t sample_next_symbol2(const t_idx& idx,
         uint64_t ngramsize,
         t_rng &rng)
 {
-    typedef typename t_idx::cst_type::node_type t_node;
     //size_t size = std::distance(pattern_begin, pattern_end);
 
     LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end);

@@ -225,7 +225,7 @@ public:
         //LOG(INFO) << "initialise_modified_kneser_ney: pass 1";
 
         // pass 1: initialise f1 and f2 counts
-        uint32_t last_node_depth = 0;
+        // uint32_t last_node_depth = 0;
         auto root = cst.root();
         for (const auto& child : cst.children(root)) {
             auto itr = cst.begin(child);
@@ -260,7 +260,6 @@ public:
                 } else {
                     /* first visit */
                     if (! cst.is_leaf(node) ) {
-                        auto depth = cst.depth(node);
                         if (depth > max_node_depth) {
                             itr.skip_subtree();
                         } 
@@ -277,7 +276,7 @@ public:
                         child_hist[parent_id].second += 1;
                 }
                 ++itr;
-                last_node_depth = depth;
+                // last_node_depth = depth;
             }        
         }
         // store into compressed in-memory data structures
