@@ -40,12 +40,11 @@ else()
 endif()
 
 add_subdirectory(external/sdsl-lite)
-add_subdirectory(external/googletest)
 
 include_directories(${CMAKE_HOME_DIRECTORY}/include
                     ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
-                    ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort-2.0.1/include/
+                    ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort/include/
                     ${CMAKE_HOME_DIRECTORY}/external/easyloggingpp/src/
                     )
 
