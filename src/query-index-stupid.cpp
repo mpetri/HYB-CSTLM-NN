@@ -1,3 +1,5 @@
+#define ELPP_STL_LOGGING
+
 #include <sdsl/int_vector.hpp>
 #include <sdsl/int_vector_mapper.hpp>
 #include "sdsl/suffix_arrays.hpp"
@@ -7,7 +9,7 @@
 
 #include "utils.hpp"
 #include "collection.hpp"
-#include "index_succinct.hpp"
+#include "index_stupid.hpp"
 
 const double d = 0.4;
 
@@ -117,39 +119,59 @@ double run_query_stupid(const t_idx& idx, const std::vector<uint64_t>& word_vec)
     std::deque<uint64_t> pattern;
     for (const auto& word : word_vec) {
         pattern.push_front(word);
-        double score = stupidbackoff(idx.m_cst_rev.csa, pattern);
+        double score = stupidbackoff(idx.m_csa_rev, pattern);
         final_score *= score;
     }
     return final_score;
 }
 
 template <class t_idx>
-void run_queries(t_idx& idx, const std::string& col_dir,
-                 const std::vector<std::vector<uint64_t> > patterns)
+void run_queries(t_idx& idx,const std::string& pattern_file)
 {
-    using clock = std::chrono::high_resolution_clock;
-    auto index_file = col_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
-    if (utils::file_exists(index_file)) {
-        LOG(INFO) << "loading index from file '" << index_file << "'";
-        sdsl::load_from_file(idx, index_file);
-
-        std::chrono::nanoseconds total_time(0);
-        for (const auto& pattern : patterns) {
-            // run the query
-            auto start = clock::now();
-            double score = run_query_stupid(idx, pattern);
-            auto stop = clock::now();
-            // output score
-            std::copy(pattern.begin(), pattern.end(),
-                      std::ostream_iterator<uint64_t>(std::cout, " "));
-            std::cout << " -> " << score;
-            total_time += (stop - start);
+    /* read patterns */
+    std::vector<std::vector<uint64_t> > patterns;
+    if (utils::file_exists(pattern_file)) {
+        std::ifstream ifile(pattern_file);
+        LOG(INFO) << "Reading input file '" << pattern_file << "'";
+        std::string line;
+        while (std::getline(ifile, line)) {
+            std::vector<uint64_t> tokens;
+            std::istringstream iss(line);
+            std::string word;
+            while (std::getline(iss, word, ' ')) {
+                uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
+                tokens.push_back(num);
+            }
+            LOG(INFO) << "Pattern " << patterns.size()+1 << " = " << tokens;
+            patterns.push_back(tokens);
         }
-        LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f
-                  << " ms";
     } else {
-        LOG(FATAL) << "index does not exist. build it first";
+        LOG(FATAL) << "Cannot read pattern file '" << pattern_file << "'";
     }
+    LOG(INFO) << "Processing " << patterns.size() << " patterns";
+
+    using clock = std::chrono::high_resolution_clock;
+    std::chrono::nanoseconds total_time(0);
+    double total_score = 0;
+    for (const auto& pattern : patterns) {
+        // run the query
+        auto start = clock::now();
+        double score = run_query_stupid(idx, pattern);
+        auto stop = clock::now();
+        if(score != 0) total_score++;
+        // // output score
+        // std::copy(pattern.begin(), pattern.end(),
+        //           std::ostream_iterator<uint64_t>(std::cout, " "));
+        // std::cout << " -> " << score;
+        LOG(INFO) << "Pattern score  = " << score;
+        total_time += (stop - start);
+    }
+    if(total_score == 0) {
+        LOG(ERROR) << "Checksum error = " << total_score;
+    }
+
+    LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f
+              << " ms";
 }
 
 int main(int argc, const char* argv[])
@@ -158,44 +180,20 @@ int main(int argc, const char* argv[])
     cmdargs_t args = parse_args(argc, argv);
 
     /* create collection dir */
-    utils::create_directory(args.collection_dir);
-
-    /* parse pattern file */
-    std::vector<std::vector<uint64_t> > patterns;
-    if (utils::file_exists(args.pattern_file)) {
-        std::ifstream ifile(args.pattern_file);
-        LOG(INFO) << "reading input file '" << args.pattern_file << "'";
-        std::string line;
-        while (std::getline(ifile, line)) {
-            std::vector<uint64_t> tokens;
-            std::istringstream iss(line);
-            std::string word;
-            while (std::getline(iss, word, ' ')) {
-                uint64_t num = std::stoull(word);
-                tokens.push_back(num);
-            }
-        }
-    } else {
-        LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
-        return EXIT_FAILURE;
-    }
+    collection col(args.collection_dir);
 
     {
         /* load SADA based index */
         using csa_type = sdsl::csa_sada_int<>;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        index_succinct<cst_type,cst_type> idx;
-
-        run_queries(idx, args.collection_dir, patterns);
+        index_stupid<csa_type> idx(col);
+        run_queries(idx,args.pattern_file);
     }
 
     {
         /* load WT based index */
         using csa_type = sdsl::csa_wt_int<>;
-        using cst_type = sdsl::cst_sct3<csa_type>;
-        index_succinct<cst_type,cst_type> idx;
-
-        run_queries(idx, args.collection_dir, patterns);
+        index_stupid<csa_type> idx(col);
+        run_queries(idx,args.pattern_file);
     }
 
     return 0;
