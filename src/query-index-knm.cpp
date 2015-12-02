@@ -155,10 +155,10 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     for (std::vector<uint64_t> pattern : patterns) {
         if(pattern[0]!=source_idx)
 	{
-	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end())<<" pplx = "<<min<<endl;
+	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end())<<" pplx = "<<min;
 		std::ostringstream sp("", std::ios_base::ate);
                 std::copy(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end(),std::ostream_iterator<std::string>(sp," "));
-		output<<sp.str()<<endl;
+		output<<sp.str()<<std::endl;
 
                 min= 1000000;
 		best.clear();
@@ -180,7 +180,7 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         if(perplexity < min)
 	{
 		min = perplexity;
-		cout<<"pplx "<<min<<endl;
+		LOG(INFO) <<"pplx "<<min;
 		best_idx = index;
 	}
 	index++;
