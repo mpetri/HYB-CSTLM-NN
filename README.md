@@ -34,6 +34,7 @@ To run the unit-test.x binary first you need to do the following
 ```
 rm -r ../collections/unittest/
 ./create-collection.x -i ../UnitTestData/data/training.data -c ../collections/unittest
+./build-index.x -c ../collections/unittest/ -m
 ./unit-test.x
 ```
 ## Comparison on Europarl German KenLM v.s. Accurate v.s Fishy ##
