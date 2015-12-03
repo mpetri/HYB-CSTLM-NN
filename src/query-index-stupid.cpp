@@ -52,7 +52,8 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_csa> double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
+template <class t_csa>
+double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
 {
     const auto N = csa_rev.size() - 1; // size of the suffix array
     const auto M = PRev.size();
@@ -126,7 +127,7 @@ double run_query_stupid(const t_idx& idx, const std::vector<uint64_t>& word_vec)
 }
 
 template <class t_idx>
-void run_queries(t_idx& idx,const std::string& pattern_file)
+void run_queries(t_idx& idx, const std::string& pattern_file)
 {
     /* read patterns */
     std::vector<std::vector<uint64_t> > patterns;
@@ -142,7 +143,7 @@ void run_queries(t_idx& idx,const std::string& pattern_file)
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
-            LOG(INFO) << "Pattern " << patterns.size()+1 << " = " << tokens;
+            LOG(INFO) << "Pattern " << patterns.size() + 1 << " = " << tokens;
             patterns.push_back(tokens);
         }
     } else {
@@ -158,7 +159,8 @@ void run_queries(t_idx& idx,const std::string& pattern_file)
         auto start = clock::now();
         double score = run_query_stupid(idx, pattern);
         auto stop = clock::now();
-        if(score != 0) total_score++;
+        if (score != 0)
+            total_score++;
         // // output score
         // std::copy(pattern.begin(), pattern.end(),
         //           std::ostream_iterator<uint64_t>(std::cout, " "));
@@ -166,7 +168,7 @@ void run_queries(t_idx& idx,const std::string& pattern_file)
         LOG(INFO) << "Pattern score  = " << score;
         total_time += (stop - start);
     }
-    if(total_score == 0) {
+    if (total_score == 0) {
         LOG(ERROR) << "Checksum error = " << total_score;
     }
 
@@ -186,14 +188,14 @@ int main(int argc, const char* argv[])
         /* load SADA based index */
         using csa_type = sdsl::csa_sada_int<>;
         index_stupid<csa_type> idx(col);
-        run_queries(idx,args.pattern_file);
+        run_queries(idx, args.pattern_file);
     }
 
     {
         /* load WT based index */
         using csa_type = sdsl::csa_wt_int<>;
         index_stupid<csa_type> idx(col);
-        run_queries(idx,args.pattern_file);
+        run_queries(idx, args.pattern_file);
     }
 
     return 0;

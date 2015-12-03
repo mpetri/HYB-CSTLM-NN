@@ -27,7 +27,8 @@ private:
 public:
     compressed_sentinel_flag() = default;
 
-    template <class t_cst> compressed_sentinel_flag(t_cst& cst)
+    template <class t_cst>
+    compressed_sentinel_flag(t_cst& cst)
     {
         sdsl::bit_vector has_sentinel(cst.nodes());
         std::map<uint64_t, uint32_t> offsets;

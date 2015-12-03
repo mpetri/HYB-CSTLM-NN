@@ -57,24 +57,24 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbsr1")) != -1) {
         switch (op) {
-            case 'p':
-                args.pattern_file = optarg;
-                break;
-            case 'c':
-                args.collection_dir = optarg;
-                break;
-            case 'm':
-                args.ismkn = true;
-                break;
-            case 'n':
-                args.ngramsize = atoi(optarg);
-                break;
-            case 'r':
-                args.isreranking = true;
-                break;
-            case '1':
-                args.byte_alphabet = true;
-                break;
+        case 'p':
+            args.pattern_file = optarg;
+            break;
+        case 'c':
+            args.collection_dir = optarg;
+            break;
+        case 'm':
+            args.ismkn = true;
+            break;
+        case 'n':
+            args.ngramsize = atoi(optarg);
+            break;
+        case 'r':
+            args.isreranking = true;
+            break;
+        case '1':
+            args.byte_alphabet = true;
+            break;
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
@@ -101,7 +101,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
-//        if(pattern.back() ==UNKNOWN_SYM) M--;
+        //        if(pattern.back() ==UNKNOWN_SYM) M--;
         pattern.push_back(PAT_END_SYM);
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
@@ -125,7 +125,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 
 template <class t_idx>
 void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
-		  const std::vector<std::vector<std::string> > orig_patterns,
+                  const std::vector<std::vector<std::string> > orig_patterns,
                   uint64_t ngramsize, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
@@ -135,26 +135,25 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
     //uint64_t candidate_idx = 1;//line number to find the unconverted sentence
-    uint64_t source_idx=idx.m_vocab.token2id("0");
+    uint64_t source_idx = idx.m_vocab.token2id("0");
     lm_bench::reset();
     std::vector<uint64_t> best;
     uint64_t index = 0;
     std::ofstream output;
     output.open("output.rrank");
     for (std::vector<uint64_t> pattern : patterns) {
-        if(pattern[0]!=source_idx)
-	{
-	        LOG(INFO)<<"Pattern is: "<<std::vector<std::string>(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end())<<" pplx = "<<min;
-		std::ostringstream sp("", std::ios_base::ate);
-                std::copy(orig_patterns[best_idx].begin(),orig_patterns[best_idx].end(),std::ostream_iterator<std::string>(sp," "));
-		output<<sp.str()<<std::endl;
+        if (pattern[0] != source_idx) {
+            LOG(INFO) << "Pattern is: " << std::vector<std::string>(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end()) << " pplx = " << min;
+            std::ostringstream sp("", std::ios_base::ate);
+            std::copy(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end(), std::ostream_iterator<std::string>(sp, " "));
+            output << sp.str() << std::endl;
 
-                min= 1000000;
-		best.clear();
-		best_idx = 0;
-  	}
-        source_idx = pattern[0];//stores the source sentence id in n-best submission
-	pattern.erase(pattern.begin(), pattern.begin() + 2); //removes sentence_index, and |||
+            min = 1000000;
+            best.clear();
+            best_idx = 0;
+        }
+        source_idx = pattern[0]; //stores the source sentence id in n-best submission
+        pattern.erase(pattern.begin(), pattern.begin() + 2); //removes sentence_index, and |||
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M = pattern_size + 1; // +1 for adding </s>
@@ -165,14 +164,13 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
         auto stop = clock::now();
 
-        perplexity = pow(10,-sentenceprob/M);
-        if(perplexity < min)
-	{
-		min = perplexity;
-		LOG(INFO) <<"pplx "<<min;
-		best_idx = index;
-	}
-	index++;
+        perplexity = pow(10, -sentenceprob / M);
+        if (perplexity < min) {
+            min = perplexity;
+            LOG(INFO) << "pplx " << min;
+            best_idx = index;
+        }
+        index++;
         total_time += (stop - start);
     }
     output.close();
@@ -181,11 +179,12 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
 }
 
 std::vector<std::string>
-parse_line(const std::string& line,bool byte) {
+parse_line(const std::string& line, bool byte)
+{
     std::vector<std::string> line_tokens;
-    if(byte) {
-        for(const auto& chr : line) {
-            line_tokens.push_back(std::string(1,chr));
+    if (byte) {
+        for (const auto& chr : line) {
+            line_tokens.push_back(std::string(1, chr));
         }
     } else {
         std::istringstream input(line);
@@ -198,7 +197,7 @@ parse_line(const std::string& line,bool byte) {
 }
 
 template <class t_idx>
-int execute(const cmdargs_t &args) 
+int execute(const cmdargs_t& args)
 {
     /* load index */
     t_idx idx;
@@ -222,19 +221,19 @@ int execute(const cmdargs_t &args)
         LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
-            auto line_tokens = parse_line(line,args.byte_alphabet);
+            auto line_tokens = parse_line(line, args.byte_alphabet);
             std::vector<uint64_t> tokens;
             std::vector<std::string> orig_tokens;
-            for (const auto &word: line_tokens) {
-		          if(args.isreranking)
-			     orig_tokens.push_back(word);
+            for (const auto& word : line_tokens) {
+                if (args.isreranking)
+                    orig_tokens.push_back(word);
                 uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
-	    if(args.isreranking) {
-	    	orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2); 
-	    	orig_patterns.push_back(orig_tokens);
-	    }
+            if (args.isreranking) {
+                orig_tokens.erase(orig_tokens.begin(), orig_tokens.begin() + 2);
+                orig_patterns.push_back(orig_tokens);
+            }
             patterns.push_back(tokens);
             //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
         }
@@ -244,14 +243,13 @@ int execute(const cmdargs_t &args)
     }
 
     /* run the querying or reranking */
-    if(args.isreranking)
+    if (args.isreranking)
         run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn);
     else
         run_queries(idx, patterns, args.ngramsize, args.ismkn);
 
     return EXIT_SUCCESS;
 }
-
 
 int main(int argc, const char* argv[])
 {

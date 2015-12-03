@@ -43,11 +43,12 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-template <class t_idx> void create_and_store(collection& col,bool use_mkn)
+template <class t_idx>
+void create_and_store(collection& col, bool use_mkn)
 {
     using clock = std::chrono::high_resolution_clock;
     auto start = clock::now();
-    t_idx idx(col,use_mkn);
+    t_idx idx(col, use_mkn);
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()

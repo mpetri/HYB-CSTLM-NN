@@ -51,21 +51,21 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbs1")) != -1) {
         switch (op) {
-            case 'p':
-                args.pattern_file = optarg;
-                break;
-            case 'c':
-                args.collection_dir = optarg;
-                break;
-            case 'm':
-                args.ismkn = true;
-                break;
-            case 'n':
-                args.ngramsize = atoi(optarg);
-                break;
-            case '1':
-                args.byte_alphabet = true;
-                break;
+        case 'p':
+            args.pattern_file = optarg;
+            break;
+        case 'c':
+            args.collection_dir = optarg;
+            break;
+        case 'm':
+            args.ismkn = true;
+            break;
+        case 'n':
+            args.ngramsize = atoi(optarg);
+            break;
+        case '1':
+            args.byte_alphabet = true;
+            break;
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
@@ -77,11 +77,12 @@ cmdargs_t parse_args(int argc, const char* argv[])
 }
 
 std::vector<std::string>
-parse_line(const std::string& line,bool byte) {
+parse_line(const std::string& line, bool byte)
+{
     std::vector<std::string> line_tokens;
-    if(byte) {
-        for(const auto& chr : line) {
-            line_tokens.push_back(std::string(1,chr));
+    if (byte) {
+        for (const auto& chr : line) {
+            line_tokens.push_back(std::string(1, chr));
         }
     } else {
         std::istringstream input(line);
@@ -94,7 +95,7 @@ parse_line(const std::string& line,bool byte) {
 }
 
 template <class t_idx, class t_rng>
-int load_data_and_sample(cmdargs_t &args, t_rng &rng) 
+int load_data_and_sample(cmdargs_t& args, t_rng& rng)
 {
     /* load index */
     t_idx idx;
@@ -109,7 +110,7 @@ int load_data_and_sample(cmdargs_t &args, t_rng &rng)
 
     /* print precomputed parameters */
     idx.print_params(args.ismkn, args.ngramsize);
-    vocab_uncompressed &vocab = idx.m_vocab;
+    vocab_uncompressed& vocab = idx.m_vocab;
 
     /* load patterns */
     std::vector<std::vector<uint64_t> > patterns;
@@ -118,9 +119,9 @@ int load_data_and_sample(cmdargs_t &args, t_rng &rng)
         LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
-            auto line_tokens = parse_line(line,args.byte_alphabet);
+            auto line_tokens = parse_line(line, args.byte_alphabet);
             std::vector<uint64_t> tokens;
-            for (const auto &word: line_tokens) {
+            for (const auto& word : line_tokens) {
                 uint64_t num = vocab.token2id(word, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
@@ -177,11 +178,11 @@ int main(int argc, const char* argv[])
     return load_data_and_sample<index_type, t_rng>(args, rng);
 }
 
-std::string as_string(const std::vector<uint64_t> &wids, const vocab_uncompressed &vocab) 
+std::string as_string(const std::vector<uint64_t>& wids, const vocab_uncompressed& vocab)
 {
     std::ostringstream oss;
     bool first = true;
-    for (auto w: wids) {
+    for (auto w : wids) {
         if (!first)
             oss << " ";
         oss << vocab.id2token(w);

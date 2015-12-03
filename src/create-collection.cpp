@@ -30,15 +30,15 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "i:c:1")) != -1) {
         switch (op) {
-            case 'i':
-                args.input_file = optarg;
-                break;
-            case 'c':
-                args.collection_dir = optarg;
-                break;
-            case '1':
-                args.byte_alphabet = true;
-                break;
+        case 'i':
+            args.input_file = optarg;
+            break;
+        case 'c':
+            args.collection_dir = optarg;
+            break;
+        case '1':
+            args.byte_alphabet = true;
+            break;
         }
     }
     if (args.collection_dir == "" || args.input_file == "") {
@@ -50,11 +50,12 @@ cmdargs_t parse_args(int argc, const char* argv[])
 }
 
 std::vector<std::string>
-parse_line(const std::string& line,bool byte) {
+parse_line(const std::string& line, bool byte)
+{
     std::vector<std::string> line_tokens;
-    if(byte) {
-        for(const auto& chr : line) {
-            line_tokens.push_back(std::string(1,chr));
+    if (byte) {
+        for (const auto& chr : line) {
+            line_tokens.push_back(std::string(1, chr));
         }
     } else {
         std::istringstream input(line);
@@ -75,26 +76,26 @@ int main(int argc, const char* argv[])
     utils::create_directory(args.collection_dir);
 
     /* (1) create dict */
-    std::unordered_map<std::string,uint64_t> dict;
-    std::vector<std::pair<uint64_t,std::string>> dict_ids;
+    std::unordered_map<std::string, uint64_t> dict;
+    std::vector<std::pair<uint64_t, std::string> > dict_ids;
     size_t max_id = 0;
     {
-        std::unordered_map<std::string,uint64_t> tdict;
+        std::unordered_map<std::string, uint64_t> tdict;
         std::ifstream ifs(args.input_file);
         std::string line;
-        while( std::getline(ifs,line) ) {
-            auto line_tokens = parse_line(line,args.byte_alphabet);
-            for(const auto& tok : line_tokens)
+        while (std::getline(ifs, line)) {
+            auto line_tokens = parse_line(line, args.byte_alphabet);
+            for (const auto& tok : line_tokens)
                 tdict[tok]++;
         }
         /* sort by freq */
-        for(const auto& did : tdict) {
-            dict_ids.emplace_back(did.second,did.first);
+        for (const auto& did : tdict) {
+            dict_ids.emplace_back(did.second, did.first);
         }
-        std::sort(dict_ids.begin(),dict_ids.end(),std::greater<std::pair<uint64_t,std::string>>());
+        std::sort(dict_ids.begin(), dict_ids.end(), std::greater<std::pair<uint64_t, std::string> >());
         /* create id mapping */
         uint64_t cur_id = NUM_SPECIAL_SYMS;
-        for(const auto& did: dict_ids) {
+        for (const auto& did : dict_ids) {
             dict[did.second] = cur_id;
             max_id = cur_id;
             cur_id++;
@@ -102,16 +103,16 @@ int main(int argc, const char* argv[])
     }
     /* (2) 2nd pass to transform the integers */
     {
-        auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir+"/"+ KEY_PREFIX + KEY_TEXT);
-        auto int_width = sdsl::bits::hi(max_id)+1;
+        auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT);
+        auto int_width = sdsl::bits::hi(max_id) + 1;
         buf.width(int_width);
         std::ifstream ifs(args.input_file);
         std::string line;
         buf.push_back(EOS_SYM); // file starts with EOS_SYM
-        while( std::getline(ifs,line) ) {
+        while (std::getline(ifs, line)) {
             buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
-            auto line_tokens = parse_line(line,args.byte_alphabet);
-            for(const auto& tok : line_tokens) {
+            auto line_tokens = parse_line(line, args.byte_alphabet);
+            for (const auto& tok : line_tokens) {
                 auto itr = dict.find(tok);
                 auto num = itr->second;
                 buf.push_back(num);
@@ -119,17 +120,17 @@ int main(int argc, const char* argv[])
             buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
             buf.push_back(EOS_SYM);
         }
-        {   // include special 'UNK' sentence to ensure symbol included in CST
-            // buf.push_back(PAT_START_SYM); 
+        { // include special 'UNK' sentence to ensure symbol included in CST
+            // buf.push_back(PAT_START_SYM);
             buf.push_back(UNKNOWN_SYM);
-            // buf.push_back(PAT_END_SYM); 
+            // buf.push_back(PAT_END_SYM);
             buf.push_back(EOS_SYM);
         }
         buf.push_back(EOF_SYM);
     }
-    /* (3) write vocab file */ 
+    /* (3) write vocab file */
     {
-        std::ofstream ofs(args.collection_dir+"/"+ KEY_PREFIX + KEY_VOCAB);
+        std::ofstream ofs(args.collection_dir + "/" + KEY_PREFIX + KEY_VOCAB);
         // write special symbols
         ofs << "<EOF> 0\n";
         ofs << "<EOS> 1\n";
@@ -138,7 +139,7 @@ int main(int argc, const char* argv[])
         ofs << "</S> 4\n";
         // write the real vocab
         uint64_t cur_id = NUM_SPECIAL_SYMS;
-        for(const auto& did: dict_ids) {
+        for (const auto& did : dict_ids) {
             ofs << did.second << " " << cur_id << "\n";
             cur_id++;
         }

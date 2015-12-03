@@ -6,7 +6,7 @@
 #include "sdsl/int_vector_mapper.hpp"
 
 template <uint8_t t_width = 0>
-using read_only_mapper = const sdsl::int_vector_mapper<t_width,std::ios_base::in>;
+using read_only_mapper = const sdsl::int_vector_mapper<t_width, std::ios_base::in>;
 
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
@@ -38,7 +38,7 @@ struct precomputed_stats {
 
     precomputed_stats() = default;
 
-    precomputed_stats(collection& col,uint64_t max_ngram_len, bool is_mkn=false);
+    precomputed_stats(collection& col, uint64_t max_ngram_len, bool is_mkn = false);
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -108,9 +108,9 @@ struct precomputed_stats {
     }
 
     template <class t_nums>
-    void display_vec(const char *name, const t_nums &nums, size_t ngramsize) const
+    void display_vec(const char* name, const t_nums& nums, size_t ngramsize) const
     {
-        LOG(INFO) << name << " = " << t_nums(nums.begin()+1, nums.begin() + std::min(ngramsize+1,nums.size()));
+        LOG(INFO) << name << " = " << t_nums(nums.begin() + 1, nums.begin() + std::min(ngramsize + 1, nums.size()));
     }
 
     void print(bool ismkn, uint32_t ngramsize) const
@@ -148,7 +148,7 @@ struct precomputed_stats {
         }
         LOG(INFO) << "------------------------------------------------";
         LOG(INFO) << "N1+(..) = " << N1plus_dotdot;
-        if(ismkn){
+        if (ismkn) {
             LOG(INFO) << "N1(.) = " << N1_dot;
             LOG(INFO) << "N2(.) = " << N2_dot;
             LOG(INFO) << "N3+(.) = " << N3plus_dot;
@@ -158,39 +158,38 @@ struct precomputed_stats {
     }
 
 private:
-    template <typename t_cst> void ncomputer(collection& col,const t_cst& cst_rev);
+    template <typename t_cst>
+    void ncomputer(collection& col, const t_cst& cst_rev);
 
+    template <class t_cst>
+    typename t_cst::char_type
+    emulate_edge(read_only_mapper<>& SAREV, read_only_mapper<>& TREV, const t_cst& cst,
+                 const typename t_cst::node_type& node, const typename t_cst::size_type& offset)
+    {
+        auto i = cst.lb(node);
+        auto text_offset = SAREV[i];
+        return TREV[text_offset + offset - 1];
+    }
 
-template<class t_cst>
-typename t_cst::char_type
-emulate_edge(read_only_mapper<>& SAREV,read_only_mapper<>& TREV,const t_cst& cst,
-    const typename t_cst::node_type& node,const typename t_cst::size_type& offset)
-{
-    auto i = cst.lb(node);
-    auto text_offset = SAREV[i];
-    return TREV[text_offset+offset-1];
-}
+    template <class t_cst>
+    typename t_cst::size_type
+    distance_to_sentinel(read_only_mapper<>& SAREV,
+                         t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
+                         const t_cst& cst, const typename t_cst::node_type& node,
+                         const typename t_cst::size_type& offset) const
+    {
+        auto i = cst.lb(node);
+        auto text_offset = SAREV[i];
 
-template<class t_cst>
-typename t_cst::size_type
-distance_to_sentinel(read_only_mapper<> &SAREV,
-        t_rank_bv &sentinel_rank, t_select_bv &sentinel_select,
-        const t_cst& cst, const typename t_cst::node_type& node, 
-        const typename t_cst::size_type &offset) const
-{
-    auto i = cst.lb(node);
-    auto text_offset = SAREV[i];
-
-    // find count (rank) of 1s in text from [0, offset]
-    auto rank = sentinel_rank(text_offset + offset);
-    // find the location of the next 1 in the text, this will be the sentence start symbol <S>
-    auto sentinel = sentinel_select(rank + 1); 
-    return sentinel - text_offset;
-}
-
+        // find count (rank) of 1s in text from [0, offset]
+        auto rank = sentinel_rank(text_offset + offset);
+        // find the location of the next 1 in the text, this will be the sentence start symbol <S>
+        auto sentinel = sentinel_select(rank + 1);
+        return sentinel - text_offset;
+    }
 };
 
-precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool )
+precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bool)
     : max_ngram_count(max_ngram_len)
     , N1plus_dotdot(0)
     , N3plus_dot(0)
@@ -223,15 +222,15 @@ precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool
             sdsl::util::bit_compress(sdsl_revinput);
             col.file_map[KEY_TEXTREV] = textrev_path;
         }
-        
-         if (col.file_map.count(KEY_SAREV) == 0) {
+
+        if (col.file_map.count(KEY_SAREV) == 0) {
             lm_construct_timer timer(KEY_SAREV);
             sdsl::int_vector<> sarev;
             sdsl::qsufsort::construct_sa(sarev, col.file_map[KEY_TEXTREV].c_str(), 0);
             auto sarev_path = col.path + "/" + KEY_PREFIX + KEY_SAREV;
             sdsl::store_to_file(sarev, sarev_path);
             col.file_map[KEY_SAREV] = sarev_path;
-         }
+        }
     }
     cst_type cst_rev;
     {
@@ -270,7 +269,7 @@ precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool
     D3_cnt.resize(size);
 
     // compute the counts & continuation counts from the CST (reversed)
-    ncomputer(col,cst_rev);
+    ncomputer(col, cst_rev);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
@@ -293,9 +292,8 @@ precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool
     }
 }
 
-
 template <class t_cst>
-void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
+void precomputed_stats::ncomputer(collection& col, const t_cst& cst_rev)
 {
     /* load SAREV to speed up edge call */
     read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
@@ -338,12 +336,12 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
             uint64_t max_n = 0;
             bool last_is_pat_start = false;
             if (4 <= counter && counter <= 6) {
-                // only need to consider one symbol for UNK, <S>, </S> edges 
+                // only need to consider one symbol for UNK, <S>, </S> edges
                 max_n = 1;
             } else if (counter >= 7) {
-                // need to consider several symbols -- minimum of 
+                // need to consider several symbols -- minimum of
                 // 1) edge length; 2) threshold; 3) reaching the <S> token
-                auto distance = distance_to_sentinel(SAREV,sentinel_rank,sentinel_select,cst_rev,node,parent_depth) + 1;
+                auto distance = distance_to_sentinel(SAREV, sentinel_rank, sentinel_select, cst_rev, node, parent_depth) + 1;
                 max_n = std::min(max_ngram_count, depth);
                 if (distance <= max_n) {
                     max_n = distance;
@@ -355,10 +353,16 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 uint64_t symbol = NUM_SPECIAL_SYMS;
                 if (2 <= counter && counter <= 6) {
                     switch (counter) {
-                        //cases 2 & 3 (EOF, EOS) handled above
-                        case 4: symbol = UNKNOWN_SYM; break; 
-                        case 5: symbol = PAT_START_SYM; break;
-                        case 6: symbol = PAT_END_SYM; break; 
+                    //cases 2 & 3 (EOF, EOS) handled above
+                    case 4:
+                        symbol = UNKNOWN_SYM;
+                        break;
+                    case 5:
+                        symbol = PAT_START_SYM;
+                        break;
+                    case 6:
+                        symbol = PAT_END_SYM;
+                        break;
                     }
                 } else {
                     // edge call is slow, but in these cases all we need to know is if it's <S> or a regular token
@@ -369,11 +373,13 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                 switch (freq) {
                 case 1:
                     n1[n] += 1;
-                    if(n == 1) N1_dot++; 
+                    if (n == 1)
+                        N1_dot++;
                     break;
                 case 2:
                     n2[n] += 1;
-                    if(n == 1) N2_dot++;
+                    if (n == 1)
+                        N2_dot++;
                     break;
                 case 3:
                     n3[n] += 1;
@@ -387,7 +393,7 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                     N1plus_dotdot++;
                 if (freq >= 3 && n == 1)
                     N3plus_dot++;
-		
+
                 // update continuation counts
                 uint64_t n1plus_back = 0ULL;
                 if (symbol == PAT_START_SYM)
@@ -400,14 +406,22 @@ void precomputed_stats::ncomputer(collection& col,const t_cst& cst_rev)
                     n1plus_back = 1;
 
                 switch (n1plus_back) {
-                case 1: n1_cnt[n] += 1; break;
-                case 2: n2_cnt[n] += 1; break;
-                case 3: n3_cnt[n] += 1; break;
-                case 4: n4_cnt[n] += 1; break;
+                case 1:
+                    n1_cnt[n] += 1;
+                    break;
+                case 2:
+                    n2_cnt[n] += 1;
+                    break;
+                case 3:
+                    n3_cnt[n] += 1;
+                    break;
+                case 4:
+                    n4_cnt[n] += 1;
+                    break;
                 }
 
                 // can skip subtree if we know the EOS symbol is coming next
-                if (counter <= 5 || symbol == PAT_START_SYM) { 
+                if (counter <= 5 || symbol == PAT_START_SYM) {
                     it.skip_subtree();
                     break;
                 }

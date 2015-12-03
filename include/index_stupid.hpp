@@ -19,6 +19,7 @@ public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_csa_rev csa_rev_type;
     typedef t_vocab vocab_type;
+
 public: // data
     csa_rev_type m_csa_rev;
     vocab_type m_vocab;
@@ -72,5 +73,4 @@ public:
             m_vocab.swap(a.m_vocab);
         }
     }
-
 };

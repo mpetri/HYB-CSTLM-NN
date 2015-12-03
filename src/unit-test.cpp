@@ -7,9 +7,8 @@
 #include <unordered_set>
 
 typedef testing::Types<
-//index_succinct<default_cst_type,default_cst_rev_type>,
-index_succinct<default_cst_type>
- > Implementations;
+    //index_succinct<default_cst_type,default_cst_rev_type>,
+    index_succinct<default_cst_type> > Implementations;
 
 struct triplet {
     std::vector<uint64_t> pattern;
@@ -40,13 +39,14 @@ std::vector<std::string> split(const std::string& s, char delim)
     return elems;
 }
 
-template <class t_idx> class LMTest : public testing::Test {
+template <class t_idx>
+class LMTest : public testing::Test {
 protected:
     const char* srilm_path = "../UnitTestData/srilm_output/output_srilm_kn";
     const char* srilm_mkn_path = "../UnitTestData/srilm_output/output_srilm_mkn";
     std::vector<triplet> srilm_triplets, srilm_triplets_mkn;
 
-    void load_srilm(const std::string &path, std::vector<triplet> &out) 
+    void load_srilm(const std::string& path, std::vector<triplet>& out)
     {
         std::ifstream file(path);
         std::string line;
@@ -71,7 +71,7 @@ protected:
         // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
         {
             col = collection(col_path);
-            idx = t_idx(col,true);
+            idx = t_idx(col, true);
             idx.print_params(true, 10);
         }
 
@@ -96,7 +96,7 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
         std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher> ngram_counts;
         /* compute c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size()-3) - (cgram - 1); i++) {
+        for (size_t i = 0; i < (text.size() - 3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -153,7 +153,7 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size() -3 ) - (cgram - 1); i++) {
+        for (size_t i = 0; i < (text.size() - 3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -197,7 +197,7 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
                     // special case: ngram starts with PAT_START_SYM
                     size_t cnt = 0;
                     // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-                    for (size_t i = 0; i < (text.size()-3) - (cng.size() - 1); i++) {
+                    for (size_t i = 0; i < (text.size() - 3) - (cng.size() - 1); i++) {
                         if (std::equal(cng.begin(), cng.end(), text.begin() + i)) {
                             cnt++;
                         }
@@ -239,7 +239,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
     std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher> uniq_bigrams;
     /* compute c-gram stats */
     // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-    for (size_t i = 0; i < (text.size() -3) - 1; i++) {
+    for (size_t i = 0; i < (text.size() - 3) - 1; i++) {
         std::vector<uint64_t> cur_gram(2);
         auto beg = text.begin() + i;
         std::copy(beg, beg + 2, cur_gram.begin());
@@ -264,7 +264,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
     std::unordered_map<uint64_t, uint64_t> unigram_freqs;
     /* compute c-gram stats */
     // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-    for (size_t i = 0; i < (text.size()-3); i++) {
+    for (size_t i = 0; i < (text.size() - 3); i++) {
         auto sym = text[i];
         if (sym != EOS_SYM && sym != EOF_SYM)
             unigram_freqs[sym]++;
@@ -293,7 +293,7 @@ TYPED_TEST(LMTest, N1PlusBack)
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size()-3) - (cgram - 1); i++) {
+        for (size_t i = 0; i < (text.size() - 3) - (cgram - 1); i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -321,7 +321,7 @@ TYPED_TEST(LMTest, N1PlusBack)
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
                 auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                                           this->idx.m_cst.csa.size() - 1, 
+                                           this->idx.m_cst.csa.size() - 1,
                                            cng.begin(), cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
@@ -333,7 +333,6 @@ TYPED_TEST(LMTest, N1PlusBack)
         }
     }
 }
-
 
 TYPED_TEST(LMTest, N1PlusFrontBack)
 {
@@ -350,7 +349,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 1; i < (text.size()-3) - cgram; i++) {
+        for (size_t i = 1; i < (text.size() - 3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -382,8 +381,8 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     auto actual_count
-                        = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb), 
-                                cng.begin(), cng.end());
+                        = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb),
+                                                    cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
                 }
             }
@@ -405,7 +404,7 @@ TYPED_TEST(LMTest, N1PlusFront)
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size()-3) - cgram; i++) {
+        for (size_t i = 0; i < (text.size() - 3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -457,7 +456,7 @@ TYPED_TEST(LMTest, N123PlusFront)
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size()-3) - cgram; i++) {//FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
+        for (size_t i = 0; i < (text.size() - 3) - cgram; i++) { //FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -487,7 +486,7 @@ TYPED_TEST(LMTest, N123PlusFront)
 
             if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
                 && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; }) 
+                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; })
                 && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
@@ -498,12 +497,12 @@ TYPED_TEST(LMTest, N123PlusFront)
                     uint64_t n1, n2, n3p, n1p;
                     this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
                     n1p = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
-                    
+
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end()) << " === " << cng << " (numberised)";
                     EXPECT_EQ(n1, expected_n1);
                     EXPECT_EQ(n2, expected_n2);
                     EXPECT_EQ(n3p, expected_n3p);
-                    EXPECT_EQ(n1p, n1+n2+n3p);
+                    EXPECT_EQ(n1p, n1 + n2 + n3p);
                 }
             }
         }
@@ -524,7 +523,7 @@ TYPED_TEST(LMTest, N123PlusBack)
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size()-3) - cgram; i++) {//FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
+        for (size_t i = 0; i < (text.size() - 3) - cgram; i++) { //FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -553,7 +552,7 @@ TYPED_TEST(LMTest, N123PlusBack)
 
             if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
                 && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; }) 
+                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; })
                 && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
@@ -564,12 +563,12 @@ TYPED_TEST(LMTest, N123PlusBack)
                     uint64_t n1, n2, n3p, n1p;
                     this->idx.N123PlusBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
                     n1p = this->idx.N1PlusBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
-                    
+
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
                     EXPECT_EQ(n1, expected_n1);
                     EXPECT_EQ(n2, expected_n2);
                     EXPECT_EQ(n3p, expected_n3p);
-                    EXPECT_EQ(n1p, n1+n2+n3p);
+                    EXPECT_EQ(n1p, n1 + n2 + n3p);
                 }
             }
         }
@@ -586,11 +585,11 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
     // (2) for all n-gram sizes
     for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
-        typedef std::map< std::pair<uint64_t, uint64_t>, uint64_t > t_symbol_counts;
+        typedef std::map<std::pair<uint64_t, uint64_t>, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFrontBack c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 1; i < (text.size() -3 ) - cgram; i++) {
+        for (size_t i = 1; i < (text.size() - 3) - cgram; i++) {
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -630,9 +629,9 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t actual_n1, actual_n2, actual_n3p, actual_n1p;
-                    this->idx.N123PlusFrontBack(this->idx.m_cst.node(lb, rb), 
-                            cng.begin(), cng.end(),
-                            actual_n1, actual_n2, actual_n3p);
+                    this->idx.N123PlusFrontBack(this->idx.m_cst.node(lb, rb),
+                                                cng.begin(), cng.end(),
+                                                actual_n1, actual_n2, actual_n3p);
                     actual_n1p = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
 
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
@@ -646,14 +645,13 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
     }
 }
 
-
 // checks whether perplexities match
 // precision of comparison is set to 1e-4
 TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order,false);
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, false);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
 }
@@ -669,7 +667,7 @@ TYPED_TEST(LMTest, PerplexityMKN)
 
 int main(int argc, char* argv[])
 {
-    log::start_log(argc, (const char**)argv,false);
+    log::start_log(argc, (const char**)argv, false);
 
     ::testing::InitGoogleTest(&argc, argv);
 

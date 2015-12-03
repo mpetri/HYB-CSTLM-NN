@@ -20,7 +20,7 @@
 #include "query.hpp"
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize,bool ismkn)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize, bool ismkn)
 {
     //LOG(INFO) << "sentence_logprob_kneser_ney for: " << idx.m_vocab.id2token(word_vec.begin(), word_vec.end());
     //LOG(INFO) << "\tfast: " << fast_index << " mkn: " << ismkn;
@@ -34,7 +34,7 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
             pattern_deq.pop_front();
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
-/*
+        /*
         if (pattern.back() == UNKNOWN_SYM) {
             M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
         }
@@ -45,21 +45,20 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
         else
             score = prob_mod_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
         final_score += log10(score);
-
     }
     //LOG(INFO) << "sentence_logprob_kneser_ney returning: " << final_score;
     return final_score;
 }
 
 template <class t_idx, class t_pattern>
-double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern &pattern, uint32_t ngramsize,bool ismkn)
+double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern, uint32_t ngramsize, bool ismkn)
 {
     auto pattern_size = pattern.size();
     pattern.push_back(PAT_END_SYM);
     pattern.insert(pattern.begin(), PAT_START_SYM);
     // run the query
     uint64_t M = pattern_size + 1;
-    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize,ismkn);
+    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
     double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
     return perplexity;
 }
