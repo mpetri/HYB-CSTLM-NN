@@ -43,7 +43,7 @@ template <class t_idx>
 class LMTest : public testing::Test {
 protected:
     const char* srilm_path = "../UnitTestData/srilm_output/output_srilm_kn";
-    const char* srilm_mkn_path = "../UnitTestData/srilm_output/output_srilm_mkn";
+    const char* srilm_mkn_path = "../UnitTestData/kenlm_output/output_kenlm";
     std::vector<triplet> srilm_triplets, srilm_triplets_mkn;
 
     void load_srilm(const std::string& path, std::vector<triplet>& out)
