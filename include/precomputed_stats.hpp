@@ -5,8 +5,6 @@
 
 #include "sdsl/int_vector_mapper.hpp"
 
-#include "index_types.hpp"
-
 template <uint8_t t_width = 0>
 using read_only_mapper = const sdsl::int_vector_mapper<t_width,std::ios_base::in>;
 
@@ -200,6 +198,8 @@ precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool
     , N2_dot(0)
 
 {
+    using csa_type = sdsl::csa_wt_int<>;
+    using cst_type = sdsl::cst_sct3<csa_type>;
     /* create the reverse CST here as this is the only place we still need it */
     {
         /* create stuff we are missing */
@@ -233,7 +233,7 @@ precomputed_stats::precomputed_stats(collection& col,uint64_t max_ngram_len,bool
             col.file_map[KEY_SAREV] = sarev_path;
          }
     }
-    default_cst_type cst_rev;
+    cst_type cst_rev;
     {
         auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(cst_rev) + ".sdsl";
         if (!utils::file_exists(cst_rev_file)) {
