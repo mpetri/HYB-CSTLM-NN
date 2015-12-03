@@ -38,6 +38,7 @@ rm -r ../collections/unittest/
 ```
 ## Comparison on Europarl German KenLM v.s. Accurate v.s Fishy ##
 Training raw size: 170MB
+
 KENLM - on eu_de and 500 test sentences (includes OOVs:	80)
 ```
 2-gram:	166.68	
@@ -67,3 +68,15 @@ on larger test set with 10K sentences the fishy v.s. kenlm
 4-gram 104.78  v.s.  105.86
 5-gram 103.11  v.s.  104.82
 ```
+## Possible ways to frame the paper (ranked by feasibility till end of December ) ##
+(1) As LM Paper (similar to emnlp)
+    contributions: i) speedup, ii)comparison with kenlm (state-of-the-art)
+    experiments: i) exactly similar to emnlp (nothing more)
+(2) As LM paper on Big data
+    contributions: all of the above, and iii) showing the impact of data size v.s. model complexity on pplx
+    experiments: all of the above, and ii) experiments with different training data size of English, German, French, Spanish: 1GB, 3GB, 7GB, 15GB, 30GB, 60GB, 125GB, (and ideally 250GB, 500GB, and 1TiB) to produce 1 graph for each language as (10 plots for n=1...10gram , x-axis data-size, y-axis pplx)
+(3) As LM paper on Big data MT experiments
+    contributions: all the above (there won't be any new contribution here)
+    experiments: either (i), or (ii) or both, and iii) MT experiments
+ 
+## ToDos ##
