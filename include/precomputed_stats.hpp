@@ -159,31 +159,21 @@ struct precomputed_stats {
 
 private:
     template <typename t_cst>
-    void ncomputer(collection& col, const t_cst& cst_rev);
-
-    template <class t_cst>
-    typename t_cst::char_type
-    emulate_edge(read_only_mapper<>& SAREV, read_only_mapper<>& TREV, const t_cst& cst,
-                 const typename t_cst::node_type& node, const typename t_cst::size_type& offset)
-    {
-        auto i = cst.lb(node);
-        auto text_offset = SAREV[i];
-        return TREV[text_offset + offset - 1];
-    }
+    void ncomputer(collection& col, const t_cst& cst);
 
     template <class t_cst>
     typename t_cst::size_type
-    distance_to_sentinel(read_only_mapper<>& SAREV,
+    distance_to_sentinel(read_only_mapper<>& SA,
                          t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
                          const t_cst& cst, const typename t_cst::node_type& node,
                          const typename t_cst::size_type& offset) const
     {
         auto i = cst.lb(node);
-        auto text_offset = SAREV[i];
+        auto text_offset = SA[i];
 
         // find count (rank) of 1s in text from [0, offset]
         auto rank = sentinel_rank(text_offset + offset);
-        // find the location of the next 1 in the text, this will be the sentence start symbol <S>
+        // find the location of the next 1 in the text, this will be </S>
         auto sentinel = sentinel_select(rank + 1);
         return sentinel - text_offset;
     }
@@ -202,51 +192,30 @@ precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bo
     /* create the reverse CST here as this is the only place we still need it */
     {
         /* create stuff we are missing */
-        if (col.file_map.count(KEY_TEXTREV) == 0) {
-            lm_construct_timer timer(KEY_TEXTREV);
-            auto textrev_path = col.path + "/" + KEY_PREFIX + KEY_TEXTREV;
-            const sdsl::int_vector_mapper<0, std::ios_base::in> sdsl_input(col.file_map[KEY_TEXT]);
-            {
-                sdsl::int_vector<> tmp;
-                std::ofstream ofs(textrev_path);
-                sdsl::serialize(tmp, ofs);
-            }
-            sdsl::int_vector_mapper<0, std::ios_base::out | std::ios_base::in> sdsl_revinput(
-                textrev_path);
-            sdsl_revinput.resize(sdsl_input.size());
-            // don't copy the last two values, sentinels (EOS, EOF)
-            std::reverse_copy(std::begin(sdsl_input), std::end(sdsl_input) - 2,
-                              std::begin(sdsl_revinput));
-            sdsl_revinput[sdsl_input.size() - 2] = EOS_SYM;
-            sdsl_revinput[sdsl_input.size() - 1] = EOF_SYM;
-            sdsl::util::bit_compress(sdsl_revinput);
-            col.file_map[KEY_TEXTREV] = textrev_path;
-        }
-
-        if (col.file_map.count(KEY_SAREV) == 0) {
-            lm_construct_timer timer(KEY_SAREV);
-            sdsl::int_vector<> sarev;
-            sdsl::qsufsort::construct_sa(sarev, col.file_map[KEY_TEXTREV].c_str(), 0);
-            auto sarev_path = col.path + "/" + KEY_PREFIX + KEY_SAREV;
-            sdsl::store_to_file(sarev, sarev_path);
-            col.file_map[KEY_SAREV] = sarev_path;
+        if (col.file_map.count(KEY_SA) == 0) {
+            lm_construct_timer timer(KEY_SA);
+            sdsl::int_vector<> sa;
+            sdsl::qsufsort::construct_sa(sa, col.file_map[KEY_TEXT].c_str(), 0);
+            auto sa_path = col.path + "/" + KEY_PREFIX + KEY_SA;
+            sdsl::store_to_file(sa, sa_path);
+            col.file_map[KEY_SA] = sa_path;
         }
     }
-    cst_type cst_rev;
+    cst_type cst;
     {
-        auto cst_rev_file = col.path + "/tmp/CST_REV-" + sdsl::util::class_to_hash(cst_rev) + ".sdsl";
-        if (!utils::file_exists(cst_rev_file)) {
-            lm_construct_timer timer("CST_REV");
+        auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(cst) + ".sdsl";
+        if (!utils::file_exists(cst_file)) {
+            lm_construct_timer timer("CST");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMPREV";
-            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SAREV];
-            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
-            construct(cst_rev, col.file_map[KEY_TEXTREV], cfg, 0);
-            sdsl::store_to_file(cst_rev, cst_rev_file);
+            cfg.id = "TMP";
+            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
+            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
+            construct(cst, col.file_map[KEY_TEXT], cfg, 0);
+            sdsl::store_to_file(cst, cst_file);
         } else {
-            sdsl::load_from_file(cst_rev, cst_rev_file);
+            sdsl::load_from_file(cst, cst_file);
         }
     }
 
@@ -269,7 +238,7 @@ precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bo
     D3_cnt.resize(size);
 
     // compute the counts & continuation counts from the CST (reversed)
-    ncomputer(col, cst_rev);
+    ncomputer(col, cst);
 
     for (auto size = 1ULL; size <= max_ngram_len; size++) {
         Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
@@ -293,143 +262,126 @@ precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bo
 }
 
 template <class t_cst>
-void precomputed_stats::ncomputer(collection& col, const t_cst& cst_rev)
+void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
     /* load SAREV to speed up edge call */
-    read_only_mapper<> SAREV(col.file_map[KEY_SAREV]);
+    read_only_mapper<> SA(col.file_map[KEY_SA]);
 
     // load up reversed text and store in a bitvector for locating sentinel symbols
-    read_only_mapper<> TREV(col.file_map[KEY_TEXTREV]);
-    sdsl::bit_vector sentinel_bv(TREV.size());
-    for (uint64_t i = 0; i < TREV.size(); ++i) {
-        auto symbol = TREV[i];
+    read_only_mapper<> TEXT(col.file_map[KEY_TEXT]);
+    sdsl::bit_vector sentinel_bv(TEXT.size());
+    for (uint64_t i = 0; i < TEXT.size(); ++i) {
+        auto symbol = TEXT[i];
         if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM)
             sentinel_bv[i] = 1;
     }
     t_rank_bv sentinel_rank(&sentinel_bv);
     t_select_bv sentinel_select(&sentinel_bv);
 
-    /* iterate over all nodes */
-    uint64_t counter = 0;
-    for (auto it = cst_rev.begin(); it != cst_rev.end(); ++it) {
-        if (it.visit() == 1) {
-            ++counter;
-            // corner cases for counters 1..6, above which are "real" n-grams
-            // corresponding to 1 = root; 2 = EOF; 3 = EOS; 4 = UNK; 5 = <S>; 6 = </S>
-            // we need to count for 4, 5 & 6; skip subtree for cases 1 -- 5.
-            if (counter == 1) {
-                continue;
-            } else if (counter <= 3) {
-                it.skip_subtree();
-                continue;
-            }
+    std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+    uint64_t num_syms;
 
-            auto node = *it;
-            auto parent = cst_rev.parent(node);
-            auto parent_depth = cst_rev.depth(parent);
-            // this next call is expensive for leaves, but we don't care in this case
-            // as the for loop below will terminate on the <S> symbol
-            auto depth = (!cst_rev.is_leaf(node)) ? cst_rev.depth(node) : (max_ngram_count + 12345);
-            auto freq = cst_rev.size(node);
-            assert(parent_depth < max_ngram_count);
+    // need to visit subtree corresponding to:
+    //      <S> -- PAT_START_SYM    (4)
+    //      UNK -- UNKNOWN_SYM      (3)
+    //      and all others >= NUM_SPECIAL_SYMS (6)
+    
+    uint64_t counter = 0; // counter = first symbol on child edge
+    for (auto child: cst.children(cst.root())) {
+        if (counter != EOF_SYM && counter != EOS_SYM) {
+            // process the node
+            for (auto it = cst.begin(child); it != cst.end(child); ++it) {
+                if (it.visit() == 1) {
+                    auto node = *it;
+                    auto parent = cst.parent(node);
+                    auto parent_depth = cst.depth(parent);
+                    // this next call is expensive for leaves, but we don't care in this case
+                    // as the for loop below will terminate on the </S> symbol
+                    auto depth = (!cst.is_leaf(node)) ? cst.depth(node) : (max_ngram_count + 12345);
+                    auto freq = cst.size(node);
+                    assert(parent_depth < max_ngram_count);
 
-            uint64_t max_n = 0;
-            bool last_is_pat_start = false;
-            if (4 <= counter && counter <= 6) {
-                // only need to consider one symbol for UNK, <S>, </S> edges
-                max_n = 1;
-            } else if (counter >= 7) {
-                // need to consider several symbols -- minimum of
-                // 1) edge length; 2) threshold; 3) reaching the <S> token
-                auto distance = distance_to_sentinel(SAREV, sentinel_rank, sentinel_select, cst_rev, node, parent_depth) + 1;
-                max_n = std::min(max_ngram_count, depth);
-                if (distance <= max_n) {
-                    max_n = distance;
-                    last_is_pat_start = true;
-                }
-            }
-
-            for (auto n = parent_depth + 1; n <= max_n; ++n) {
-                uint64_t symbol = NUM_SPECIAL_SYMS;
-                if (2 <= counter && counter <= 6) {
-                    switch (counter) {
-                    //cases 2 & 3 (EOF, EOS) handled above
-                    case 4:
-                        symbol = UNKNOWN_SYM;
-                        break;
-                    case 5:
-                        symbol = PAT_START_SYM;
-                        break;
-                    case 6:
-                        symbol = PAT_END_SYM;
-                        break;
+                    uint64_t max_n = 0;
+                    bool last_is_pat_end = false;
+                    if (counter == UNKNOWN_SYM || counter == PAT_START_SYM || counter == PAT_END_SYM) {
+                        // only need to consider one symbol for UNK, <S>, </S> edges
+                        max_n = 1;
+                    } else {
+                        // need to consider several symbols -- minimum of
+                        // 1) edge length; 2) threshold; 3) reaching the <S> token
+                        auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst, node, parent_depth) + 1;
+                        max_n = std::min(max_ngram_count, depth);
+                        if (distance <= max_n) {
+                            max_n = distance;
+                            last_is_pat_end = true;
+                        }
                     }
-                } else {
-                    // edge call is slow, but in these cases all we need to know is if it's <S> or a regular token
-                    symbol = (last_is_pat_start && n == max_n) ? PAT_START_SYM : NUM_SPECIAL_SYMS;
+
+                    for (auto n = parent_depth + 1; n <= max_n; ++n) {
+                        uint64_t symbol = NUM_SPECIAL_SYMS;
+                        if (n == 1) {
+                            symbol = counter;
+                        } else if (last_is_pat_end && n == max_n) {
+                            // edge call is slow, but in these cases all we need to know is if it's </S> or a regular token
+                            symbol = PAT_END_SYM;
+                        }
+
+                        // update frequency counts
+                        switch (freq) {
+                            case 1:
+                                n1[n] += 1;
+                                if (n == 1) N1_dot++;
+                                break;
+                            case 2:
+                                n2[n] += 1;
+                                if (n == 1) N2_dot++;
+                                break;
+                            case 3: n3[n] += 1; break;
+                            case 4: n4[n] += 1; break;
+                        }
+
+                        if (n == 2)
+                            N1plus_dotdot++;
+                        if (freq >= 3 && n == 1)
+                            N3plus_dot++;
+
+                        // update continuation counts
+                        uint64_t n1plus_back = 0ULL;
+                        if (counter == PAT_START_SYM)
+                            // special case where the pattern starts with <s>: actual count is used
+                            n1plus_back = freq;
+                        else if (n == depth) {
+                            // no need to adjust for EOS symbol, as this only happens when symbol = </S>
+                            auto lb = cst.lb(node);
+                            auto rb = cst.rb(node);
+                            num_syms = 0;
+                            sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                            n1plus_back = num_syms;
+                        } else
+                            n1plus_back = 1;
+
+                        switch (n1plus_back) {
+                            case 1: n1_cnt[n] += 1; break;
+                            case 2: n2_cnt[n] += 1; break;
+                            case 3: n3_cnt[n] += 1; break;
+                            case 4: n4_cnt[n] += 1; break;
+                        }
+
+                        // can skip subtree if we know the EOS symbol is coming next
+                        if (counter == UNKNOWN_SYM || counter == PAT_END_SYM || symbol == PAT_END_SYM) {
+                            it.skip_subtree();
+                            break;
+                        }
+                    }
+
+                    if (depth >= max_ngram_count) {
+                        it.skip_subtree();
+                    }
                 }
-
-                // update frequency counts
-                switch (freq) {
-                case 1:
-                    n1[n] += 1;
-                    if (n == 1)
-                        N1_dot++;
-                    break;
-                case 2:
-                    n2[n] += 1;
-                    if (n == 1)
-                        N2_dot++;
-                    break;
-                case 3:
-                    n3[n] += 1;
-                    break;
-                case 4:
-                    n4[n] += 1;
-                    break;
-                }
-
-                if (n == 2)
-                    N1plus_dotdot++;
-                if (freq >= 3 && n == 1)
-                    N3plus_dot++;
-
-                // update continuation counts
-                uint64_t n1plus_back = 0ULL;
-                if (symbol == PAT_START_SYM)
-                    // special case where the pattern starts with <s>: actual count is used
-                    n1plus_back = freq;
-                else if (n == depth)
-                    // no need to adjust for EOS symbol, as this only happens when symbol = <S>
-                    n1plus_back = cst_rev.degree(node);
-                else
-                    n1plus_back = 1;
-
-                switch (n1plus_back) {
-                case 1:
-                    n1_cnt[n] += 1;
-                    break;
-                case 2:
-                    n2_cnt[n] += 1;
-                    break;
-                case 3:
-                    n3_cnt[n] += 1;
-                    break;
-                case 4:
-                    n4_cnt[n] += 1;
-                    break;
-                }
-
-                // can skip subtree if we know the EOS symbol is coming next
-                if (counter <= 5 || symbol == PAT_START_SYM) {
-                    it.skip_subtree();
-                    break;
-                }
-            }
-
-            if (depth >= max_ngram_count) {
-                it.skip_subtree();
             }
         }
+        ++counter;
     }
 }
