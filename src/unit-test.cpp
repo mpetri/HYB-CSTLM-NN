@@ -508,7 +508,7 @@ TYPED_TEST(LMTest, N123PlusFront)
         }
     }
 }
-
+#if 0
 TYPED_TEST(LMTest, N123PlusBack)
 {
     // (1) get the text
@@ -644,7 +644,7 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
         }
     }
 }
-
+#endif
 // checks whether perplexities match
 // precision of comparison is set to 1e-4
 TYPED_TEST(LMTest, Perplexity)

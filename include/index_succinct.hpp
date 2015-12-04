@@ -185,7 +185,7 @@ public:
     {
         m_precomputed.print(ismkn, ngramsize);
     }
-
+/*
     void N123PlusBack(const node_type& node,
                       pattern_iterator pattern_begin, pattern_iterator,
                       uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
@@ -238,7 +238,7 @@ public:
                 n3p -= 1;
         }
     }
-
+*/
     uint64_t N1PlusFrontBack(const node_type& node,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end) const
     {
@@ -271,7 +271,7 @@ public:
             }
         }
     }
-
+/*
     void N123PlusFrontBack(const node_type& node,
                            pattern_iterator pattern_begin, pattern_iterator pattern_end,
                            uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
@@ -295,10 +295,10 @@ public:
         } else {
             // special case, only one way of extending this pattern to the right
             if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
-                /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
+                // pattern must be 13xyz41 -> #P(*3xyz4*) == 0 
                 n1 = n2 = n3p = 0;
             } else if (*pattern_begin == PAT_START_SYM) {
-                /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
+                // pattern must be 13xyzA -> #P(*3xyz*) == 1
                 auto size = m_cst.size(node);
                 n1 = n2 = n3p = 0;
                 if (size == 1)
@@ -308,12 +308,12 @@ public:
                 else
                     n3p = 1;
             } else {
-                /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
+                // pattern must be *xyzA -> #P(*xyz*) == N1PlusBack 
                 N123PlusBack(node, pattern_begin, pattern_end, n1, n2, n3p);
             }
         }
     }
-
+*/
     // Computes N_1+( abc * )
     uint64_t N1PlusFront(const node_type& node,
                          pattern_iterator pattern_begin, pattern_iterator pattern_end) const
