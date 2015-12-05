@@ -23,7 +23,8 @@ Build index (including quantities for modified KN)
 ```
 
 Query index
-Run ./querk-index-knm.x to see the running time arguments. Here are some examples:
+
+run ./querk-index-knm.x to see the running time arguments. Here are some examples:
 
 For Modified Kneser-ney (fastest index) with accurate version
 ```
