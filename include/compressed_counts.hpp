@@ -290,11 +290,11 @@ public:
 
         // pass 2: compute front-back (fb, fb1, fb2), back (b) and front (f1, f2) counts
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_fb2 = sdsl::temp_file_buffer<32>::create();
+        //auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
+        //auto tmp_buffer_counts_fb2 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
         uint64_t num_syms = 0;
-        uint64_t fb1 = 0, fb2 = 0;
+        //uint64_t fb1 = 0, fb2 = 0;
 
         for (const auto& child : cst.children(root)) {
             auto itr = cst.begin(child);
@@ -305,10 +305,10 @@ public:
                 if (itr.visit() == 2) {
                     auto str_depth = cst.depth(node);
                     if (str_depth <= max_node_depth) {
-                        auto c = compute_contexts_mkn(cst, node, num_syms, fb1, fb2);
+                        auto c = compute_contexts(cst, node, num_syms);
                         tmp_buffer_counts_fb.push_back(c);
-                        tmp_buffer_counts_fb1.push_back(fb1);
-                        tmp_buffer_counts_fb2.push_back(fb2);
+                        //tmp_buffer_counts_fb1.push_back(fb1);
+                        //tmp_buffer_counts_fb2.push_back(fb2);
                         tmp_buffer_counts_b.push_back(num_syms);
                     }
                 } else {
