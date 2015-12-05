@@ -16,18 +16,27 @@ Create a collection:
 ./create-collection.x -i toyfile.txt -c ../collections/toy
 ```
 
-Build index
+Build index (including quantities for modified KN)
 
 ```
-./build-index.x -c ../collections/toy/
+./build-index.x -c ../collections/toy/ -m
 ```
 
 Query index
+Run ./querk-index-knm.x to see the running time arguments. Here are some examples:
 
+For Modified Kneser-ney (fastest index) with accurate version
 ```
-./query-index-stupid.x -c ../collections/toy/ -p toyquery.txt
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5 -s -m
 ```
-
+For Modified Kneser-ney (fastest index) with fishy version version
+```
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5 -s -m -f
+```
+For Kneser-Ney (fastest index)
+```
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5
+```
 ## Running `unit' tests ##
 
 To run the unit-test.x binary first you need to do the following
