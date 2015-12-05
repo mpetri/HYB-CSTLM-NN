@@ -71,6 +71,7 @@ int main(int argc, const char* argv[])
 {
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
+    sdsl::memory_monitor::start();
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
@@ -144,6 +145,7 @@ int main(int argc, const char* argv[])
             cur_id++;
         }
     }
-
+    sdsl::memory_monitor::stop();
+    LOG(INFO) <<"MemoryPeak for creating the collection =  " <<sdsl::memory_monitor::peak() << " bytes.";
     return 0;
 }

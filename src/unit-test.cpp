@@ -651,7 +651,7 @@ TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, false);
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, false, false);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
 }
@@ -660,7 +660,7 @@ TYPED_TEST(LMTest, PerplexityMKN)
 {
     for (unsigned int i = 0; i < this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, kenlm.pattern, kenlm.order, true);
+        double perplexity = sentence_perplexity_kneser_ney(this->idx, kenlm.pattern, kenlm.order, true, false);
         EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
     }
 }
