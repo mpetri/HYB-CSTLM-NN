@@ -146,6 +146,6 @@ int main(int argc, const char* argv[])
         }
     }
     sdsl::memory_monitor::stop();
-    LOG(INFO) <<"MemoryPeak for creating the collection =  " <<sdsl::memory_monitor::peak() << " bytes.";
+    std::cerr <<"MemoryPeak for creating the collection =  " <<sdsl::memory_monitor::peak() << " bytes." << std::endl;
     return 0;
 }
