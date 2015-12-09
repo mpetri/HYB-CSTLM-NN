@@ -140,7 +140,6 @@ int main(int argc, const char* argv[])
         std::string line;
         buf.push_back(EOS_SYM); // file starts with EOS_SYM
         uint64_t num_non_freq_syms = 0;
-	bool isreplaced = false;
         while (std::getline(ifs, line)) {
             buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
             auto line_tokens = parse_line(line, args.byte_alphabet);
