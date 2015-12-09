@@ -77,6 +77,7 @@ parse_line(const std::string& line, bool byte)
 int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
+    bool isreplaced = false;
 
     LOG(INFO) << "parse command line";
     cmdargs_t args = parse_args(argc, argv);
@@ -139,6 +140,7 @@ int main(int argc, const char* argv[])
         std::string line;
         buf.push_back(EOS_SYM); // file starts with EOS_SYM
         uint64_t num_non_freq_syms = 0;
+	bool isreplaced = false;
         while (std::getline(ifs, line)) {
             buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
             auto line_tokens = parse_line(line, args.byte_alphabet);
@@ -146,6 +148,7 @@ int main(int argc, const char* argv[])
                 auto itr = dict.find(tok);
                 if(itr == dict.end()) {
                     buf.push_back(NOT_FREQ_SYM);
+		    isreplaced = true;
                     num_non_freq_syms++;
                 } else {
                     auto num = itr->second;
@@ -157,7 +160,8 @@ int main(int argc, const char* argv[])
         }
         { // include special 'UNK' sentence to ensure symbol included in CST
             buf.push_back(UNKNOWN_SYM);
-            buf.push_back(NOT_FREQ_SYM);
+	    if(isreplaced)
+               buf.push_back(NOT_FREQ_SYM);
             buf.push_back(EOS_SYM);
         }
         buf.push_back(EOF_SYM);
@@ -174,7 +178,8 @@ int main(int argc, const char* argv[])
         ofs << "<UNK> 2\n";
         ofs << "<S> 3\n";
         ofs << "</S> 4\n";
-        ofs << "<NOT_FREQ> 5\n";
+	if(isreplaced)
+           ofs << "<NOT_FREQ> 5\n";
         // write the real vocab
         uint64_t cur_id = NUM_SPECIAL_SYMS;
         for (const auto& did : dict_ids) {
