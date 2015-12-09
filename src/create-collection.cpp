@@ -32,7 +32,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.collection_dir = "";
     args.byte_alphabet = false;
     args.min_symbol_freq = 0;
-    while ((op = getopt(argc, (char* const*)argv, "i:c:1")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "i:c:1t:")) != -1) {
         switch (op) {
         case 'i':
             args.input_file = optarg;
@@ -80,6 +80,10 @@ int main(int argc, const char* argv[])
 
     LOG(INFO) << "parse command line";
     cmdargs_t args = parse_args(argc, argv);
+    LOG(INFO) << "collection dir = " << args.collection_dir;
+    LOG(INFO) << "input file = " << args.input_file;
+    LOG(INFO) << "min_symbol_freq = " << args.min_symbol_freq;
+    LOG(INFO) << "byte_alphabet = " << args.byte_alphabet;
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
