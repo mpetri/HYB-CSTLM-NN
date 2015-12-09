@@ -3,7 +3,6 @@
 
 #include "utils.hpp"
 #include "index_types.hpp"
-
 #include "logging.hpp"
 
 typedef struct cmdargs {
@@ -76,12 +75,13 @@ int main(int argc, const char* argv[])
 
     /* parse collection directory */
     collection col(args.collection_dir);
-
     /* create indexes */
+    sdsl::memory_monitor::start();
     {
         using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
-
+    sdsl::memory_monitor::stop();
+    LOG(INFO) <<"MemoryPeak for buidling index_succinct =  " <<sdsl::memory_monitor::peak() << " bytes.";
     return 0;
 }

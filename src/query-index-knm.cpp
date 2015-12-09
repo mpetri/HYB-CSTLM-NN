@@ -24,6 +24,7 @@ typedef struct cmdargs {
     std::string collection_dir;
     int ngramsize;
     bool ismkn;
+    bool isfishy;
     bool isbackward;
     bool isstored;
     bool isreranking;
@@ -34,13 +35,14 @@ std::vector<uint32_t> ngram_occurrences;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
+    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize> -m <boolean>\n",
             program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
     fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
+    fprintf(stdout, "  -f : use the fishy MKN (default = accurate).\n");
     fprintf(stdout, "  -r : doing reranking (default = language modelling).\n");
     fprintf(stdout, "  -1 : byte parsing.\n");
 };
@@ -52,16 +54,20 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.pattern_file = "";
     args.collection_dir = "";
     args.ismkn = false;
+    args.isfishy = false;
     args.ngramsize = 1;
     args.isreranking = false;
     args.byte_alphabet = false;
-    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mbsr1")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "p:c:n:mfbsr1")) != -1) {
         switch (op) {
         case 'p':
             args.pattern_file = optarg;
             break;
         case 'c':
             args.collection_dir = optarg;
+            break;
+        case 'f':
+	    args.isfishy = true;
             break;
         case 'm':
             args.ismkn = true;
@@ -89,7 +95,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 //            = false -- use N1+Back/FrontBack using reverse CST & forward search
 template <class t_idx>
 void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
-                 uint64_t ngramsize, bool ismkn)
+                 uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -106,7 +112,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, isfishy);
         auto stop = clock::now();
 
         //std::ostringstream sp("", std::ios_base::ate);
@@ -126,7 +132,7 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
 template <class t_idx>
 void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
                   const std::vector<std::vector<std::string> > orig_patterns,
-                  uint64_t ngramsize, bool ismkn)
+                  uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -161,7 +167,7 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, isfishy);
         auto stop = clock::now();
 
         perplexity = pow(10, -sentenceprob / M);
@@ -244,9 +250,9 @@ int execute(const cmdargs_t& args)
 
     /* run the querying or reranking */
     if (args.isreranking)
-        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn);
+        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn, args.isfishy);
     else
-        run_queries(idx, patterns, args.ngramsize, args.ismkn);
+        run_queries(idx, patterns, args.ngramsize, args.ismkn, args.isfishy);
 
     return EXIT_SUCCESS;
 }
@@ -254,10 +260,14 @@ int execute(const cmdargs_t& args)
 int main(int argc, const char* argv[])
 {
     log::start_log(argc, argv);
+    sdsl::memory_monitor::start();
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
     typedef index_succinct<default_cst_type> index_type;
     execute<index_type>(args);
+
+    sdsl::memory_monitor::stop();
+    LOG(INFO) <<"MemoryPeak in query Time " <<sdsl::memory_monitor::peak() << " bytes.";
 }

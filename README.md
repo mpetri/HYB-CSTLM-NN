@@ -16,78 +16,85 @@ Create a collection:
 ./create-collection.x -i toyfile.txt -c ../collections/toy
 ```
 
-Build index
+Build index (including quantities for modified KN)
 
 ```
-./build-index.x -c ../collections/toy/
+./build-index.x -c ../collections/toy/ -m
 ```
 
 Query index
 
-```
-./query-index-stupid.x -c ../collections/toy/ -p toyquery.txt
-```
+run ./querk-index-knm.x to see the running time arguments. Here are some examples:
 
+For Modified Kneser-ney (fastest index) with accurate version
+```
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5 -s -m
+```
+For Modified Kneser-ney (fastest index) with fishy version version
+```
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5 -s -m -f
+```
+For Kneser-Ney (fastest index)
+```
+./query-index-knm.x -c  ../collections/toy/ -p toyquery.txt -n 5
+```
 ## Running `unit' tests ##
 
 To run the unit-test.x binary first you need to do the following
-```sh
+```
 rm -r ../collections/unittest/
 ./create-collection.x -i ../UnitTestData/data/training.data -c ../collections/unittest
-touch ../collections/unittest/text.VOCAB
+./build-index.x -c ../collections/unittest/ -m
+./unit-test.x
 ```
-Then you should be able to run the test script and the output should be interpretable.
+## Comparison on Europarl German KenLM v.s. Accurate v.s Fishy ##
+Training raw size: 170MB
 
-## Running integration tests ##
-
-I've put some fairly simple test data under *UnitTestData/data/undoc_2000*. See the file there *README.undoc* to see how it was constructed. It's a character level representation of the first 1000 sentences of a corpus. This should be sufficient to test out the various counting methods without getting hit too heavily by the slow runtime of the *ncompute* method etc. 
-
-To run this, first compile then from the build directory run:
+KENLM - on eu_de and 500 test sentences (includes OOVs:	80)
 ```
-./create-collection.x -i ../UnitTestData/data/undoc_2000_fr_en_sample.train -c ../collections/undoc
+2-gram:	166.68	
+default: 95MB    trie: 38MB
+3-gram:	108.44
+default: 402MB    trie: 168MB
+4-gram:	100.75
+default: 963MB    trie: 441MB
+5-gram:	99.59
+default: 1692MB    trie: 825MB
 ```
-which will create the *undoc* folder and put a single file in there. 
-Quick work-around for the missing *vocab* file
+under the same training and test setting the accurate v.s. fishy:
 ```
-touch ../collections/undoc/text.VOCAB
+2-gram:	166.68  v.s.  166.68
+275MB
+3-gram:	108.44  v.s.  108.09
+275MB
+4-gram:	100.75  v.s.  99.68
+275MB
+5-gram:	99.59   v.s.  97.94
+275MB
 ```
-Next run
-``` 
-./build-index.x -c ../collections/undoc
+on larger test set with 10K sentences the fishy v.s. kenlm
 ```
-which builds the index and various precomputed stuff. Finally query with
+2-gram 174.80  v.s.  174.80
+3-gram 112.47  v.s.  112.84
+4-gram 104.78  v.s.  105.86
+5-gram 103.11  v.s.  104.82
 ```
-./query-index-knm.x -c ../collections/undoc -p ../UnitTestData/data/undoc_2000_fr_en_sample.test -n 5
+## Possible ways to frame the paper (ranked by feasibility based on end of December deadline) ##
+(1) As LM Paper (similar to emnlp)
 ```
-which queries using 5-grams for a test sample. There are a couple of issues here, namely it reports:
-```sh
-------------------------------------------------
--------------PRECOMPUTED QUANTITIES-------------
-------------------------------------------------
-n1 = 0 4 254 1898 6734 15697 
-n2 = 0 2 133 852 2523 5218 
-n3 = 0 1 105 437 1519 2745 
-n4 = 0 1 72 317 974 1598 
-------------------------------------------------
-Y = 0 0.5 0.488462 0.526929 0.571647 0.600658 
-------------------------------------------------
-N1+(..) = 1394
-N3+(.) = 116
-------------------------------------------------
-------------------------------------------------
-reading input file '../UnitTestData/data/undoc_2000_fr_en_sample.test'
-------------------------------------------------
-------------------------------------------------
-PATTERN is = 3 26 
-dot_LB= 135477  dot_RB= 135654
-Lowest Order numerator is: 10 denomiator is: 1394
-Lowest Order probability 0.0071736
-------------------------------------------------
-dot_LB= 135477  dot_RB= 135654
-0x7fc10860f720
-0x7fc10860f720
-XXXdot_LB= 135478  dot_RB= 135505
-dot_LB= 135477  dot_RB= 135654
-XXXdot_LB= 2001  dot_RB= 2000
+    contributions: i) speedup, ii)comparison with kenlm (state-of-the-art)
+    experiments: i) exactly similar to emnlp (nothing more)
 ```
-where the leading 0s in the precomputed quantities seem fishy, and the last few lines look like some kind of  failure case.
+(2) As LM paper on Big data
+```
+    contributions: all of the above, and iii) showing the impact of data size v.s. model complexity on pplx
+    experiments: all of the above, and ii) experiments with different training data size of English, German,
+    French, Spanish: 1GB, 3GB, 7GB, 15GB, 30GB, 60GB, 125GB, (and ideally 250GB, 500GB, and 1TiB) to produce
+    1 graph for each language where each having 10 plots for n=1...10gram , where x-axis is data-size, and y-axis is pplx.
+```
+(3) As LM paper on Big data MT experiments
+```
+    contributions: all the above (there won't be any new contribution here)
+    experiments: either (i), or (ii) or both, and iii) MT experiments
+```
+## ToDos ##

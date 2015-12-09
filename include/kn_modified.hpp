@@ -22,7 +22,7 @@
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
 double prob_mod_kneser_ney(const t_idx& idx,
-                           t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize)
+                           t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize, bool isfishy)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0 / (idx.m_vocab.size() - 4); // p -- FIXME: should we subtract away sentinels? //ehsan: not sure why -4 works! but it works!
@@ -95,8 +95,10 @@ double prob_mod_kneser_ney(const t_idx& idx,
             n2 = idx.m_precomputed.n2_cnt[1];
             n3p = (idx.vocab_size() - 2) - (n1 + n2);
         } else {
-            idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p); //accurate version
-            //idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);//FishyVersion
+	    if(!isfishy) 
+            	idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p); //accurate version
+	    else
+             	idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);//FishyVersion}
             //idx.N123PlusFrontBack_from_forward(node_excl, start, pattern_end - 1, n1, n2, n3p);//XXX Do not use this.
         }
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;

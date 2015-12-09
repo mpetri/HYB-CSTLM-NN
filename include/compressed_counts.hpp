@@ -18,8 +18,8 @@ private:
     bv_type m_bv;
     typename bv_type::rank_1_type m_bv_rank;
     vector_type m_counts_fb;
-    vector_type m_counts_fb1;
-    vector_type m_counts_fb2;
+//    vector_type m_counts_fb1;
+//    vector_type m_counts_fb2;
     vector_type m_counts_b;
     vector_type m_counts_f1;
     vector_type m_counts_f2;
@@ -32,8 +32,8 @@ public:
         m_bv = cc.m_bv;
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = cc.m_counts_fb;
-        m_counts_fb1 = cc.m_counts_fb1;
-        m_counts_fb2 = cc.m_counts_fb2;
+//        m_counts_fb1 = cc.m_counts_fb1;
+//        m_counts_fb2 = cc.m_counts_fb2;
         m_counts_b = cc.m_counts_b;
         m_counts_f1 = cc.m_counts_f1;
         m_counts_f2 = cc.m_counts_f2;
@@ -44,8 +44,8 @@ public:
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-        m_counts_fb1 = std::move(cc.m_counts_fb1);
-        m_counts_fb2 = std::move(cc.m_counts_fb2);
+//        m_counts_fb1 = std::move(cc.m_counts_fb1);
+//        m_counts_fb2 = std::move(cc.m_counts_fb2);
         m_counts_b = std::move(cc.m_counts_b);
         m_counts_f1 = std::move(cc.m_counts_f1);
         m_counts_f2 = std::move(cc.m_counts_f2);
@@ -56,8 +56,8 @@ public:
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-        m_counts_fb1 = std::move(cc.m_counts_fb1);
-        m_counts_fb2 = std::move(cc.m_counts_fb2);
+//        m_counts_fb1 = std::move(cc.m_counts_fb1);
+//        m_counts_fb2 = std::move(cc.m_counts_fb2);
         m_counts_b = std::move(cc.m_counts_b);
         m_counts_f1 = std::move(cc.m_counts_f1);
         m_counts_f2 = std::move(cc.m_counts_f2);
@@ -290,11 +290,11 @@ public:
 
         // pass 2: compute front-back (fb, fb1, fb2), back (b) and front (f1, f2) counts
         auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_fb2 = sdsl::temp_file_buffer<32>::create();
+        //auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
+        //auto tmp_buffer_counts_fb2 = sdsl::temp_file_buffer<32>::create();
         auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
         uint64_t num_syms = 0;
-        uint64_t fb1 = 0, fb2 = 0;
+        //uint64_t fb1 = 0, fb2 = 0;
 
         for (const auto& child : cst.children(root)) {
             auto itr = cst.begin(child);
@@ -305,10 +305,10 @@ public:
                 if (itr.visit() == 2) {
                     auto str_depth = cst.depth(node);
                     if (str_depth <= max_node_depth) {
-                        auto c = compute_contexts_mkn(cst, node, num_syms, fb1, fb2);
+                        auto c = compute_contexts(cst, node, num_syms);
                         tmp_buffer_counts_fb.push_back(c);
-                        tmp_buffer_counts_fb1.push_back(fb1);
-                        tmp_buffer_counts_fb2.push_back(fb2);
+                        //tmp_buffer_counts_fb1.push_back(fb1);
+                        //tmp_buffer_counts_fb2.push_back(fb2);
                         tmp_buffer_counts_b.push_back(num_syms);
                     }
                 } else {
@@ -326,8 +326,8 @@ public:
         // compress the count structures into in-memory structures
         m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
-        m_counts_fb1 = vector_type(tmp_buffer_counts_fb1);
-        m_counts_fb2 = vector_type(tmp_buffer_counts_fb2);
+        //m_counts_fb1 = vector_type(tmp_buffer_counts_fb1);
+        //m_counts_fb2 = vector_type(tmp_buffer_counts_fb2);
         //LOG(INFO) << "initialise_modified_kneser_ney: done";
     }
 
@@ -340,8 +340,8 @@ public:
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_bv_rank, out, child, "bv_rank");
         written_bytes += sdsl::serialize(m_counts_fb, out, child, "counts_fb");
-        written_bytes += sdsl::serialize(m_counts_fb1, out, child, "counts_fb1");
-        written_bytes += sdsl::serialize(m_counts_fb2, out, child, "counts_fb2");
+//        written_bytes += sdsl::serialize(m_counts_fb1, out, child, "counts_fb1");
+//        written_bytes += sdsl::serialize(m_counts_fb2, out, child, "counts_fb2");
         written_bytes += sdsl::serialize(m_counts_b, out, child, "counts_b");
         written_bytes += sdsl::serialize(m_counts_f1, out, child, "counts_f1");
         written_bytes += sdsl::serialize(m_counts_f2, out, child, "counts_f2");
@@ -375,7 +375,7 @@ public:
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_fb[rank_in_vec];
     }
-
+/*
     template <class t_cst, class t_node_type>
     void lookup_fb123p(t_cst& cst, t_node_type node, uint64_t& fb1, uint64_t& fb2, uint64_t& fb3p) const
     {
@@ -388,7 +388,7 @@ public:
         assert(fb >= fb1 + fb2);
         fb3p = fb - fb1 - fb2;
     }
-
+*/
     template <class t_cst, class t_node_type>
     uint64_t lookup_b(t_cst& cst, t_node_type node) const
     {
@@ -402,8 +402,8 @@ public:
         sdsl::load(m_bv, in);
         m_bv_rank.load(in, &m_bv);
         sdsl::load(m_counts_fb, in);
-        sdsl::load(m_counts_fb1, in);
-        sdsl::load(m_counts_fb2, in);
+//        sdsl::load(m_counts_fb1, in);
+//        sdsl::load(m_counts_fb2, in);
         sdsl::load(m_counts_b, in);
         sdsl::load(m_counts_f1, in);
         sdsl::load(m_counts_f2, in);
