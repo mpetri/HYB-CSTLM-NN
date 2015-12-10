@@ -50,6 +50,13 @@ public:
         return written_bytes;
     }
 
+
+    //required by Moses
+    std::unordered_map<std::string, uint64_t> vocab_id() const
+    {
+        return m_t2i;
+    }
+
     std::string id2token(const uint64_t& id) const
     {
         auto itr = m_i2t.find(id);
