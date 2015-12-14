@@ -169,7 +169,8 @@ private:
                          const typename t_cst::size_type& offset) const
     {
         auto i = cst.lb(node);
-        auto text_offset = SA[i];
+        // increment for case where the current symbol is the sentinel
+        auto text_offset = SA[i]+1;
 
         // find count (rank) of 1s in text from [0, offset]
         auto rank = sentinel_rank(text_offset + offset);
@@ -261,6 +262,98 @@ precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bo
     }
 }
 
+#if 1
+// naive, sloooowwwwww version -- unit-tests fail for continuation counts...
+template <class t_cst>
+void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
+{
+    std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+    uint64_t num_syms;
+
+    for (auto it = cst.begin(); it != cst.end(); ++it) {
+        if (it.visit() == 1) {
+            auto node = *it;
+            auto parent = cst.parent(node);
+            // root node
+            if (node == parent) continue;
+            auto start = cst.edge(node, 1);
+            // sentinel subtrees
+            if (start == EOF_SYM || start == EOS_SYM) {
+                it.skip_subtree();
+                continue;
+            }
+            auto parent_depth = cst.depth(parent);
+            auto depth = cst.depth(node);
+            auto freq = cst.size(node);
+
+            for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
+                auto symbol = cst.edge(node, n);
+                if (symbol == EOS_SYM || symbol == EOF_SYM || symbol == UNKNOWN_SYM) {
+                    it.skip_subtree();
+                    break;
+                }
+
+                // update frequency counts
+                switch (freq) {
+                    case 1:
+                        n1[n] += 1;
+                        if (n == 1) N1_dot++;
+                        break;
+                    case 2:
+                        n2[n] += 1;
+                        if (n == 1) N2_dot++;
+                        break;
+                    case 3: n3[n] += 1; break;
+                    case 4: n4[n] += 1; break;
+                }
+                if (n == 2)
+                    N1plus_dotdot++;
+                if (freq >= 3 && n == 1)
+                    N3plus_dot++;
+
+                // update continuation counts
+                uint64_t n1plus_back = 0ULL;
+                if (start == PAT_START_SYM)
+                    // special case where the pattern starts with <s>: actual count is used
+                    n1plus_back = freq;
+                else if (n == depth) {
+                    // no need to adjust for EOS symbol, as this only happens when symbol = </S>
+                    auto lb = cst.lb(node);
+                    auto rb = cst.rb(node);
+                    num_syms = 0;
+                    sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                    n1plus_back = num_syms;
+                } else
+                    n1plus_back = 1;
+
+                switch (n1plus_back) {
+                    case 1: n1_cnt[n] += 1; break;
+                    case 2: n2_cnt[n] += 1; break;
+                    case 3: n3_cnt[n] += 1; break;
+                    case 4: n4_cnt[n] += 1; break;
+                }
+            }
+            //                    std::cerr << "ncomputer -- edge has"
+            //                        << " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
+            //                        << " freq " << freq 
+            //                        << " depth " << depth
+            //                        << " pdepth " << parent_depth
+            //                        << " max_n " << max_n
+            //                        << " label";
+            //                    for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
+            //                        std::cerr << ' ' << cst.edge(node, i);
+            //                    std::cerr << std::endl;
+            //                    std::cerr << "counter is " << counter << std::endl;
+
+        }
+    }
+}
+
+#else
+
+// optimised version
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
@@ -292,6 +385,8 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     for (auto child: cst.children(cst.root())) {
         if (counter != EOF_SYM && counter != EOS_SYM) {
             // process the node
+            // FIXME: this can be done more simply by incrementing counter
+            //  whenever parent_depth == 0
             for (auto it = cst.begin(child); it != cst.end(child); ++it) {
                 if (it.visit() == 1) {
                     auto node = *it;
@@ -304,29 +399,36 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     assert(parent_depth < max_ngram_count);
 
                     uint64_t max_n = 0;
-                    bool last_is_pat_end = false;
-                    if (counter == UNKNOWN_SYM || counter == PAT_START_SYM || counter == PAT_END_SYM) {
+                    if (counter == UNKNOWN_SYM || counter == PAT_END_SYM) {
                         // only need to consider one symbol for UNK, <S>, </S> edges
                         max_n = 1;
                     } else {
                         // need to consider several symbols -- minimum of
-                        // 1) edge length; 2) threshold; 3) reaching the <S> token
+                        // 1) edge length; 2) threshold; 3) reaching the </S> token
                         auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst, node, parent_depth) + 1;
                         max_n = std::min(max_ngram_count, depth);
-                        if (distance <= max_n) {
+                        if (distance <= max_n) 
                             max_n = distance;
-                            last_is_pat_end = true;
-                        }
+                        if (distance <= depth)
+                            it.skip_subtree();
                     }
+
+                    std::cerr << "ncomputer -- edge has"
+                        << " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
+                        << " freq " << freq 
+                        << " depth " << cst.depth(node) 
+                        << " pdepth " << parent_depth
+                        << " max_n " << max_n
+                        << " label";
+                    for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
+                        std::cerr << ' ' << cst.edge(node, i);
+                    std::cerr << std::endl;
+
+                    std::cerr << "counter is " << counter << std::endl;
 
                     for (auto n = parent_depth + 1; n <= max_n; ++n) {
                         uint64_t symbol = NUM_SPECIAL_SYMS;
-                        if (n == 1) {
-                            symbol = counter;
-                        } else if (last_is_pat_end && n == max_n) {
-                            // edge call is slow, but in these cases all we need to know is if it's </S> or a regular token
-                            symbol = PAT_END_SYM;
-                        }
+                        if (n == 1) symbol = counter;
 
                         // update frequency counts
                         switch (freq) {
@@ -385,3 +487,4 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
         ++counter;
     }
 }
+#endif
