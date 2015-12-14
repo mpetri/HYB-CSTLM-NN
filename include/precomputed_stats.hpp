@@ -318,15 +318,17 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                 if (start == PAT_START_SYM)
                     // special case where the pattern starts with <s>: actual count is used
                     n1plus_back = freq;
-                else if (n == depth) {
+                else { 
+                    //if (n == depth) {
                     // no need to adjust for EOS symbol, as this only happens when symbol = </S>
                     auto lb = cst.lb(node);
                     auto rb = cst.rb(node);
                     num_syms = 0;
                     sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
                     n1plus_back = num_syms;
-                } else
-                    n1plus_back = 1;
+                } 
+                    //else
+                    //  n1plus_back = 1;
 
                 switch (n1plus_back) {
                     case 1: n1_cnt[n] += 1; break;
