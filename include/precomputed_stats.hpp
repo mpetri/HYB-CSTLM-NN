@@ -419,8 +419,9 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 
                     // update continuation counts
                     uint64_t n1plus_back = 0ULL;
-                    if (counter == PAT_START_SYM) {
+                    if (counter == PAT_START_SYM || freq == 1) {
                         // special case where the pattern starts with <s>: actual count is used
+                        // also when freq = 1 the pattern can only be preceeded by one symbol
                         n1plus_back = freq;
                     } else {
                         // no need to adjust for EOS symbol, as this only happens when symbol = <S>
