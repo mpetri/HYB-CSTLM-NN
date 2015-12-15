@@ -169,8 +169,7 @@ private:
                          const typename t_cst::size_type& offset) const
     {
         auto i = cst.lb(node);
-        // increment for case where the current symbol is the sentinel
-        auto text_offset = SA[i]+1;
+        auto text_offset = SA[i];
 
         // find count (rank) of 1s in text from [0, offset]
         auto rank = sentinel_rank(text_offset + offset);
@@ -262,8 +261,8 @@ precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bo
     }
 }
 
-#if 1
-// naive, sloooowwwwww version -- unit-tests fail for continuation counts...
+#if 0
+// naive, sloooowwwwww version 
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
@@ -287,10 +286,27 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
             auto parent_depth = cst.depth(parent);
             auto depth = cst.depth(node);
             auto freq = cst.size(node);
+            auto max_n = std::min(max_ngram_count, depth);
+
+            // update continuation counts -- FIXME: this can be done at the root level, i.e., 
+            // only update for top level children (with parent_depth == 0)
+            uint64_t n1plus_back = 0ULL;
+            if (start == PAT_START_SYM)
+                // special case where the pattern starts with <s>: actual count is used
+                n1plus_back = freq;
+            else { 
+                // no need to adjust for EOS symbol, as this only happens when start = <S>
+                auto lb = cst.lb(node);
+                auto rb = cst.rb(node);
+                num_syms = 0;
+                sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                n1plus_back = num_syms;
+            } 
 
             for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
                 auto symbol = cst.edge(node, n);
                 if (symbol == EOS_SYM || symbol == EOF_SYM || symbol == UNKNOWN_SYM) {
+                    max_n = n-1;
                     it.skip_subtree();
                     break;
                 }
@@ -313,23 +329,6 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                 if (freq >= 3 && n == 1)
                     N3plus_dot++;
 
-                // update continuation counts
-                uint64_t n1plus_back = 0ULL;
-                if (start == PAT_START_SYM)
-                    // special case where the pattern starts with <s>: actual count is used
-                    n1plus_back = freq;
-                else { 
-                    //if (n == depth) {
-                    // no need to adjust for EOS symbol, as this only happens when symbol = </S>
-                    auto lb = cst.lb(node);
-                    auto rb = cst.rb(node);
-                    num_syms = 0;
-                    sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-                    n1plus_back = num_syms;
-                } 
-                    //else
-                    //  n1plus_back = 1;
-
                 switch (n1plus_back) {
                     case 1: n1_cnt[n] += 1; break;
                     case 2: n2_cnt[n] += 1; break;
@@ -337,18 +336,19 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     case 4: n4_cnt[n] += 1; break;
                 }
             }
-            //                    std::cerr << "ncomputer -- edge has"
-            //                        << " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
-            //                        << " freq " << freq 
-            //                        << " depth " << depth
-            //                        << " pdepth " << parent_depth
-            //                        << " max_n " << max_n
-            //                        << " label";
-            //                    for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
-            //                        std::cerr << ' ' << cst.edge(node, i);
-            //                    std::cerr << std::endl;
-            //                    std::cerr << "counter is " << counter << std::endl;
 
+            //std::cerr << "ncomputer -- edge has"
+                //<< " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
+                //<< " freq " << freq 
+                //<< " n1plus_back " << n1plus_back 
+                //<< " depth " << depth
+                //<< " pdepth " << parent_depth
+                //<< " max_n " << max_n
+                //<< " label";
+            //for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
+                //std::cerr << ' ' << cst.edge(node, i);
+            //std::cerr << std::endl;
+            //std::cerr << "start is " << start << std::endl;
         }
     }
 }
@@ -367,7 +367,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     sdsl::bit_vector sentinel_bv(TEXT.size());
     for (uint64_t i = 0; i < TEXT.size(); ++i) {
         auto symbol = TEXT[i];
-        if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM)
+        if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM && symbol != PAT_START_SYM)
             sentinel_bv[i] = 1;
     }
     t_rank_bv sentinel_rank(&sentinel_bv);
@@ -385,10 +385,11 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     
     uint64_t counter = 0; // counter = first symbol on child edge
     for (auto child: cst.children(cst.root())) {
-        if (counter != EOF_SYM && counter != EOS_SYM) {
+        if (counter != EOF_SYM && counter != EOS_SYM && counter != UNKNOWN_SYM) {
             // process the node
             // FIXME: this can be done more simply by incrementing counter
             //  whenever parent_depth == 0
+
             for (auto it = cst.begin(child); it != cst.end(child); ++it) {
                 if (it.visit() == 1) {
                     auto node = *it;
@@ -401,6 +402,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     assert(parent_depth < max_ngram_count);
 
                     uint64_t max_n = 0;
+                    bool last_is_sentinel = false;
                     if (counter == UNKNOWN_SYM || counter == PAT_END_SYM) {
                         // only need to consider one symbol for UNK, <S>, </S> edges
                         max_n = 1;
@@ -409,28 +411,43 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                         // 1) edge length; 2) threshold; 3) reaching the </S> token
                         auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst, node, parent_depth) + 1;
                         max_n = std::min(max_ngram_count, depth);
-                        if (distance <= max_n) 
+                        if (distance <= max_n) {
                             max_n = distance;
-                        if (distance <= depth)
-                            it.skip_subtree();
+                            last_is_sentinel = true;
+                        }
                     }
 
-                    std::cerr << "ncomputer -- edge has"
-                        << " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
-                        << " freq " << freq 
-                        << " depth " << cst.depth(node) 
-                        << " pdepth " << parent_depth
-                        << " max_n " << max_n
-                        << " label";
-                    for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
-                        std::cerr << ' ' << cst.edge(node, i);
-                    std::cerr << std::endl;
+                    // update continuation counts
+                    uint64_t n1plus_back = 0ULL;
+                    if (counter == PAT_START_SYM) {
+                        // special case where the pattern starts with <s>: actual count is used
+                        n1plus_back = freq;
+                    } else {
+                        // no need to adjust for EOS symbol, as this only happens when symbol = <S>
+                        auto lb = cst.lb(node);
+                        auto rb = cst.rb(node);
+                        num_syms = 0;
+                        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                        n1plus_back = num_syms;
+                    } 
 
-                    std::cerr << "counter is " << counter << std::endl;
+                    //std::cerr << "ncomputer -- edge has"
+                        //<< " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
+                        //<< " freq " << freq 
+                        //<< " n1plus_back " << n1plus_back 
+                        //<< " depth " << cst.depth(node) 
+                        //<< " pdepth " << parent_depth
+                        //<< " max_n " << max_n
+                        //<< " label";
+                    //for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
+                        //std::cerr << ' ' << cst.edge(node, i);
+                    //std::cerr << std::endl;
+                    //std::cerr << "counter is " << counter << std::endl;
 
                     for (auto n = parent_depth + 1; n <= max_n; ++n) {
                         uint64_t symbol = NUM_SPECIAL_SYMS;
                         if (n == 1) symbol = counter;
+                        else if (n == max_n && last_is_sentinel) symbol = PAT_END_SYM;
 
                         // update frequency counts
                         switch (freq) {
@@ -451,21 +468,6 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                         if (freq >= 3 && n == 1)
                             N3plus_dot++;
 
-                        // update continuation counts
-                        uint64_t n1plus_back = 0ULL;
-                        if (counter == PAT_START_SYM)
-                            // special case where the pattern starts with <s>: actual count is used
-                            n1plus_back = freq;
-                        else if (n == depth) {
-                            // no need to adjust for EOS symbol, as this only happens when symbol = </S>
-                            auto lb = cst.lb(node);
-                            auto rb = cst.rb(node);
-                            num_syms = 0;
-                            sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-                            n1plus_back = num_syms;
-                        } else
-                            n1plus_back = 1;
-
                         switch (n1plus_back) {
                             case 1: n1_cnt[n] += 1; break;
                             case 2: n2_cnt[n] += 1; break;
@@ -475,12 +477,14 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 
                         // can skip subtree if we know the EOS symbol is coming next
                         if (counter == UNKNOWN_SYM || counter == PAT_END_SYM || symbol == PAT_END_SYM) {
+                            //std::cerr << "\tquit 1\n";
                             it.skip_subtree();
                             break;
                         }
                     }
 
                     if (depth >= max_ngram_count) {
+                        //std::cerr << "\tquit 2\n";
                         it.skip_subtree();
                     }
                 }
