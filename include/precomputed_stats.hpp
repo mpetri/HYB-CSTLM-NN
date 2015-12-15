@@ -305,7 +305,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 
             for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
                 auto symbol = cst.edge(node, n);
-                if (symbol == EOS_SYM || symbol == EOF_SYM || symbol == UNKNOWN_SYM) {
+                if (symbol == EOS_SYM || symbol == EOF_SYM) {
                     max_n = n-1;
                     it.skip_subtree();
                     break;
@@ -385,7 +385,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     
     uint64_t counter = 0; // counter = first symbol on child edge
     for (auto child: cst.children(cst.root())) {
-        if (counter != EOF_SYM && counter != EOS_SYM && counter != UNKNOWN_SYM) {
+        if (counter != EOF_SYM && counter != EOS_SYM) {
             // process the node
             // FIXME: this can be done more simply by incrementing counter
             //  whenever parent_depth == 0
@@ -477,11 +477,13 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                         }
 
                         // can skip subtree if we know the EOS symbol is coming next
+			
                         if (counter == UNKNOWN_SYM || counter == PAT_END_SYM || symbol == PAT_END_SYM) {
                             //std::cerr << "\tquit 1\n";
                             it.skip_subtree();
                             break;
                         }
+			
                     }
 
                     if (depth >= max_ngram_count) {
