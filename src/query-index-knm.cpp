@@ -35,7 +35,7 @@ std::vector<uint32_t> ngram_occurrences;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize> -m <boolean>\n",
+    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
             program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");

@@ -11,12 +11,13 @@ typedef struct cmdargs {
     std::string input_file;
     std::string collection_dir;
     bool byte_alphabet;
+    bool write_corpus;
     uint64_t min_symbol_freq;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -i <input file> -c <coldir> -t <thres>\n", program);
+    fprintf(stdout, "%s -i <input file> -c <coldir> -t <thres> \n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -i <input file>      : the input file.\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
@@ -28,6 +29,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
+    args.write_corpus=false;
     args.input_file = "";
     args.collection_dir = "";
     args.byte_alphabet = false;
@@ -42,6 +44,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
             break;
         case 't':
             args.min_symbol_freq = std::strtoull(optarg,NULL,10);
+            args.write_corpus = true;
             break;
         case '1':
             args.byte_alphabet = true;
@@ -133,6 +136,9 @@ int main(int argc, const char* argv[])
     }
     LOG(INFO) << "2nd pass to transform the integers";
     {
+	std::ofstream corpus_word;
+	if(args.write_corpus){corpus_word.open(args.collection_dir + "/corpus.WORD");}
+
         auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT);
         auto int_width = sdsl::bits::hi(max_id) + 1;
         buf.width(int_width);
@@ -146,14 +152,17 @@ int main(int argc, const char* argv[])
             for (const auto& tok : line_tokens) {
                 auto itr = dict.find(tok);
                 if(itr == dict.end()) {
+		    if(args.write_corpus) corpus_word<<"<NOT_FREQ> ";
                     buf.push_back(NOT_FREQ_SYM);
 		    isreplaced = true;
                     num_non_freq_syms++;
                 } else {
+                    if(args.write_corpus) corpus_word<<tok+" ";
                     auto num = itr->second;
                     buf.push_back(num);
                 }
             }
+	    if(args.write_corpus) corpus_word<<"\n";
             buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
             buf.push_back(EOS_SYM);
         }
@@ -164,6 +173,7 @@ int main(int argc, const char* argv[])
             buf.push_back(EOS_SYM);
         }
         buf.push_back(EOF_SYM);
+	if(args.write_corpus) corpus_word.close();
         LOG(INFO) << "text size = " << buf.size();
         LOG(INFO) << "num_non_freq_syms = " << num_non_freq_syms;
         LOG(INFO) << "non freq percent = " << 100.0 * ( (double) num_non_freq_syms / (double) buf.size());
