@@ -34,7 +34,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
             args.collection_dir = optarg;
             break;
         case 'p':
-            args.collection_dir = optarg;
+            args.prefix_collection_dir = optarg;
             break;
         case 's':
             args.percent = std::atof(optarg);
