@@ -47,6 +47,14 @@ rm -r ../collections/unittest/
 ./build-index.x -c ../collections/unittest/ -m
 ./unit-test.x
 ```
+## Data, Parsed, Memory
+
+Language | RAW (GiB) | PARSED (GiB) | MemoryPeakIndexing (GiB) | MemoryPeakQuery (GiB) |
+---------|-----------|--------------|--------------------------|-----------------------|
+German   |   340     |   175        |                          |                       |
+French   |   294     |   162        |                          |                       |
+Spanish  |   398     |   220        |                          |                       |
+
 ## Comparison on Europarl German KenLM v.s. Accurate v.s Fishy ##
 Training raw size: 170MB
 
