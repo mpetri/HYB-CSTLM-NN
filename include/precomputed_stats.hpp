@@ -382,6 +382,15 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     //      <S> -- PAT_START_SYM    (4)
     //      UNK -- UNKNOWN_SYM      (3)
     //      and all others >= NUM_SPECIAL_SYMS (6)
+
+    // runtime, measured on Europarl DE
+    //      precomputing sentinels              0.562 secs
+    //      distance_to_sentinel               10.236 secs
+    //      interval_symbols                   18.791 secs
+    //      front matter (parent,depth,size)   56.126 secs
+    //      iteration (++it, children)         21.201 secs
+    //      incrementing count loop             2.564 secs
+    // overall                                115.008 secs
     
     uint64_t counter = 0; // counter = first symbol on child edge
     for (auto child: cst.children(cst.root())) {
@@ -389,8 +398,10 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
             // process the node
             // FIXME: this can be done more simply by incrementing counter
             //  whenever parent_depth == 0
+            // wierdly, it's faster this way
 
-            for (auto it = cst.begin(child); it != cst.end(child); ++it) {
+            auto end = cst.end(child);
+            for (auto it = cst.begin(child); it != end; ++it) {
                 if (it.visit() == 1) {
                     auto node = *it;
                     auto parent = cst.parent(node);
