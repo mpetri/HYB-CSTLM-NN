@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include "index_types.hpp"
 #include "logging.hpp"
+#include "mem_monitor.hpp"
 
 typedef struct cmdargs {
     std::string collection_dir;
@@ -68,20 +69,26 @@ void create_and_store(collection& col, bool use_mkn)
 
 int main(int argc, const char* argv[])
 {
+
     log::start_log(argc, argv);
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
+    mem_monitor m(args.collection_dir  + "/tmp/build-index-" + std::to_string(sdsl::util::pid()));
+
     /* parse collection directory */
     collection col(args.collection_dir);
     /* create indexes */
-    sdsl::memory_monitor::start();
     {
         using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
-    sdsl::memory_monitor::stop();
-    LOG(INFO) <<"MemoryPeak for buidling index_succinct =  " <<sdsl::memory_monitor::peak() << " bytes.";
+
+    auto stats = m.get_current_stats();
+    LOG(INFO) << "VmPeak = " << stats.VmPeak;
+    uint64_t text_size_bytes = sdsl::util::file_size(col.file_map[KEY_TEXT]);
+    LOG(INFO) << "Input bytes = " << text_size_bytes;
+    LOG(INFO) << "Ratio = " << (double) stats.VmPeak / (double) text_size_bytes;
     return 0;
 }
