@@ -35,16 +35,10 @@ public:
     index_succinct() = default;
     index_succinct(collection& col, bool is_mkn = false)
     {
-        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
-        if (!utils::file_exists(discounts_file)) {
-            lm_construct_timer timer("DISCOUNTS");
-            m_precomputed = precomputed_stats(col, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_precomputed, discounts_file);
-        } else {
-            sdsl::load_from_file(m_precomputed, discounts_file);
-        }
+        utils::lm_mem_monitor::event("BUILD_INDEX_SUCCINCT");
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
         if (!utils::file_exists(cst_file)) {
+            utils::lm_mem_monitor::event("BUILD_CST");
             lm_construct_timer timer("CST");
             sdsl::cache_config cfg;
             cfg.delete_files = false;
@@ -56,6 +50,14 @@ public:
             sdsl::store_to_file(m_cst, cst_file);
         } else {
             sdsl::load_from_file(m_cst, cst_file);
+        }
+        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
+        if (!utils::file_exists(discounts_file)) {
+            lm_construct_timer timer("DISCOUNTS");
+            m_precomputed = precomputed_stats(col,m_cst,t_max_ngram_count, is_mkn);
+            sdsl::store_to_file(m_precomputed, discounts_file);
+        } else {
+            sdsl::load_from_file(m_precomputed, discounts_file);
         }
         auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_n1plusfrontback) + ".sdsl";
         if (!utils::file_exists(precomputed_file)) {

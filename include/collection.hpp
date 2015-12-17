@@ -58,6 +58,7 @@ struct collection {
             }
         }
         if (file_map.count(KEY_SA) == 0) {
+            utils::lm_mem_monitor::event("BUILD_SA");
             lm_construct_timer timer(KEY_SA);
             sdsl::int_vector<> sa;
             sdsl::qsufsort::construct_sa(sa, file_map[KEY_TEXT].c_str(), 0);

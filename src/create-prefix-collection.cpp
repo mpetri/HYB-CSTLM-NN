@@ -60,7 +60,7 @@ int main(int argc, const char* argv[])
     collection col(args.collection_dir);
 
     {
-    	sdsl::read_only_mapper<0> text(col.file_map[KEY_TEXT]);
+    	sdsl::read_only_mapped_buffer<0> text(col.file_map[KEY_TEXT]);
     	uint64_t num_sentences = 0;
     	for(const auto& sym : text) {
     		if(sym == EOS_SYM) num_sentences++;

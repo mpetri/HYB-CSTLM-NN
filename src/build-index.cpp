@@ -4,7 +4,6 @@
 #include "utils.hpp"
 #include "index_types.hpp"
 #include "logging.hpp"
-#include "mem_monitor.hpp"
 
 typedef struct cmdargs {
     std::string collection_dir;
@@ -69,13 +68,13 @@ void create_and_store(collection& col, bool use_mkn)
 
 int main(int argc, const char* argv[])
 {
-
     log::start_log(argc, argv);
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
-    mem_monitor m(args.collection_dir  + "/tmp/build-index-" + std::to_string(sdsl::util::pid()));
+    auto mem_log_file = args.collection_dir  + "/tmp/build-index-" + std::to_string(sdsl::util::pid());
+    utils::lm_mem_monitor::start(mem_log_file);
 
     /* parse collection directory */
     collection col(args.collection_dir);
@@ -85,7 +84,7 @@ int main(int argc, const char* argv[])
         create_and_store<index_type>(col, args.use_mkn);
     }
 
-    auto stats = m.get_current_stats();
+    auto stats = utils::lm_mem_monitor::stats();
     LOG(INFO) << "VmPeak = " << stats.VmPeak;
     uint64_t text_size_bytes = sdsl::util::file_size(col.file_map[KEY_TEXT]);
     LOG(INFO) << "Input bytes = " << text_size_bytes;

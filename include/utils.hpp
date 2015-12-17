@@ -12,6 +12,7 @@
 
 #include "logging.hpp"
 #include "timings.hpp"
+#include "mem_monitor.hpp"
 
 namespace utils {
 
@@ -43,4 +44,28 @@ void create_directory(std::string dir)
         }
     }
 }
+
+struct lm_mem_monitor {
+    static void start(std::string file) {
+        auto& m = instance(file);
+        m.event("START");
+    }
+
+    static mem_monitor& instance(std::string file = "") {
+        static mem_monitor m(file);
+        return m;
+    }
+
+    static void event(const std::string& ev) {
+        auto& m = instance();
+        m.event(ev);
+    }
+
+    static mem_stat stats() {
+        auto& m = instance();
+        return m.get_current_stats();
+    }
+};
+
+
 }
