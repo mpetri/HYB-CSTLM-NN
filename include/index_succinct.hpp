@@ -339,6 +339,57 @@ public:
         return N1plus_front;
     }
 
+    void N123PlusFrontPrime(const node_type& node,
+                             pattern_iterator pattern_begin, pattern_iterator pattern_end,
+                             uint64_t& f1prime, uint64_t& f2prime, uint64_t& f3pprime) const
+    {
+        auto timer = lm_bench::bench(timer_type::N123PlusFrontPrime);
+        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
+        bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
+        f1prime = f2prime = f3pprime = 0;
+        uint64_t all = 0;
+        if (full_match) {
+	    m_n1plusfrontback.lookup_f123pprime(m_cst, node, f1prime, f2prime, f3pprime);//FIXME change the name n1plusfrontback
+	    /*
+            // pattern matches the edge label
+            auto child = m_cst.select_child(node, 1);
+	    all =
+            while (child != m_cst.root()) {
+                auto lb = m_cst.lb(child);
+                auto rb = m_cst.rb(child);
+
+                static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+                static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+                static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+                typename t_cst::csa_type::size_type num_syms = 0;
+                sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                if (num_syms == 1)
+                    n1++;
+                if (num_syms == 2)
+                    n2++;
+                all++;
+                child = m_cst.sibling(child);
+            }*/
+        } else {
+            //FIXME this can be replaced ny N1PlusBack of this node?
+            // pattern is part of the edge label
+            auto lb = m_cst.lb(node);
+            auto rb = m_cst.rb(node);
+            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+            typename t_cst::csa_type::size_type num_syms = 0;
+            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+            if (num_syms == 1)
+                f1prime++;
+            if (num_syms == 2)
+                f2prime++;
+            all++;
+            f3pprime = all - f1prime - f2prime;
+        }
+    }
+
+
     // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of MKN
     void N123PlusFront_lower(const node_type& node,
                              pattern_iterator pattern_begin, pattern_iterator pattern_end,

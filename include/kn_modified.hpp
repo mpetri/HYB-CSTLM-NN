@@ -96,7 +96,8 @@ double prob_mod_kneser_ney(const t_idx& idx,
             n3p = (idx.vocab_size() - 2) - (n1 + n2);
         } else {
 	    if(!isfishy) 
-            	idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p); //accurate version
+            	//idx.N123PlusFront_lower(node_excl, start, pattern_end - 1, n1, n2, n3p); //accurate version
+		idx.N123PlusFrontPrime(node_excl, start, pattern_end - 1, n1, n2, n3p); 
 	    else
              	idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);//FishyVersion}
             //idx.N123PlusFrontBack_from_forward(node_excl, start, pattern_end - 1, n1, n2, n3p);//XXX Do not use this.
