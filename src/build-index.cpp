@@ -73,7 +73,7 @@ int main(int argc, const char* argv[])
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
-    auto mem_log_file = args.collection_dir  + "/tmp/build-index-" + std::to_string(sdsl::util::pid());
+    auto mem_log_file = args.collection_dir  + "/mem-log-build-index-" + std::to_string(sdsl::util::pid());
     utils::lm_mem_monitor::start(mem_log_file);
 
     /* parse collection directory */

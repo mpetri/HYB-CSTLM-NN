@@ -65,7 +65,9 @@ int main(int argc, const char* argv[])
     	for(const auto& sym : text) {
     		if(sym == EOS_SYM) num_sentences++;
     	}
-    	auto new_num_sentences = num_sentences * args.percent;
+        LOG(INFO) << "num sentences = " << num_sentences;
+    	uint64_t new_num_sentences = num_sentences * args.percent;
+        LOG(INFO) << "prefix sentences = " << new_num_sentences;
 
 	    /* create collection dir */
 	    utils::create_directory(args.prefix_collection_dir);
@@ -75,7 +77,10 @@ int main(int argc, const char* argv[])
 
     	uint64_t processed_sentences = 0;
     	for(const auto& sym : text) {
-    		if(sym == EOS_SYM) processed_sentences++;
+    		if(sym == EOS_SYM) {
+                processed_sentences++;
+                if(processed_sentences % 100000 == 0) LOG(INFO) << "Processed sentences = " << processed_sentences;
+            }
     		new_text.push_back(sym);
     		if(processed_sentences == new_num_sentences) {
     			break;

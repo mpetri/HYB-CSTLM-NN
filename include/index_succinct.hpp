@@ -62,7 +62,7 @@ public:
         auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_n1plusfrontback) + ".sdsl";
         if (!utils::file_exists(precomputed_file)) {
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
-            m_n1plusfrontback = compressed_counts<>(m_cst, t_max_ngram_count, is_mkn);
+            m_n1plusfrontback = compressed_counts<>(col,m_cst, t_max_ngram_count, is_mkn);
             sdsl::store_to_file(m_n1plusfrontback, precomputed_file);
         } else {
             sdsl::load_from_file(m_n1plusfrontback, precomputed_file);

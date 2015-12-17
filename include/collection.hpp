@@ -67,4 +67,8 @@ struct collection {
             file_map[KEY_SA] = sa_path;
         }
     }
+
+    std::string temp_file(std::string id) {
+        return path + "/tmp/" + id + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
+    }
 };

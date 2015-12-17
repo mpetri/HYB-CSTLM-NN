@@ -1,6 +1,7 @@
 [submodule "external/sdsl-lite"]
 	path = external/sdsl-lite
-	url = https://github.com/simongog/sdsl-lite.git
+	url = https://github.com/mpetri/sdsl-lite.git
+	branch = mapped_buffer_branch
 [submodule "external/googletest"]
 	path = external/googletest
 	url = https://chromium.googlesource.com/external/googletest
