@@ -10,4 +10,4 @@
 	url = https://github.com/easylogging/easyloggingpp.git
 [submodule "external/mem_monitor"]
 	path = external/mem_monitor
-	url = git@github.com:mpetri/mem_monitor.git
+	url = https://github.com/mpetri/mem_monitor.git 

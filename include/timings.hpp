@@ -33,6 +33,7 @@ enum class timer_type {
     N123PlusFront,
     N1PlusFrontBack,
     N123PlusFrontBack,
+    N123PlusFrontPrime,
     forward_search,
     backward_search,
     highestorder,
@@ -58,6 +59,8 @@ timer_type_to_str(int type)
         return "N1PlusFrontBack";
     case timer_type::N123PlusFrontBack:
         return "N123PlusFrontBack";
+    case timer_type::N123PlusFrontPrime:
+        return "N123PlusFrontPrime";
     case timer_type::forward_search:
         return "forward_search";
     case timer_type::backward_search:
