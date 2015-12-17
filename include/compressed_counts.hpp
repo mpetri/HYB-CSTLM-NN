@@ -7,6 +7,7 @@
 #include "constants.hpp"
 #include "collection.hpp"
 #include "logging.hpp"
+#include "utils.hpp"
 
 template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::dac_vector<> >
 struct compressed_counts {
@@ -88,6 +89,7 @@ public:
     template <class t_cst>
     compressed_counts(t_cst& cst, uint64_t max_node_depth, bool mkn_counts)
     {
+        utils::lm_mem_monitor::event("compressed_counts");
         m_is_mkn = mkn_counts;
         if (!mkn_counts)
             initialise_kneser_ney(cst, max_node_depth);

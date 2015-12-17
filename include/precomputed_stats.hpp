@@ -2,11 +2,10 @@
 
 #include "constants.hpp"
 #include "collection.hpp"
+#include "utils.hpp"
 
 #include "sdsl/int_vector_mapper.hpp"
-
-template <uint8_t t_width = 0>
-using read_only_mapper = const sdsl::int_vector_mapper<t_width, std::ios_base::in>;
+#include "sdsl/int_vector_mapped_buffer.hpp"
 
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
@@ -38,7 +37,59 @@ struct precomputed_stats {
 
     precomputed_stats() = default;
 
-    precomputed_stats(collection& col, uint64_t max_ngram_len, bool is_mkn = false);
+
+    template<class t_cst>
+    precomputed_stats(collection& col,t_cst& cst,uint64_t max_ngram_len, bool)
+        : max_ngram_count(max_ngram_len)
+        , N1plus_dotdot(0)
+        , N3plus_dot(0)
+        , N1_dot(0)
+        , N2_dot(0)
+
+    {
+        utils::lm_mem_monitor::event("precomputed_stats");
+
+        auto size = max_ngram_count + 1;
+        n1.resize(size);
+        n2.resize(size);
+        n3.resize(size);
+        n4.resize(size);
+        Y.resize(size);
+        Y_cnt.resize(size);
+        D1.resize(size);
+        D2.resize(size);
+        D3.resize(size);
+        n1_cnt.resize(size);
+        n2_cnt.resize(size);
+        n3_cnt.resize(size);
+        n4_cnt.resize(size);
+        D1_cnt.resize(size);
+        D2_cnt.resize(size);
+        D3_cnt.resize(size);
+
+        // compute the counts & continuation counts from the CST (reversed)
+        ncomputer(col, cst);
+
+        for (auto size = 1ULL; size <= max_ngram_len; size++) {
+            Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
+            if (n1[size] != 0)
+                D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
+            if (n2[size] != 0)
+                D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
+            if (n3[size] != 0)
+                D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
+        }
+
+        for (auto size = 1ULL; size <= max_ngram_len; size++) {
+            Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
+            if (n1_cnt[size] != 0)
+                D1_cnt[size] = 1 - 2 * Y_cnt[size] * (double)n2_cnt[size] / n1_cnt[size];
+            if (n2_cnt[size] != 0)
+                D2_cnt[size] = 2 - 3 * Y_cnt[size] * (double)n3_cnt[size] / n2_cnt[size];
+            if (n3_cnt[size] != 0)
+                D3_cnt[size] = 3 - 4 * Y_cnt[size] * (double)n4_cnt[size] / n3_cnt[size];
+        }
+    }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
@@ -163,7 +214,7 @@ private:
 
     template <class t_cst>
     typename t_cst::size_type
-    distance_to_sentinel(read_only_mapper<>& SA,
+    distance_to_sentinel(sdsl::read_only_mapped_buffer<>& SA,
                          t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
                          const t_cst& cst, const typename t_cst::node_type& node,
                          const typename t_cst::size_type& offset) const
@@ -179,87 +230,6 @@ private:
     }
 };
 
-precomputed_stats::precomputed_stats(collection& col, uint64_t max_ngram_len, bool)
-    : max_ngram_count(max_ngram_len)
-    , N1plus_dotdot(0)
-    , N3plus_dot(0)
-    , N1_dot(0)
-    , N2_dot(0)
-
-{
-    using csa_type = sdsl::csa_wt_int<>;
-    using cst_type = sdsl::cst_sct3<csa_type>;
-    /* create the reverse CST here as this is the only place we still need it */
-    {
-        /* create stuff we are missing */
-        if (col.file_map.count(KEY_SA) == 0) {
-            lm_construct_timer timer(KEY_SA);
-            sdsl::int_vector<> sa;
-            sdsl::qsufsort::construct_sa(sa, col.file_map[KEY_TEXT].c_str(), 0);
-            auto sa_path = col.path + "/" + KEY_PREFIX + KEY_SA;
-            sdsl::store_to_file(sa, sa_path);
-            col.file_map[KEY_SA] = sa_path;
-        }
-    }
-    cst_type cst;
-    {
-        auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(cst) + ".sdsl";
-        if (!utils::file_exists(cst_file)) {
-            lm_construct_timer timer("CST");
-            sdsl::cache_config cfg;
-            cfg.delete_files = false;
-            cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMP";
-            cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
-            cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
-            construct(cst, col.file_map[KEY_TEXT], cfg, 0);
-            sdsl::store_to_file(cst, cst_file);
-        } else {
-            sdsl::load_from_file(cst, cst_file);
-        }
-    }
-
-    auto size = max_ngram_count + 1;
-    n1.resize(size);
-    n2.resize(size);
-    n3.resize(size);
-    n4.resize(size);
-    Y.resize(size);
-    Y_cnt.resize(size);
-    D1.resize(size);
-    D2.resize(size);
-    D3.resize(size);
-    n1_cnt.resize(size);
-    n2_cnt.resize(size);
-    n3_cnt.resize(size);
-    n4_cnt.resize(size);
-    D1_cnt.resize(size);
-    D2_cnt.resize(size);
-    D3_cnt.resize(size);
-
-    // compute the counts & continuation counts from the CST (reversed)
-    ncomputer(col, cst);
-
-    for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        Y[size] = n1[size] / (n1[size] + 2 * n2[size]);
-        if (n1[size] != 0)
-            D1[size] = 1 - 2 * Y[size] * (double)n2[size] / n1[size];
-        if (n2[size] != 0)
-            D2[size] = 2 - 3 * Y[size] * (double)n3[size] / n2[size];
-        if (n3[size] != 0)
-            D3[size] = 3 - 4 * Y[size] * (double)n4[size] / n3[size];
-    }
-
-    for (auto size = 1ULL; size <= max_ngram_len; size++) {
-        Y_cnt[size] = (double)n1_cnt[size] / (n1_cnt[size] + 2 * n2_cnt[size]);
-        if (n1_cnt[size] != 0)
-            D1_cnt[size] = 1 - 2 * Y_cnt[size] * (double)n2_cnt[size] / n1_cnt[size];
-        if (n2_cnt[size] != 0)
-            D2_cnt[size] = 2 - 3 * Y_cnt[size] * (double)n3_cnt[size] / n2_cnt[size];
-        if (n3_cnt[size] != 0)
-            D3_cnt[size] = 3 - 4 * Y_cnt[size] * (double)n4_cnt[size] / n3_cnt[size];
-    }
-}
 
 #if 0
 // naive, sloooowwwwww version 
@@ -359,16 +329,16 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
-    /* load SAREV to speed up edge call */
-    read_only_mapper<> SA(col.file_map[KEY_SA]);
-
     // load up reversed text and store in a bitvector for locating sentinel symbols
-    read_only_mapper<> TEXT(col.file_map[KEY_TEXT]);
-    sdsl::bit_vector sentinel_bv(TEXT.size());
-    for (uint64_t i = 0; i < TEXT.size(); ++i) {
-        auto symbol = TEXT[i];
-        if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM && symbol != PAT_START_SYM)
-            sentinel_bv[i] = 1;
+    sdsl::bit_vector sentinel_bv;
+    {
+        sdsl::read_only_mapped_buffer<> TEXT(col.file_map[KEY_TEXT]);
+        sentinel_bv.resize(TEXT.size());
+        for (uint64_t i = 0; i < TEXT.size(); ++i) {
+            auto symbol = TEXT[i];
+            if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM && symbol != PAT_START_SYM)
+                sentinel_bv[i] = 1;
+        }
     }
     t_rank_bv sentinel_rank(&sentinel_bv);
     t_select_bv sentinel_select(&sentinel_bv);
@@ -378,10 +348,22 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
     uint64_t num_syms;
 
+    /* load SA to speed up edge call */
+    sdsl::read_only_mapped_buffer<> SA(col.file_map[KEY_SA]);
+
     // need to visit subtree corresponding to:
     //      <S> -- PAT_START_SYM    (4)
     //      UNK -- UNKNOWN_SYM      (3)
     //      and all others >= NUM_SPECIAL_SYMS (6)
+
+    // runtime, measured on Europarl DE
+    //      precomputing sentinels              0.562 secs
+    //      distance_to_sentinel               10.236 secs
+    //      interval_symbols                   18.791 secs
+    //      front matter (parent,depth,size)   56.126 secs
+    //      iteration (++it, children)         21.201 secs
+    //      incrementing count loop             2.564 secs
+    // overall                                115.008 secs
     
     uint64_t counter = 0; // counter = first symbol on child edge
     for (auto child: cst.children(cst.root())) {
@@ -389,8 +371,10 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
             // process the node
             // FIXME: this can be done more simply by incrementing counter
             //  whenever parent_depth == 0
+            // wierdly, it's faster this way
 
-            for (auto it = cst.begin(child); it != cst.end(child); ++it) {
+            auto end = cst.end(child);
+            for (auto it = cst.begin(child); it != end; ++it) {
                 if (it.visit() == 1) {
                     auto node = *it;
                     auto parent = cst.parent(node);
