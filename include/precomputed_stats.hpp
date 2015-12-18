@@ -47,8 +47,6 @@ struct precomputed_stats {
         , N2_dot(0)
 
     {
-        utils::lm_mem_monitor::event("precomputed_stats");
-
         auto size = max_ngram_count + 1;
         n1.resize(size);
         n2.resize(size);
