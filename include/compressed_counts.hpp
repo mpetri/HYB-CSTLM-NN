@@ -52,7 +52,6 @@ public:
     }
     compressed_counts(compressed_counts&& cc)
     {
-        utils::lm_mem_monitor::event("compressed_counts(compressed_counts&& cc)");
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
@@ -70,7 +69,6 @@ public:
     }
     compressed_counts& operator=(compressed_counts&& cc)
     {
-        utils::lm_mem_monitor::event("operator=(compressed_counts");
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
@@ -92,7 +90,6 @@ public:
     compressed_counts(collection& col, t_cst& cst, uint64_t max_node_depth,
                       bool mkn_counts)
     {
-        utils::lm_mem_monitor::event("compressed_counts");
         m_is_mkn = mkn_counts;
         if (!mkn_counts)
             initialise_kneser_ney(col, cst, max_node_depth);
