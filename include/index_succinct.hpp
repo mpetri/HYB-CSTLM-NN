@@ -35,10 +35,8 @@ public:
     index_succinct() = default;
     index_succinct(collection& col, bool is_mkn = false)
     {
-        utils::lm_mem_monitor::event("BUILD_INDEX_SUCCINCT");
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
         if (!utils::file_exists(cst_file)) {
-            utils::lm_mem_monitor::event("BUILD_CST");
             lm_construct_timer timer("CST");
             sdsl::cache_config cfg;
             cfg.delete_files = false;

@@ -41,9 +41,9 @@ public:
 //        m_counts_fb1 = cc.m_counts_fb1;
 //        m_counts_fb2 = cc.m_counts_fb2;
 
-    m_counts_f1prime = cc.m_counts_f1prime;
-    m_counts_f2prime = cc.m_counts_f2prime;
-    m_counts_f3pprime = cc.m_counts_f3pprime;
+	m_counts_f1prime = cc.m_counts_f1prime;
+	m_counts_f2prime = cc.m_counts_f2prime;
+	m_counts_f3pprime = cc.m_counts_f3pprime;
 
         m_counts_b = cc.m_counts_b;
         m_counts_f1 = cc.m_counts_f1;
@@ -52,13 +52,14 @@ public:
     }
     compressed_counts(compressed_counts&& cc)
     {
+        utils::lm_mem_monitor::event("compressed_counts(compressed_counts&& cc)");
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
 //        m_counts_fb1 = std::move(cc.m_counts_fb1);
 //        m_counts_fb2 = std::move(cc.m_counts_fb2);
 
-    m_counts_f1prime = std::move(cc.m_counts_f1prime);
+	m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
         m_counts_f3pprime = std::move(cc.m_counts_f3pprime);
 
@@ -69,6 +70,7 @@ public:
     }
     compressed_counts& operator=(compressed_counts&& cc)
     {
+        utils::lm_mem_monitor::event("operator=(compressed_counts");
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
@@ -134,9 +136,9 @@ public:
     {
         f1prime = 0;
         f2prime = 0;
-    f3pprime = 0;
+	f3pprime = 0;
         uint64_t all = 0;
-    auto child = cst.select_child(node, 1);
+	auto child = cst.select_child(node, 1);
          while (child != cst.root()) {
              auto lb = cst.lb(child);
              auto rb = cst.rb(child);
@@ -153,10 +155,10 @@ public:
              all++;
              child = cst.sibling(child);
         }
-    f3pprime = all - f1prime - f2prime;
-    
+	f3pprime = all - f1prime - f2prime;
+	
 
-    /* computes fb */
+	/* computes fb */
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
 
@@ -191,8 +193,8 @@ public:
     void initialise_kneser_ney(collection& col,t_cst& cst, uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
-        auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
+        auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
+        auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
         uint64_t num_syms = 0;
 
         auto root = cst.root();
@@ -208,7 +210,6 @@ public:
                     auto str_depth = cst.depth(node);
                     if (str_depth <= max_node_depth) {
                         tmp_bv[node_id] = 1;
-
                         auto c = compute_contexts(cst, node, num_syms);
                         tmp_buffer_counts_fb.push_back(c);
                         tmp_buffer_counts_b.push_back(num_syms);
@@ -237,132 +238,107 @@ public:
     template <class t_cst>
     void initialise_modified_kneser_ney(collection& col,t_cst& cst, uint64_t max_node_depth)
     {
-        sdsl::bit_vector tmp_bv(cst.nodes());
-        auto tmp_buffer_counts_f1 = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_f2 = sdsl::temp_file_buffer<32>::create();
-        //std::vector<std::pair<uint64_t, uint64_t>> stack;
-        std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
+        {
+            utils::lm_mem_monitor::event("compressed_counts_pass_one");
+            sdsl::bit_vector tmp_bv(cst.nodes());
+            auto tmp_buffer_counts_f1 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1"));
+            auto tmp_buffer_counts_f2 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2"));
+            auto root = cst.root();
+            for (const auto& child : cst.children(root)) {
+                auto itr = cst.begin(child);
+                auto end = cst.end(child);
 
-        //LOG(INFO) << "initialise_modified_kneser_ney: pass 1";
+                std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
+                while (itr != end) {
+                    auto node = *itr;
+                    auto depth = cst.node_depth(node);
 
-        // pass 1: initialise f1 and f2 counts
-        // uint32_t last_node_depth = 0;
-        auto root = cst.root();
-        for (const auto& child : cst.children(root)) {
-            auto itr = cst.begin(child);
-            auto end = cst.end(child);
+                    if (itr.visit() == 2) {
+                        auto node_id = cst.id(node);
 
-            while (itr != end) {
-                auto node = *itr;
-                auto depth = cst.node_depth(node);
+                        auto str_depth = cst.depth(node);
+                        if (str_depth <= max_node_depth) {
+                            tmp_bv[node_id] = 1;
+                            auto& f12 = child_hist[node_id];
+                            assert(cst.degree(node) >= f12.first + f12.second);
+                            tmp_buffer_counts_f1.push_back(f12.first);
+                            tmp_buffer_counts_f2.push_back(f12.second);
+                        }
+                        child_hist.erase(node_id);
+                    } else {
+                        /* first visit */
+                        if (!cst.is_leaf(node)) {
+                            if (depth > max_node_depth) {
+                                itr.skip_subtree();
+                            }
+                        }
+                        int count = cst.size(node);
+                        auto parent_id = cst.id(cst.parent(node));
+                        if (count == 1)
+                            child_hist[parent_id].first += 1;
+                        else if (count == 2)
+                            child_hist[parent_id].second += 1;
 
-                if (itr.visit() == 2) {
-                    auto node_id = cst.id(node);
-
-                    auto str_depth = cst.depth(node);
-                    if (str_depth <= max_node_depth) {
-                        tmp_bv[node_id] = 1;
-                        //auto &f12 = stack.back();
-                        auto& f12 = child_hist[node_id];
-                        assert(cst.degree(node) >= f12.first + f12.second);
-
-                        tmp_buffer_counts_f1.push_back(f12.first);
-                        tmp_buffer_counts_f2.push_back(f12.second);
-
-                        //{
-                        //std::vector<uint64_t> edge;
-                        //for (uint64_t i = 1; i <= cst.depth(node); ++i)
-                        //edge.push_back(cst.edge(node, i));
-                        //LOG(INFO) << "storing for node labelled " << edge << " with degree " << cst.degree(node) << " child counts " << f12;
-                        //}
                     }
-                    //stack.pop_back();
-                    child_hist.erase(node_id);
-                } else {
-                    /* first visit */
-                    if (!cst.is_leaf(node)) {
-                        if (depth > max_node_depth) {
-                            itr.skip_subtree();
+                    ++itr;
+                    // last_node_depth = depth;
+                }
+            }
+            // store into compressed in-memory data structures
+            utils::lm_mem_monitor::event("compressed_counts_pass_one_compress");
+            m_bv = bv_type(tmp_bv); tmp_bv.resize(0);
+            m_bv_rank.set_vector(&m_bv);
+            m_counts_f1 = vector_type(tmp_buffer_counts_f1); 
+            m_counts_f2 = vector_type(tmp_buffer_counts_f2); 
+            utils::lm_mem_monitor::event("compressed_counts_done!");
+            LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
+        }
+        // pass 2: compute front-back (fb, fb1, fb2), back (b) and front (f1, f2) counts
+        {
+            utils::lm_mem_monitor::event("compressed_counts_pass_two");
+            auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
+            auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
+            auto tmp_buffer_counts_f1prime  = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1p"));
+            auto tmp_buffer_counts_f2prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2p"));
+            auto tmp_buffer_counts_f3pprime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f3p"));
+            uint64_t num_syms = 0;
+            uint64_t f1prime = 0, f2prime = 0, f3pprime=0;
+            auto root = cst.root();
+            for (const auto& child : cst.children(root)) {
+                auto itr = cst.begin(child);
+                auto end = cst.end(child);
+                while (itr != end) {
+                    auto node = *itr;
+                    if (itr.visit() == 2) {
+                        auto str_depth = cst.depth(node);
+                        if (str_depth <= max_node_depth) {
+                            auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime, f3pprime);
+                            tmp_buffer_counts_fb.push_back(c);
+                            tmp_buffer_counts_b.push_back(num_syms);
+                            tmp_buffer_counts_f1prime.push_back(f1prime);
+                            tmp_buffer_counts_f2prime.push_back(f2prime);
+                            tmp_buffer_counts_f3pprime.push_back(f3pprime);
+                        }
+                    } else {
+                        /* first visit */
+                        if (!cst.is_leaf(node)) {
+                            auto depth = cst.depth(node);
+                            if (depth > max_node_depth) {
+                                itr.skip_subtree();
+                            }
                         }
                     }
-
-                    int count = cst.size(node);
-                    //if (depth > last_node_depth)
-                    //    stack.push_back(std::make_pair(0ul, 0ul));
-                    //auto &cs = stack.back();
-                    auto parent_id = cst.id(cst.parent(node));
-                    if (count == 1)
-                        child_hist[parent_id].first += 1;
-                    else if (count == 2)
-                        child_hist[parent_id].second += 1;
+                    ++itr;
                 }
-                ++itr;
-                // last_node_depth = depth;
             }
+            utils::lm_mem_monitor::event("compressed_counts_pass_two_compress");
+            m_counts_fb = vector_type(tmp_buffer_counts_fb); 
+            m_counts_b = vector_type(tmp_buffer_counts_b); 
+            m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
+            m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
+            m_counts_f3pprime = vector_type(tmp_buffer_counts_f3pprime);
+            utils::lm_mem_monitor::event("compressed_counts_pass_two_compress_done");
         }
-        // store into compressed in-memory data structures
-        m_counts_f1 = vector_type(tmp_buffer_counts_f1);
-        m_counts_f2 = vector_type(tmp_buffer_counts_f2);
-        m_bv = bv_type(tmp_bv);
-        m_bv_rank.set_vector(&m_bv);
-
-        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
-        //LOG(INFO) << "initialise_modified_kneser_ney: pass 2";
-
-        // pass 2: compute front-back (fb, f1prime, f2prime, f3pprime), back (b) and front (f1, f2) counts
-        auto tmp_buffer_counts_fb = sdsl::temp_file_buffer<32>::create();
-        //auto tmp_buffer_counts_fb1 = sdsl::temp_file_buffer<32>::create();
-        //auto tmp_buffer_counts_fb2 = sdsl::temp_file_buffer<32>::create();
-    auto tmp_buffer_counts_f1prime = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_f2prime = sdsl::temp_file_buffer<32>::create();
-        auto tmp_buffer_counts_f3pprime = sdsl::temp_file_buffer<32>::create();
-
-        auto tmp_buffer_counts_b = sdsl::temp_file_buffer<32>::create();
-        uint64_t num_syms = 0;
-        
-        uint64_t f1prime = 0, f2prime = 0, f3pprime=0;
-
-        for (const auto& child : cst.children(root)) {
-            auto itr = cst.begin(child);
-            auto end = cst.end(child);
-
-            while (itr != end) {
-                auto node = *itr;
-                if (itr.visit() == 2) {
-                    auto str_depth = cst.depth(node);
-                    if (str_depth <= max_node_depth) {
-                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime, f3pprime);
-                        tmp_buffer_counts_fb.push_back(c);
-
-                        tmp_buffer_counts_f1prime.push_back(f1prime);
-                        tmp_buffer_counts_f2prime.push_back(f2prime);
-            tmp_buffer_counts_f3pprime.push_back(f3pprime);
-
-                        tmp_buffer_counts_b.push_back(num_syms);
-                    }
-                } else {
-                    /* first visit */
-                    if (!cst.is_leaf(node)) {
-                        auto depth = cst.depth(node);
-                        if (depth > max_node_depth) {
-                            itr.skip_subtree();
-                        }
-                    }
-                }
-                ++itr;
-            }
-        }
-        // compress the count structures into in-memory structures
-        m_counts_b = vector_type(tmp_buffer_counts_b);
-        m_counts_fb = vector_type(tmp_buffer_counts_fb);
-
-    m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
-        m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
-        m_counts_f3pprime = vector_type(tmp_buffer_counts_f3pprime);
-
-        //m_counts_fb1 = vector_type(tmp_buffer_counts_fb1);
-        //m_counts_fb2 = vector_type(tmp_buffer_counts_fb2);
-        //LOG(INFO) << "initialise_modified_kneser_ney: done";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -374,18 +350,29 @@ public:
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_bv_rank, out, child, "bv_rank");
         written_bytes += sdsl::serialize(m_counts_fb, out, child, "counts_fb");
-//        written_bytes += sdsl::serialize(m_counts_fb1, out, child, "counts_fb1");
-//        written_bytes += sdsl::serialize(m_counts_fb2, out, child, "counts_fb2");
-
-        written_bytes += sdsl::serialize(m_counts_f1prime, out, child, "counts_f1prime");
-        written_bytes += sdsl::serialize(m_counts_f2prime, out, child, "counts_f2prime");
-        written_bytes += sdsl::serialize(m_counts_f3pprime, out, child, "counts_f3pprime");
-
         written_bytes += sdsl::serialize(m_counts_b, out, child, "counts_b");
         written_bytes += sdsl::serialize(m_counts_f1, out, child, "counts_f1");
         written_bytes += sdsl::serialize(m_counts_f2, out, child, "counts_f2");
+        written_bytes += sdsl::serialize(m_counts_f1prime, out, child, "counts_f1p");
+        written_bytes += sdsl::serialize(m_counts_f2prime, out, child, "counts_f2p");
+        written_bytes += sdsl::serialize(m_counts_f3pprime, out, child, "counts_f3p");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
+    }
+
+
+    void load(std::istream& in)
+    {
+        sdsl::load(m_bv, in);
+        m_bv_rank.load(in, &m_bv);
+        sdsl::load(m_counts_fb, in);
+        sdsl::load(m_counts_b, in);
+        sdsl::load(m_counts_f1, in);
+        sdsl::load(m_counts_f2, in);
+        sdsl::load(m_counts_f1prime, in);
+        sdsl::load(m_counts_f2prime, in);
+        sdsl::load(m_counts_f3pprime, in);
+        m_is_mkn = (m_counts_f1.size() > 0);
     }
 
     // FIXME: could do this a bit more efficiently, without decompressing m_bv
@@ -426,20 +413,6 @@ public:
         f3pprime = m_counts_f3pprime[rank_in_vec];
     }
 
-/*
-    template <class t_cst, class t_node_type>
-    void lookup_fb123p(t_cst& cst, t_node_type node, uint64_t& fb1, uint64_t& fb2, uint64_t& fb3p) const
-    {
-        assert(m_is_mkn);
-        auto id = cst.id(node);
-        auto rank_in_vec = m_bv_rank(id);
-        auto fb = m_counts_fb[rank_in_vec];
-        fb1 = m_counts_fb1[rank_in_vec];
-        fb2 = m_counts_fb2[rank_in_vec];
-        assert(fb >= fb1 + fb2);
-        fb3p = fb - fb1 - fb2;
-    }
-*/
     template <class t_cst, class t_node_type>
     uint64_t lookup_b(t_cst& cst, t_node_type node) const
     {
@@ -448,23 +421,4 @@ public:
         return m_counts_b[rank_in_vec];
     }
 
-    void load(std::istream& in)
-    {
-        sdsl::load(m_bv, in);
-        m_bv_rank.load(in, &m_bv);
-        sdsl::load(m_counts_fb, in);
-//        sdsl::load(m_counts_fb1, in);
-//        sdsl::load(m_counts_fb2, in);
-
-    sdsl::load(m_counts_f1prime, in);
-    sdsl::load(m_counts_f2prime, in);
-    sdsl::load(m_counts_f3pprime, in);
-
-        sdsl::load(m_counts_b, in);
-        sdsl::load(m_counts_f1, in);
-        sdsl::load(m_counts_f2, in);
-        m_is_mkn = (m_counts_f1.size() > 0);
-    }
 };
-
-

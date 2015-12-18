@@ -14,7 +14,7 @@ private:
 public:
     vocab_uncompressed() = default;
     vocab_uncompressed(collection& col)
-    {
+    {        
         auto vocab_file = col.file_map[KEY_VOCAB];
         std::ifstream vfs(vocab_file);
         std::string line;

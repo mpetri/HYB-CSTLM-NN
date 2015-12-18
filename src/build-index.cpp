@@ -49,6 +49,7 @@ void create_and_store(collection& col, bool use_mkn)
     auto start = clock::now();
     t_idx idx(col, use_mkn);
     auto stop = clock::now();
+    utils::lm_mem_monitor::event("construction done");
     LOG(INFO) << "index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
                  / 1000.0f;
@@ -56,11 +57,9 @@ void create_and_store(collection& col, bool use_mkn)
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {
         LOG(INFO) << "writing index to file : " << output_file;
+        utils::lm_mem_monitor::event("store to file");
         auto bytes = sdsl::serialize(idx, ofs);
         LOG(INFO) << "index size : " << bytes / (1024 * 1024) << " MB";
-        LOG(INFO) << "writing space usage visualization to file : " << output_file + ".html";
-        std::ofstream vofs(output_file + ".html");
-        sdsl::write_structure<sdsl::HTML_FORMAT>(vofs, idx);
     } else {
         LOG(FATAL) << "cannot write index to file : " << output_file;
     }
@@ -83,6 +82,7 @@ int main(int argc, const char* argv[])
         using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
+    utils::lm_mem_monitor::event("done all");
 
     auto stats = utils::lm_mem_monitor::stats();
     LOG(INFO) << "VmPeak = " << stats.VmPeak;

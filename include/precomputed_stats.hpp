@@ -230,101 +230,6 @@ private:
     }
 };
 
-
-#if 0
-// naive, sloooowwwwww version 
-template <class t_cst>
-void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
-{
-    std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
-    std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-    std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
-    uint64_t num_syms;
-
-    for (auto it = cst.begin(); it != cst.end(); ++it) {
-        if (it.visit() == 1) {
-            auto node = *it;
-            auto parent = cst.parent(node);
-            // root node
-            if (node == parent) continue;
-            auto start = cst.edge(node, 1);
-            // sentinel subtrees
-            if (start == EOF_SYM || start == EOS_SYM) {
-                it.skip_subtree();
-                continue;
-            }
-            auto parent_depth = cst.depth(parent);
-            auto depth = cst.depth(node);
-            auto freq = cst.size(node);
-            auto max_n = std::min(max_ngram_count, depth);
-
-            // update continuation counts -- FIXME: this can be done at the root level, i.e., 
-            // only update for top level children (with parent_depth == 0)
-            uint64_t n1plus_back = 0ULL;
-            if (start == PAT_START_SYM)
-                // special case where the pattern starts with <s>: actual count is used
-                n1plus_back = freq;
-            else { 
-                // no need to adjust for EOS symbol, as this only happens when start = <S>
-                auto lb = cst.lb(node);
-                auto rb = cst.rb(node);
-                num_syms = 0;
-                sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-                n1plus_back = num_syms;
-            } 
-
-            for (auto n = parent_depth + 1; n <= std::min(max_ngram_count, depth); ++n) {
-                auto symbol = cst.edge(node, n);
-                if (symbol == EOS_SYM || symbol == EOF_SYM) {
-                    max_n = n-1;
-                    it.skip_subtree();
-                    break;
-                }
-
-                // update frequency counts
-                switch (freq) {
-                    case 1:
-                        n1[n] += 1;
-                        if (n == 1) N1_dot++;
-                        break;
-                    case 2:
-                        n2[n] += 1;
-                        if (n == 1) N2_dot++;
-                        break;
-                    case 3: n3[n] += 1; break;
-                    case 4: n4[n] += 1; break;
-                }
-                if (n == 2)
-                    N1plus_dotdot++;
-                if (freq >= 3 && n == 1)
-                    N3plus_dot++;
-
-                switch (n1plus_back) {
-                    case 1: n1_cnt[n] += 1; break;
-                    case 2: n2_cnt[n] += 1; break;
-                    case 3: n3_cnt[n] += 1; break;
-                    case 4: n4_cnt[n] += 1; break;
-                }
-            }
-
-            //std::cerr << "ncomputer -- edge has"
-                //<< " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
-                //<< " freq " << freq 
-                //<< " n1plus_back " << n1plus_back 
-                //<< " depth " << depth
-                //<< " pdepth " << parent_depth
-                //<< " max_n " << max_n
-                //<< " label";
-            //for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
-                //std::cerr << ' ' << cst.edge(node, i);
-            //std::cerr << std::endl;
-            //std::cerr << "start is " << start << std::endl;
-        }
-    }
-}
-
-#else
-
 // optimised version
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
@@ -334,6 +239,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     {
         sdsl::read_only_mapped_buffer<> TEXT(col.file_map[KEY_TEXT]);
         sentinel_bv.resize(TEXT.size());
+        sdsl::util::set_to_value(sentinel_bv,0);
         for (uint64_t i = 0; i < TEXT.size(); ++i) {
             auto symbol = TEXT[i];
             if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM && symbol != PAT_START_SYM)
@@ -480,4 +386,3 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
         ++counter;
     }
 }
-#endif
