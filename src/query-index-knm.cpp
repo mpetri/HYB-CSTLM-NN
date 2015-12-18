@@ -35,8 +35,10 @@ std::vector<uint32_t> ngram_occurrences;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
-            program);
+    fprintf(
+        stdout,
+        "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
+        program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
@@ -67,7 +69,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
             args.collection_dir = optarg;
             break;
         case 'f':
-	    args.isfishy = true;
+            args.isfishy = true;
             break;
         case 'm':
             args.ismkn = true;
@@ -91,17 +93,20 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-// fast_index = true -- use N1+Back/FrontBack based solely on forward CST & backward search
-//            = false -- use N1+Back/FrontBack using reverse CST & forward search
+// fast_index = true -- use N1+Back/FrontBack based solely on forward CST &
+// backward search
+//            = false -- use N1+Back/FrontBack using reverse CST & forward
+//            search
 template <class t_idx>
-void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
+void run_queries(const t_idx& idx,
+                 const std::vector<std::vector<uint64_t> > patterns,
                  uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    //uint64_t ind = 1;
+    // uint64_t ind = 1;
     lm_bench::reset();
     for (std::vector<uint64_t> pattern : patterns) {
         uint64_t pattern_size = pattern.size();
@@ -115,22 +120,27 @@ void run_queries(const t_idx& idx, const std::vector<std::vector<uint64_t> > pat
         double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, isfishy);
         auto stop = clock::now();
 
-        //std::ostringstream sp("", std::ios_base::ate);
-        //std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp," "));
-        //LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
-        //duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
+        // std::ostringstream sp("", std::ios_base::ate);
+        // std::copy(pattern.begin(),pattern.end(),std::ostream_iterator<uint64_t>(sp,"
+        // "));
+        // LOG(INFO) << "P(" << ind++ << ") = " << sp.str() << "("<<
+        // duration_cast<microseconds>(stop-start).count() / 1000.0f <<" ms)";
 
         perplexity += sentenceprob;
         total_time += (stop - start);
     }
     lm_bench::print();
-    LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
+    LOG(INFO) << "Time = "
+              << duration_cast<microseconds>(total_time).count() / 1000.0f
+              << " ms";
     perplexity = perplexity / M;
-    LOG(INFO) << "Test Corpus Perplexity is: " << std::setprecision(10) << pow(10, -perplexity);
+    LOG(INFO) << "Test Corpus Perplexity is: " << std::setprecision(10)
+              << pow(10, -perplexity);
 }
 
 template <class t_idx>
-void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > patterns,
+void run_reranker(const t_idx& idx,
+                  const std::vector<std::vector<uint64_t> > patterns,
                   const std::vector<std::vector<std::string> > orig_patterns,
                   uint64_t ngramsize, bool ismkn, bool isfishy)
 {
@@ -140,7 +150,7 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     uint64_t best_idx = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    //uint64_t candidate_idx = 1;//line number to find the unconverted sentence
+    // uint64_t candidate_idx = 1;//line number to find the unconverted sentence
     uint64_t source_idx = idx.m_vocab.token2id("0");
     lm_bench::reset();
     std::vector<uint64_t> best;
@@ -149,17 +159,22 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     output.open("output.rrank");
     for (std::vector<uint64_t> pattern : patterns) {
         if (pattern[0] != source_idx) {
-            LOG(INFO) << "Pattern is: " << std::vector<std::string>(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end()) << " pplx = " << min;
+            LOG(INFO) << "Pattern is: "
+                      << std::vector<std::string>(orig_patterns[best_idx].begin(),
+                                                  orig_patterns[best_idx].end())
+                      << " pplx = " << min;
             std::ostringstream sp("", std::ios_base::ate);
-            std::copy(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end(), std::ostream_iterator<std::string>(sp, " "));
+            std::copy(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end(),
+                      std::ostream_iterator<std::string>(sp, " "));
             output << sp.str() << std::endl;
 
             min = 1000000;
             best.clear();
             best_idx = 0;
         }
-        source_idx = pattern[0]; //stores the source sentence id in n-best submission
-        pattern.erase(pattern.begin(), pattern.begin() + 2); //removes sentence_index, and |||
+        source_idx = pattern[0]; // stores the source sentence id in n-best submission
+        pattern.erase(pattern.begin(),
+                      pattern.begin() + 2); // removes sentence_index, and |||
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M = pattern_size + 1; // +1 for adding </s>
@@ -181,11 +196,12 @@ void run_reranker(const t_idx& idx, const std::vector<std::vector<uint64_t> > pa
     }
     output.close();
     lm_bench::print();
-    LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
+    LOG(INFO) << "Time = "
+              << duration_cast<microseconds>(total_time).count() / 1000.0f
+              << " ms";
 }
 
-std::vector<std::string>
-parse_line(const std::string& line, bool byte)
+std::vector<std::string> parse_line(const std::string& line, bool byte)
 {
     std::vector<std::string> line_tokens;
     if (byte) {
@@ -241,7 +257,8 @@ int execute(const cmdargs_t& args)
                 orig_patterns.push_back(orig_tokens);
             }
             patterns.push_back(tokens);
-            //LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(), tokens.end());
+            // LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(),
+            // tokens.end());
         }
     } else {
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
@@ -250,7 +267,8 @@ int execute(const cmdargs_t& args)
 
     /* run the querying or reranking */
     if (args.isreranking)
-        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn, args.isfishy);
+        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn,
+                     args.isfishy);
     else
         run_queries(idx, patterns, args.ngramsize, args.ismkn, args.isfishy);
 
@@ -269,5 +287,6 @@ int main(int argc, const char* argv[])
     execute<index_type>(args);
 
     sdsl::memory_monitor::stop();
-    LOG(INFO) <<"MemoryPeak in query Time " <<sdsl::memory_monitor::peak() << " bytes.";
+    LOG(INFO) << "MemoryPeak in query Time " << sdsl::memory_monitor::peak()
+              << " bytes.";
 }

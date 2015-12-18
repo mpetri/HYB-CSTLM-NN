@@ -29,7 +29,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int op;
-    args.write_corpus=false;
+    args.write_corpus = false;
     args.input_file = "";
     args.collection_dir = "";
     args.byte_alphabet = false;
@@ -43,7 +43,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
             args.collection_dir = optarg;
             break;
         case 't':
-            args.min_symbol_freq = std::strtoull(optarg,NULL,10);
+            args.min_symbol_freq = std::strtoull(optarg, NULL, 10);
             args.write_corpus = true;
             break;
         case '1':
@@ -59,8 +59,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-std::vector<std::string>
-parse_line(const std::string& line, bool byte)
+std::vector<std::string> parse_line(const std::string& line, bool byte)
 {
     std::vector<std::string> line_tokens;
     if (byte) {
@@ -112,16 +111,18 @@ int main(int argc, const char* argv[])
         for (const auto& did : tdict) {
             dict_ids.emplace_back(did.second, did.first);
         }
-        std::sort(dict_ids.begin(), dict_ids.end(), std::greater<std::pair<uint64_t, std::string> >());
+        std::sort(dict_ids.begin(), dict_ids.end(),
+                  std::greater<std::pair<uint64_t, std::string> >());
 
-        LOG(INFO) << "remove low freq (<"<<args.min_symbol_freq<<") symbols";
-        for(size_t i=0;i<dict_ids.size();i++) {
-            if(dict_ids[i].first < args.min_symbol_freq) {
+        LOG(INFO) << "remove low freq (<" << args.min_symbol_freq << ") symbols";
+        for (size_t i = 0; i < dict_ids.size(); i++) {
+            if (dict_ids[i].first < args.min_symbol_freq) {
                 LOG(INFO) << "initial sigma = " << dict_ids.size();
-                LOG(INFO) << "initial log2(sigma) = " << sdsl::bits::hi(dict_ids.size()) + 1;
-                LOG(INFO) << "new sigma = " << i+1;
-                LOG(INFO) << "new log2(sigma) = " << sdsl::bits::hi(i+1) + 1;
-                dict_ids.resize(i+1);
+                LOG(INFO) << "initial log2(sigma) = "
+                          << sdsl::bits::hi(dict_ids.size()) + 1;
+                LOG(INFO) << "new sigma = " << i + 1;
+                LOG(INFO) << "new log2(sigma) = " << sdsl::bits::hi(i + 1) + 1;
+                dict_ids.resize(i + 1);
                 break;
             }
         }
@@ -136,8 +137,10 @@ int main(int argc, const char* argv[])
     }
     LOG(INFO) << "2nd pass to transform the integers";
     {
-	std::ofstream corpus_word;
-	if(args.write_corpus){corpus_word.open(args.collection_dir + "/corpus.WORD");}
+        std::ofstream corpus_word;
+        if (args.write_corpus) {
+            corpus_word.open(args.collection_dir + "/corpus.WORD");
+        }
 
         auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT);
         auto int_width = sdsl::bits::hi(max_id) + 1;
@@ -151,32 +154,37 @@ int main(int argc, const char* argv[])
             auto line_tokens = parse_line(line, args.byte_alphabet);
             for (const auto& tok : line_tokens) {
                 auto itr = dict.find(tok);
-                if(itr == dict.end()) {
-		    if(args.write_corpus) corpus_word<<"<NOT_FREQ> ";
+                if (itr == dict.end()) {
+                    if (args.write_corpus)
+                        corpus_word << "<NOT_FREQ> ";
                     buf.push_back(NOT_FREQ_SYM);
-		    isreplaced = true;
+                    isreplaced = true;
                     num_non_freq_syms++;
                 } else {
-                    if(args.write_corpus) corpus_word<<tok+" ";
+                    if (args.write_corpus)
+                        corpus_word << tok + " ";
                     auto num = itr->second;
                     buf.push_back(num);
                 }
             }
-	    if(args.write_corpus) corpus_word<<"\n";
+            if (args.write_corpus)
+                corpus_word << "\n";
             buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
             buf.push_back(EOS_SYM);
         }
         { // include special 'UNK' sentence to ensure symbol included in CST
             buf.push_back(UNKNOWN_SYM);
-	    if(isreplaced)
-               buf.push_back(NOT_FREQ_SYM);
+            if (isreplaced)
+                buf.push_back(NOT_FREQ_SYM);
             buf.push_back(EOS_SYM);
         }
         buf.push_back(EOF_SYM);
-	if(args.write_corpus) corpus_word.close();
+        if (args.write_corpus)
+            corpus_word.close();
         LOG(INFO) << "text size = " << buf.size();
         LOG(INFO) << "num_non_freq_syms = " << num_non_freq_syms;
-        LOG(INFO) << "non freq percent = " << 100.0 * ( (double) num_non_freq_syms / (double) buf.size());
+        LOG(INFO) << "non freq percent = "
+                  << 100.0 * ((double)num_non_freq_syms / (double)buf.size());
     }
     LOG(INFO) << "write vocab file";
     {
@@ -187,8 +195,8 @@ int main(int argc, const char* argv[])
         ofs << "<UNK> 2\n";
         ofs << "<S> 3\n";
         ofs << "</S> 4\n";
-	if(isreplaced)
-           ofs << "<NOT_FREQ> 5\n";
+        if (isreplaced)
+            ofs << "<NOT_FREQ> 5\n";
         // write the real vocab
         uint64_t cur_id = NUM_SPECIAL_SYMS;
         for (const auto& did : dict_ids) {

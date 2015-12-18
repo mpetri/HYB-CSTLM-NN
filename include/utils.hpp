@@ -44,5 +44,4 @@ void create_directory(std::string dir)
         }
     }
 }
-
 }

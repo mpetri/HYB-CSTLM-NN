@@ -22,7 +22,9 @@ struct lm_construct_timer {
     ~lm_construct_timer()
     {
         auto stop = watch::now();
-        LOG(INFO) << "STOP_CONSTRUCT(" << name << ") - " << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec";
+        LOG(INFO) << "STOP_CONSTRUCT(" << name << ") - "
+                  << duration_cast<milliseconds>(stop - start).count() / 1000.0f
+                  << " sec";
     }
 };
 
@@ -42,8 +44,7 @@ enum class timer_type {
 };
 const uint64_t num_timer_types = 8;
 
-std::string
-timer_type_to_str(int type)
+std::string timer_type_to_str(int type)
 {
     timer_type t = static_cast<timer_type>(type);
     switch (t) {
@@ -126,21 +127,20 @@ public:
         for (size_t i = 0; i < num_timer_types; i++) {
             LOG(INFO) << std::setw(17) << timer_type_to_str(i)
                       << " Calls=" << std::setw(10) << d.num_calls[i]
-                      << " Total=" << std::setw(10) << std::setprecision(6) << duration_cast<milliseconds>(d.total_time[i]).count() / 1000.0f << " sec"
-                      << " Avg=" << std::setw(10) << d.total_time[i].count() / (d.num_calls[i] == 0 ? 1 : d.num_calls[i]) << " ns";
+                      << " Total=" << std::setw(10) << std::setprecision(6)
+                      << duration_cast<milliseconds>(d.total_time[i]).count() / 1000.0f << " sec"
+                      << " Avg=" << std::setw(10)
+                      << d.total_time[i].count() / (d.num_calls[i] == 0 ? 1 : d.num_calls[i]) << " ns";
         }
     }
 };
 
-//factored out for timing
+// factored out for timing
 template <class t_cst>
-bool
-forward_search_wrapper(
-    const t_cst& cst,
-    typename t_cst::node_type& v,
-    const typename t_cst::size_type d,
-    const typename t_cst::char_type c,
-    typename t_cst::size_type& char_pos)
+bool forward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
+                            const typename t_cst::size_type d,
+                            const typename t_cst::char_type c,
+                            typename t_cst::size_type& char_pos)
 {
     auto timer = lm_bench::bench(timer_type::forward_search);
     auto ok = forward_search(cst, v, d, c, char_pos);
@@ -149,14 +149,11 @@ forward_search_wrapper(
 
 // factored out for timing
 template <class t_csa>
-bool
-backward_search_wrapper(
-    const t_csa& csa,
-    typename t_csa::size_type l,
-    typename t_csa::size_type r,
-    typename t_csa::char_type c,
-    typename t_csa::size_type& l_res,
-    typename t_csa::size_type& r_res)
+bool backward_search_wrapper(const t_csa& csa, typename t_csa::size_type l,
+                             typename t_csa::size_type r,
+                             typename t_csa::char_type c,
+                             typename t_csa::size_type& l_res,
+                             typename t_csa::size_type& r_res)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     return backward_search(csa, l, r, c, l_res, r_res);
@@ -164,11 +161,8 @@ backward_search_wrapper(
 
 // convenience function
 template <class t_cst>
-bool
-backward_search_wrapper(
-    const t_cst& cst,
-    typename t_cst::node_type& v,
-    const typename t_cst::char_type c)
+bool backward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
+                             const typename t_cst::char_type c)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     typename t_cst::size_type l = cst.lb(v), r = cst.rb(v);

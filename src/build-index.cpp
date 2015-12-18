@@ -51,8 +51,8 @@ void create_and_store(collection& col, bool use_mkn)
     auto stop = clock::now();
     utils::lm_mem_monitor::event("construction done");
     LOG(INFO) << "index construction in (s): "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
-                 / 1000.0f;
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     stop - start).count() / 1000.0f;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {

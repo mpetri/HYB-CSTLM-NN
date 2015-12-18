@@ -20,10 +20,13 @@
 #include "query.hpp"
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, uint64_t& /*M*/, uint64_t ngramsize, bool ismkn, bool isfishy)
+double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
+                                   uint64_t& /*M*/, uint64_t ngramsize,
+                                   bool ismkn, bool isfishy)
 {
-    //LOG(INFO) << "sentence_logprob_kneser_ney for: " << idx.m_vocab.id2token(word_vec.begin(), word_vec.end());
-    //LOG(INFO) << "\tfast: " << fast_index << " mkn: " << ismkn;
+    // LOG(INFO) << "sentence_logprob_kneser_ney for: " <<
+    // idx.m_vocab.id2token(word_vec.begin(), word_vec.end());
+    // LOG(INFO) << "\tfast: " << fast_index << " mkn: " << ismkn;
     double final_score = 0;
     std::deque<uint64_t> pattern_deq;
     for (const auto& word : word_vec) {
@@ -35,23 +38,26 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec, 
         }
         std::vector<uint64_t> pattern(pattern_deq.begin(), pattern_deq.end());
         /*
-        if (pattern.back() == UNKNOWN_SYM) {
-            M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
-        }
+    if (pattern.back() == UNKNOWN_SYM) {
+        M = M - 1; // excluding OOV from perplexity - identical to SRILM ppl
+    }
 */
         double score;
         if (!ismkn)
             score = prob_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize);
         else
-            score = prob_mod_kneser_ney(idx, pattern.begin(), pattern.end(), ngramsize, isfishy);
+            score = prob_mod_kneser_ney(idx, pattern.begin(), pattern.end(),
+                                        ngramsize, isfishy);
         final_score += log10(score);
     }
-    //LOG(INFO) << "sentence_logprob_kneser_ney returning: " << final_score;
+    // LOG(INFO) << "sentence_logprob_kneser_ney returning: " << final_score;
     return final_score;
 }
 
 template <class t_idx, class t_pattern>
-double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern, uint32_t ngramsize, bool ismkn, bool isfishy)
+double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern,
+                                      uint32_t ngramsize, bool ismkn,
+                                      bool isfishy)
 {
     auto pattern_size = pattern.size();
     pattern.push_back(PAT_END_SYM);
@@ -63,12 +69,13 @@ double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern, uint
     return perplexity;
 }
 
-//required by Moses
+// required by Moses
 template <class t_idx, class t_pattern>
 uint64_t patternId(const t_idx& idx, const t_pattern& word_vec)
 {
-   uint64_t lb=0, rb=idx.m_cst.size()-1;
-   backward_search(idx.m_cst.csa, lb, rb, word_vec.begin(), word_vec.end(), lb, rb);
-   auto node = idx.m_cst.node(lb, rb) ;
-   return idx.m_cst.id(node);
+    uint64_t lb = 0, rb = idx.m_cst.size() - 1;
+    backward_search(idx.m_cst.csa, lb, rb, word_vec.begin(), word_vec.end(), lb,
+                    rb);
+    auto node = idx.m_cst.node(lb, rb);
+    return idx.m_cst.id(node);
 }

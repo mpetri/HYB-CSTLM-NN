@@ -65,13 +65,14 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
     // track the lower and upper bounds for numerator (full) and denominator
     // (context) matches
     uint64_t lb_num = 0, lb_denom = 0, rb_num = N - 1, rb_denom = N - 1;
-    uint64_t lb_num_prev = 0, lb_denom_prev = 0, rb_num_prev = N - 1, rb_denom_prev = N - 1;
+    uint64_t lb_num_prev = 0, lb_denom_prev = 0, rb_num_prev = N - 1,
+             rb_denom_prev = N - 1;
     for (auto m = 1UL; m <= M; m++) {
         double numer = 0, denom = 0;
         lb_num_prev = lb_num;
         rb_num_prev = rb_num;
-        sdsl::backward_search(csa_rev, lb_num, rb_num, full_pattern.begin(), full_pattern.end(),
-                              lb_num, rb_num);
+        sdsl::backward_search(csa_rev, lb_num, rb_num, full_pattern.begin(),
+                              full_pattern.end(), lb_num, rb_num);
         numer = rb_num - lb_num + 1;
         // missing patterns || unknown words
         if (lb_num > rb_num || (lb_num < 0 || rb_num > N)) {
@@ -82,8 +83,9 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
         rb_denom_prev = rb_denom;
         lb_denom_prev = lb_denom;
         if (m >= 2) {
-            sdsl::backward_search(csa_rev, lb_denom, rb_denom, context_pattern.begin(),
-                                  context_pattern.end(), lb_denom, rb_denom);
+            sdsl::backward_search(csa_rev, lb_denom, rb_denom,
+                                  context_pattern.begin(), context_pattern.end(),
+                                  lb_denom, rb_denom);
         }
         denom = rb_denom - lb_denom + 1;
         score = numer / denom;
@@ -114,7 +116,8 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
 }
 
 template <class t_idx>
-double run_query_stupid(const t_idx& idx, const std::vector<uint64_t>& word_vec)
+double run_query_stupid(const t_idx& idx,
+                        const std::vector<uint64_t>& word_vec)
 {
     double final_score = 1;
     std::deque<uint64_t> pattern;
@@ -172,7 +175,8 @@ void run_queries(t_idx& idx, const std::string& pattern_file)
         LOG(ERROR) << "Checksum error = " << total_score;
     }
 
-    LOG(INFO) << "time = " << duration_cast<microseconds>(total_time).count() / 1000.0f
+    LOG(INFO) << "time = "
+              << duration_cast<microseconds>(total_time).count() / 1000.0f
               << " ms";
 }
 

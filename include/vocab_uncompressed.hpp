@@ -14,7 +14,7 @@ private:
 public:
     vocab_uncompressed() = default;
     vocab_uncompressed(collection& col)
-    {        
+    {
         auto vocab_file = col.file_map[KEY_VOCAB];
         std::ifstream vfs(vocab_file);
         std::string line;
@@ -31,8 +31,7 @@ public:
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
     {
-        sdsl::structure_tree_node* child
-            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         std::vector<uint8_t> token_data;
         sdsl::int_vector<> ids(m_i2t.size());
@@ -50,12 +49,8 @@ public:
         return written_bytes;
     }
 
-
-    //required by Moses
-    std::unordered_map<std::string, uint64_t> vocab_id() const
-    {
-        return m_t2i;
-    }
+    // required by Moses
+    std::unordered_map<std::string, uint64_t> vocab_id() const { return m_t2i; }
 
     std::string id2token(const uint64_t& id) const
     {

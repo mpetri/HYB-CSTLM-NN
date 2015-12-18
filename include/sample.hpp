@@ -18,24 +18,25 @@
 #include "constants.hpp"
 
 template <class t_idx, class t_pat_iter, class t_rng>
-uint64_t sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin, t_pat_iter pattern_end,
-                            uint64_t ngramsize, t_rng& rng)
+uint64_t sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
+                            t_pat_iter pattern_end, uint64_t ngramsize,
+                            t_rng& rng)
 {
-    return _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize, idx.m_cst.root(), 0, rng);
+    return _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
+                               idx.m_cst.root(), 0, rng);
 }
 
 template <class t_idx, class t_pat_iter, class t_rng>
-uint64_t _sample_next_symbol(const t_idx& idx,
-                             t_pat_iter pattern_begin,
-                             t_pat_iter pattern_end,
-                             uint64_t ngramsize,
+uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
+                             t_pat_iter pattern_end, uint64_t ngramsize,
                              typename t_idx::cst_type::node_type node,
-                             uint64_t ctxsize,
-                             t_rng& rng)
+                             uint64_t ctxsize, t_rng& rng)
 {
     size_t size = std::distance(pattern_begin, pattern_end);
 
-    LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end) << " ctxsize " << ctxsize;
+    LOG(INFO) << "sampling for pattern "
+              << std::vector<uint64_t>(pattern_begin, pattern_end) << " ctxsize "
+              << ctxsize;
 
     // attempt a longer match
     uint64_t next = EOF_SYM;
@@ -44,8 +45,8 @@ uint64_t _sample_next_symbol(const t_idx& idx,
         if (*start != UNKNOWN_SYM) {
             auto ok = backward_search_wrapper(idx.m_cst, node, *start);
             if (ok) {
-                next = _sample_next_symbol(idx, pattern_begin, pattern_end,
-                                           ngramsize, node, ctxsize + 1, rng);
+                next = _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
+                                           node, ctxsize + 1, rng);
                 if (next != EOF_SYM)
                     return next;
             }
@@ -88,9 +89,11 @@ uint64_t _sample_next_symbol(const t_idx& idx,
                     r -= idx.N1PlusBack(child, start, pattern_end + 1) - D;
                 }
 
-                LOG(INFO) << "\t\tr now " << r << " after child " << child << " of size " << idx.m_cst.size();
+                LOG(INFO) << "\t\tr now " << r << " after child " << child
+                          << " of size " << idx.m_cst.size();
                 if (r <= 0) {
-                    // is i the right index or are we off by one? think this is ok, as it's 1-indexed
+                    // is i the right index or are we off by one? think this is ok, as
+                    // it's 1-indexed
                     next = idx.m_cst.edge(child, i);
                     break;
                 }
@@ -105,7 +108,8 @@ uint64_t _sample_next_symbol(const t_idx& idx,
     } else {
         // FIXME: somewhat wasteful, could be done in one iterator
         static std::vector<uint64_t> unigrams_cs(unigram_counts(idx));
-        static std::discrete_distribution<uint64_t> unigrams(unigrams_cs.begin(), unigrams_cs.end());
+        static std::discrete_distribution<uint64_t> unigrams(unigrams_cs.begin(),
+                                                             unigrams_cs.end());
         unigrams_cs.clear();
         next = unigrams(rng);
         LOG(INFO) << "\tsampled unigram";
@@ -136,15 +140,14 @@ std::vector<uint64_t> unigram_counts(const t_idx& idx)
 }
 
 template <class t_idx, class t_pat_iter, class t_rng>
-uint64_t sample_next_symbol2(const t_idx& idx,
-                             t_pat_iter pattern_begin,
-                             t_pat_iter pattern_end,
-                             uint64_t ngramsize,
+uint64_t sample_next_symbol2(const t_idx& idx, t_pat_iter pattern_begin,
+                             t_pat_iter pattern_end, uint64_t ngramsize,
                              t_rng& rng)
 {
-    //size_t size = std::distance(pattern_begin, pattern_end);
+    // size_t size = std::distance(pattern_begin, pattern_end);
 
-    LOG(INFO) << "sampling for pattern " << std::vector<uint64_t>(pattern_begin, pattern_end);
+    LOG(INFO) << "sampling for pattern "
+              << std::vector<uint64_t>(pattern_begin, pattern_end);
 
     std::vector<double> probs;
     std::vector<uint64_t> pattern(pattern_begin, pattern_end);
@@ -153,7 +156,8 @@ uint64_t sample_next_symbol2(const t_idx& idx,
     for (uint64_t next = 0; next < idx.m_vocab.size(); ++next) {
         if (next >= NUM_SPECIAL_SYMS || next == PAT_END_SYM || next == UNKNOWN_SYM) {
             pattern.back() = next;
-            auto prob = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(), ngramsize);
+            auto prob = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(),
+                                               ngramsize);
             total += prob;
         } else {
             probs.push_back(0);

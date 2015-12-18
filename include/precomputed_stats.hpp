@@ -37,9 +37,8 @@ struct precomputed_stats {
 
     precomputed_stats() = default;
 
-
-    template<class t_cst>
-    precomputed_stats(collection& col,t_cst& cst,uint64_t max_ngram_len, bool)
+    template <class t_cst>
+    precomputed_stats(collection& col, t_cst& cst, uint64_t max_ngram_len, bool)
         : max_ngram_count(max_ngram_len)
         , N1plus_dotdot(0)
         , N3plus_dot(0)
@@ -92,8 +91,7 @@ struct precomputed_stats {
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
     {
-        sdsl::structure_tree_node* child
-            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
 
         sdsl::write_member(max_ngram_count, out, child, "max_ngram_count");
@@ -157,9 +155,12 @@ struct precomputed_stats {
     }
 
     template <class t_nums>
-    void display_vec(const char* name, const t_nums& nums, size_t ngramsize) const
+    void display_vec(const char* name, const t_nums& nums,
+                     size_t ngramsize) const
     {
-        LOG(INFO) << name << " = " << t_nums(nums.begin() + 1, nums.begin() + std::min(ngramsize + 1, nums.size()));
+        LOG(INFO) << name << " = "
+                  << t_nums(nums.begin() + 1,
+                            nums.begin() + std::min(ngramsize + 1, nums.size()));
     }
 
     void print(bool ismkn, uint32_t ngramsize) const
@@ -232,12 +233,13 @@ private:
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
-    // load up reversed text and store in a bitvector for locating sentinel symbols
+    // load up reversed text and store in a bitvector for locating sentinel
+    // symbols
     sdsl::bit_vector sentinel_bv;
     {
         sdsl::read_only_mapped_buffer<> TEXT(col.file_map[KEY_TEXT]);
         sentinel_bv.resize(TEXT.size());
-        sdsl::util::set_to_value(sentinel_bv,0);
+        sdsl::util::set_to_value(sentinel_bv, 0);
         for (uint64_t i = 0; i < TEXT.size(); ++i) {
             auto symbol = TEXT[i];
             if (symbol < NUM_SPECIAL_SYMS && symbol != UNKNOWN_SYM && symbol != PAT_START_SYM)
@@ -247,7 +249,8 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     t_rank_bv sentinel_rank(&sentinel_bv);
     t_select_bv sentinel_select(&sentinel_bv);
 
-    std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+        cst.csa.sigma);
     std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
     std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
     uint64_t num_syms;
@@ -268,9 +271,9 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     //      iteration (++it, children)         21.201 secs
     //      incrementing count loop             2.564 secs
     // overall                                115.008 secs
-    
+
     uint64_t counter = 0; // counter = first symbol on child edge
-    for (auto child: cst.children(cst.root())) {
+    for (auto child : cst.children(cst.root())) {
         if (counter != EOF_SYM && counter != EOS_SYM) {
             // process the node
             // FIXME: this can be done more simply by incrementing counter
@@ -283,9 +286,11 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     auto node = *it;
                     auto parent = cst.parent(node);
                     auto parent_depth = cst.depth(parent);
-                    // this next call is expensive for leaves, but we don't care in this case
+                    // this next call is expensive for leaves, but we don't care in this
+                    // case
                     // as the for loop below will terminate on the </S> symbol
-                    auto depth = (!cst.is_leaf(node)) ? cst.depth(node) : (max_ngram_count + 12345);
+                    auto depth = (!cst.is_leaf(node)) ? cst.depth(node)
+                                                      : (max_ngram_count + 12345);
                     auto freq = cst.size(node);
                     assert(parent_depth < max_ngram_count);
 
@@ -297,7 +302,8 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     } else {
                         // need to consider several symbols -- minimum of
                         // 1) edge length; 2) threshold; 3) reaching the </S> token
-                        auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst, node, parent_depth) + 1;
+                        auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst,
+                                                             node, parent_depth) + 1;
                         max_n = std::min(max_ngram_count, depth);
                         if (distance <= max_n) {
                             max_n = distance;
@@ -308,48 +314,61 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     // update continuation counts
                     uint64_t n1plus_back = 0ULL;
                     if (counter == PAT_START_SYM || freq == 1) {
-                        // special case where the pattern starts with <s>: actual count is used
-                        // also when freq = 1 the pattern can only be preceeded by one symbol
+                        // special case where the pattern starts with <s>: actual count is
+                        // used
+                        // also when freq = 1 the pattern can only be preceeded by one
+                        // symbol
                         n1plus_back = freq;
                     } else {
-                        // no need to adjust for EOS symbol, as this only happens when symbol = <S>
+                        // no need to adjust for EOS symbol, as this only happens when
+                        // symbol = <S>
                         auto lb = cst.lb(node);
                         auto rb = cst.rb(node);
                         num_syms = 0;
-                        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
+                                               preceding_syms, left, right);
                         n1plus_back = num_syms;
-                    } 
+                    }
 
-                    //std::cerr << "ncomputer -- edge has"
-                        //<< " range [" << cst.lb(node) << "," << cst.rb(node) << "]" 
-                        //<< " freq " << freq 
-                        //<< " n1plus_back " << n1plus_back 
-                        //<< " depth " << cst.depth(node) 
-                        //<< " pdepth " << parent_depth
-                        //<< " max_n " << max_n
-                        //<< " label";
-                    //for (uint64_t i = 1; i <= std::min(cst.depth(node), max_ngram_count+2); ++i)
-                        //std::cerr << ' ' << cst.edge(node, i);
-                    //std::cerr << std::endl;
-                    //std::cerr << "counter is " << counter << std::endl;
+                    // std::cerr << "ncomputer -- edge has"
+                    //<< " range [" << cst.lb(node) << "," << cst.rb(node) << "]"
+                    //<< " freq " << freq
+                    //<< " n1plus_back " << n1plus_back
+                    //<< " depth " << cst.depth(node)
+                    //<< " pdepth " << parent_depth
+                    //<< " max_n " << max_n
+                    //<< " label";
+                    // for (uint64_t i = 1; i <= std::min(cst.depth(node),
+                    // max_ngram_count+2); ++i)
+                    // std::cerr << ' ' << cst.edge(node, i);
+                    // std::cerr << std::endl;
+                    // std::cerr << "counter is " << counter << std::endl;
 
                     for (auto n = parent_depth + 1; n <= max_n; ++n) {
                         uint64_t symbol = NUM_SPECIAL_SYMS;
-                        if (n == 1) symbol = counter;
-                        else if (n == max_n && last_is_sentinel) symbol = PAT_END_SYM;
+                        if (n == 1)
+                            symbol = counter;
+                        else if (n == max_n && last_is_sentinel)
+                            symbol = PAT_END_SYM;
 
                         // update frequency counts
                         switch (freq) {
-                            case 1:
-                                n1[n] += 1;
-                                if (n == 1) N1_dot++;
-                                break;
-                            case 2:
-                                n2[n] += 1;
-                                if (n == 1) N2_dot++;
-                                break;
-                            case 3: n3[n] += 1; break;
-                            case 4: n4[n] += 1; break;
+                        case 1:
+                            n1[n] += 1;
+                            if (n == 1)
+                                N1_dot++;
+                            break;
+                        case 2:
+                            n2[n] += 1;
+                            if (n == 1)
+                                N2_dot++;
+                            break;
+                        case 3:
+                            n3[n] += 1;
+                            break;
+                        case 4:
+                            n4[n] += 1;
+                            break;
                         }
 
                         if (n == 2)
@@ -358,24 +377,31 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                             N3plus_dot++;
 
                         switch (n1plus_back) {
-                            case 1: n1_cnt[n] += 1; break;
-                            case 2: n2_cnt[n] += 1; break;
-                            case 3: n3_cnt[n] += 1; break;
-                            case 4: n4_cnt[n] += 1; break;
+                        case 1:
+                            n1_cnt[n] += 1;
+                            break;
+                        case 2:
+                            n2_cnt[n] += 1;
+                            break;
+                        case 3:
+                            n3_cnt[n] += 1;
+                            break;
+                        case 4:
+                            n4_cnt[n] += 1;
+                            break;
                         }
 
                         // can skip subtree if we know the EOS symbol is coming next
-			
+
                         if (counter == UNKNOWN_SYM || counter == PAT_END_SYM || symbol == PAT_END_SYM) {
-                            //std::cerr << "\tquit 1\n";
+                            // std::cerr << "\tquit 1\n";
                             it.skip_subtree();
                             break;
                         }
-			
                     }
 
                     if (depth >= max_ngram_count) {
-                        //std::cerr << "\tquit 2\n";
+                        // std::cerr << "\tquit 2\n";
                         it.skip_subtree();
                     }
                 }

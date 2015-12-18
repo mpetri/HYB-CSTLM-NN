@@ -21,19 +21,23 @@
 // predicted given the previous values in the pattern.
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
-double prob_kneser_ney(const t_idx& idx,
-                       t_pat_iter pattern_begin, t_pat_iter pattern_end, uint64_t ngramsize)
+double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
+                       t_pat_iter pattern_end, uint64_t ngramsize)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0;
-    t_node node_incl = idx.m_cst.root(); // v_F^all matching the full pattern, including last item
-    t_node node_excl = idx.m_cst.root(); // v_F     matching only the context, excluding last item
+    t_node node_incl = idx.m_cst
+                           .root(); // v_F^all matching the full pattern, including last item
+    t_node node_excl = idx.m_cst
+                           .root(); // v_F     matching only the context, excluding last item
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end - 1) == UNKNOWN_SYM);
     bool ok = !unk;
 
-    //LOG(INFO) << "prob_kneser_ney_single for pattern: " << idx.m_vocab.id2token(pattern_begin, pattern_end);
-    //LOG(INFO) << "as numbers: " << std::vector<uint64_t>(pattern_begin, pattern_end);
+    // LOG(INFO) << "prob_kneser_ney_single for pattern: " <<
+    // idx.m_vocab.id2token(pattern_begin, pattern_end);
+    // LOG(INFO) << "as numbers: " << std::vector<uint64_t>(pattern_begin,
+    // pattern_end);
 
     for (unsigned i = 1; i <= size; ++i) {
         t_pat_iter start = pattern_end - i;
@@ -72,7 +76,7 @@ double prob_kneser_ney(const t_idx& idx,
         }
     }
 
-    //LOG(INFO) << "prob_kneser_ney_single returning: " << p;
+    // LOG(INFO) << "prob_kneser_ney_single returning: " << p;
 
     return p;
 }

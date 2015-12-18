@@ -18,7 +18,8 @@ const std::string KEY_SA = "SA";
 const std::string KEY_SAREV = "SAREV";
 const std::string KEY_VOCAB = "VOCAB";
 
-std::vector<std::string> collection_keys = { KEY_TEXT, KEY_TEXTREV, KEY_SA, KEY_SAREV, KEY_VOCAB };
+std::vector<std::string> collection_keys = { KEY_TEXT, KEY_TEXTREV, KEY_SA,
+                                             KEY_SAREV, KEY_VOCAB };
 
 struct collection {
     std::string path;
@@ -67,7 +68,8 @@ struct collection {
         }
     }
 
-    std::string temp_file(std::string id) {
+    std::string temp_file(std::string id)
+    {
         return path + "/tmp/" + id + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
     }
 };

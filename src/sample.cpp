@@ -30,8 +30,10 @@ typedef struct cmdargs {
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
-            program);
+    fprintf(
+        stdout,
+        "%s -c <collection dir> -p <pattern file> -m <boolean> -n <ngramsize>\n",
+        program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
@@ -76,8 +78,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
-std::vector<std::string>
-parse_line(const std::string& line, bool byte)
+std::vector<std::string> parse_line(const std::string& line, bool byte)
 {
     std::vector<std::string> line_tokens;
     if (byte) {
@@ -136,7 +137,7 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
     std::chrono::nanoseconds total_time(0);
     lm_bench::reset();
     for (std::vector<uint64_t> pattern : patterns) {
-        //pattern.push_back(PAT_END_SYM);
+        // pattern.push_back(PAT_END_SYM);
         pattern.insert(pattern.begin(), PAT_START_SYM);
 
         LOG(INFO) << "Pattern is: " << as_string(pattern, idx.m_vocab);
@@ -144,7 +145,8 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
         auto start = clock::now();
         uint64_t next;
         do {
-            next = sample_next_symbol(idx, pattern.begin(), pattern.end(), args.ngramsize, rng);
+            next = sample_next_symbol(idx, pattern.begin(), pattern.end(),
+                                      args.ngramsize, rng);
             pattern.push_back(next);
         } while (next != PAT_END_SYM);
         auto stop = clock::now();
@@ -153,7 +155,9 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
         total_time += (stop - start);
     }
     lm_bench::print();
-    LOG(INFO) << "Time = " << duration_cast<microseconds>(total_time).count() / 1000.0f << " ms";
+    LOG(INFO) << "Time = "
+              << duration_cast<microseconds>(total_time).count() / 1000.0f
+              << " ms";
 
     return EXIT_SUCCESS;
 }
@@ -172,13 +176,15 @@ int main(int argc, const char* argv[])
     /* seed random number generator */
     t_rng rng;
     auto now = std::chrono::system_clock::now();
-    rng.seed(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count());
+    rng.seed(std::chrono::duration_cast<std::chrono::seconds>(
+                 now.time_since_epoch()).count());
 
     /* load data, sample */
     return load_data_and_sample<index_type, t_rng>(args, rng);
 }
 
-std::string as_string(const std::vector<uint64_t>& wids, const vocab_uncompressed& vocab)
+std::string as_string(const std::vector<uint64_t>& wids,
+                      const vocab_uncompressed& vocab)
 {
     std::ostringstream oss;
     bool first = true;

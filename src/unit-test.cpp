@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 typedef testing::Types<
-    //index_succinct<default_cst_type,default_cst_rev_type>,
+    // index_succinct<default_cst_type,default_cst_rev_type>,
     index_succinct<default_cst_type> > Implementations;
 
 struct triplet {
@@ -68,7 +68,8 @@ protected:
 
     virtual void SetUp()
     {
-        // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this << std::endl;
+        // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this
+        // << std::endl;
         {
             col = collection(col_path);
             idx = t_idx(col, true);
@@ -92,8 +93,10 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
               std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
-        std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher> ngram_counts;
+    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count;
+         cgram++) {
+        std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher>
+            ngram_counts;
         /* compute c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
         for (size_t i = 0; i < (text.size() - 3) - (cgram - 1); i++) {
@@ -109,9 +112,9 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
         uint64_t act_n4 = 0;
         for (const auto& ngc : ngram_counts) {
             const auto& cng = ngc.first;
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(),
-                                [](uint64_t i) { return i == EOF_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; })) {
                 auto cnt = ngc.second;
                 switch (cnt) {
                 case 1:
@@ -130,14 +133,14 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.m_precomputed.n1[cgram], act_n1) << "n1[" << cgram
-                                                             << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n2[cgram], act_n2) << "n2[" << cgram
-                                                             << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n3[cgram], act_n3) << "n3[" << cgram
-                                                             << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n4[cgram], act_n4) << "n4[" << cgram
-                                                             << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n1[cgram], act_n1)
+            << "n1[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n2[cgram], act_n2)
+            << "n2[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n3[cgram], act_n3)
+            << "n3[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n4[cgram], act_n4)
+            << "n4[" << cgram << "] count incorrect!";
     }
 }
 
@@ -148,7 +151,8 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
               std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count; cgram++) {
+    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count;
+         cgram++) {
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
         /* compute N1PlusBack c-gram stats */
@@ -174,9 +178,9 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
         uint64_t act_n4_cnt = 0;
         for (const auto& ngc : ngram_counts) {
             const auto& cng = ngc.first;
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(),
-                                [](uint64_t i) { return i == EOF_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; })) {
                 if (cng[0] != PAT_START_SYM) {
                     auto cnt = ngc.second.size();
                     switch (cnt) {
@@ -220,14 +224,14 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.m_precomputed.n1_cnt[cgram], act_n1_cnt) << "n1_cnt[" << cgram
-                                                                     << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n2_cnt[cgram], act_n2_cnt) << "n2_cnt[" << cgram
-                                                                     << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n3_cnt[cgram], act_n3_cnt) << "n3_cnt[" << cgram
-                                                                     << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n4_cnt[cgram], act_n4_cnt) << "n4_cnt[" << cgram
-                                                                     << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n1_cnt[cgram], act_n1_cnt)
+            << "n1_cnt[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n2_cnt[cgram], act_n2_cnt)
+            << "n2_cnt[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n3_cnt[cgram], act_n3_cnt)
+            << "n3_cnt[" << cgram << "] count incorrect!";
+        EXPECT_EQ(this->idx.m_precomputed.n4_cnt[cgram], act_n4_cnt)
+            << "n4_cnt[" << cgram << "] count incorrect!";
     }
 }
 
@@ -243,10 +247,9 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
         std::vector<uint64_t> cur_gram(2);
         auto beg = text.begin() + i;
         std::copy(beg, beg + 2, cur_gram.begin());
-        if (std::none_of(cur_gram.cbegin(), cur_gram.cend(), [](uint64_t i) {
-                return i == EOS_SYM;
-            }) && std::none_of(cur_gram.cbegin(), cur_gram.cend(),
-                               [](uint64_t i) { return i == EOF_SYM; })) {
+        if (std::none_of(cur_gram.cbegin(), cur_gram.cend(),
+                         [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cur_gram.cbegin(), cur_gram.cend(),
+                                                             [](uint64_t i) { return i == EOF_SYM; })) {
             uniq_bigrams.insert(cur_gram);
         }
     }
@@ -275,7 +278,8 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
             act_N3plus_dot++;
     }
     /* compare counts */
-    EXPECT_EQ(this->idx.m_precomputed.N3plus_dot, act_N3plus_dot) << "N3plus_dot count incorrect!";
+    EXPECT_EQ(this->idx.m_precomputed.N3plus_dot, act_N3plus_dot)
+        << "N3plus_dot count incorrect!";
 }
 
 TYPED_TEST(LMTest, N1PlusBack)
@@ -287,7 +291,8 @@ TYPED_TEST(LMTest, N1PlusBack)
 
     // (2) for all n-gram sizes
 
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+         cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusBack counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
@@ -312,21 +317,20 @@ TYPED_TEST(LMTest, N1PlusBack)
         for (const auto& ngc : ngram_counts) {
             const auto& cng = ngc.first;
             auto expected_N1PlusBack_count = ngc.second.size();
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) {
-                       return i == PAT_START_SYM;
-                   }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
-                                      [](uint64_t i) { return i == PAT_END_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                     [](uint64_t i) { return i == PAT_START_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                                                         [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
                 auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                                           this->idx.m_cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
+                                           this->idx.m_cst.csa.size() - 1, cng.begin(),
+                                           cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
-                    auto actual_count
-                        = this->idx.N1PlusBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    auto actual_count = this->idx.N1PlusBack(this->idx.m_cst.node(lb, rb),
+                                                             cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusBack_count);
                 }
             }
@@ -342,7 +346,8 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+         cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         std::unordered_map<std::vector<uint64_t>,
                            std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>,
@@ -361,8 +366,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                 ngram_counts[cur_gram] = ctx_set;
             } else {
                 if (ngram_counts.find(cur_gram) == ngram_counts.end())
-                    ngram_counts[cur_gram]
-                        = std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>();
+                    ngram_counts[cur_gram] = std::unordered_set<std::vector<uint64_t>, uint64_vector_hasher>();
             }
         }
 
@@ -370,19 +374,19 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
         for (const auto& ngc : ngram_counts) {
             const auto& cng = ngc.first;
             auto expected_N1PlusFrontBack_count = ngc.second.size();
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(),
-                                [](uint64_t i) { return i == EOF_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
+                auto cnt = backward_search(this->idx.m_cst.csa, 0,
+                                           this->idx.m_cst.csa.size() - 1, cng.begin(),
+                                           cng.end(), lb, rb);
 
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
-                    auto actual_count
-                        = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb),
-                                                    cng.begin(), cng.end());
+                    auto actual_count = this->idx.N1PlusFrontBack(
+                        this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
                 }
             }
@@ -398,7 +402,8 @@ TYPED_TEST(LMTest, N1PlusFront)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+         cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
@@ -422,19 +427,20 @@ TYPED_TEST(LMTest, N1PlusFront)
         for (const auto& ngc : ngram_counts) {
             const auto& cng = ngc.first;
             auto expected_N1PlusFront_count = ngc.second.size();
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) {
-                       return i == PAT_START_SYM;
-                   }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
-                                      [](uint64_t i) { return i == PAT_END_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                     [](uint64_t i) { return i == PAT_START_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                                                         [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
+                auto cnt = backward_search(this->idx.m_cst.csa, 0,
+                                           this->idx.m_cst.csa.size() - 1, cng.begin(),
+                                           cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
-                    auto actual_count = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    auto actual_count = this->idx.N1PlusFront(
+                        this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFront_count);
                 }
             }
@@ -450,13 +456,17 @@ TYPED_TEST(LMTest, N123PlusFront)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+         cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         typedef std::map<uint64_t, uint64_t> t_symbol_counts;
-        std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
+        std::unordered_map<std::vector<uint64_t>, t_symbol_counts,
+                           uint64_vector_hasher> ngram_counts;
         /* compute N1PlusFront c-gram stats */
         // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size() - 3) - cgram; i++) { //FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
+        for (size_t i = 0; i < (text.size() - 3) - cgram;
+             i++) { // FIXME: remove -3 and it fails this test twice, leave -3 it
+            // fails this test once
             std::vector<uint64_t> cur_gram(cgram);
             auto beg = text.begin() + i;
             std::copy(beg, beg + cgram, cur_gram.begin());
@@ -484,21 +494,27 @@ TYPED_TEST(LMTest, N123PlusFront)
                     expected_n3p += 1;
             }
 
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
+            if (std::none_of(cng.cbegin(), cng.cend(),
+                             [](uint64_t i) { return i == EOS_SYM; }) && std::none_of(cng.cbegin(), cng.cend(),
+                                                                 [](uint64_t i) { return i == EOF_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                     [](uint64_t i) { return i == PAT_START_SYM; }) && std::none_of(cng.cbegin() + 1, cng.cend() - 1,
+                                                                                                                                         [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
+                auto cnt = backward_search(this->idx.m_cst.csa, 0,
+                                           this->idx.m_cst.csa.size() - 1, cng.begin(),
+                                           cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t n1, n2, n3p, n1p;
-                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
-                    n1p = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(),
+                                            cng.end(), n1, n2, n3p);
+                    n1p = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(),
+                                                cng.end());
 
-                    //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end()) << " === " << cng << " (numberised)";
+                    // LOG(INFO) << "pattern is " <<
+                    // this->idx.m_vocab.id2token(cng.begin(), cng.end()) << " === " <<
+                    // cng << " (numberised)";
                     EXPECT_EQ(n1, expected_n1);
                     EXPECT_EQ(n2, expected_n2);
                     EXPECT_EQ(n3p, expected_n3p);
@@ -651,7 +667,8 @@ TYPED_TEST(LMTest, Perplexity)
 {
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, srilm.pattern, srilm.order, false, false);
+        double perplexity = sentence_perplexity_kneser_ney(
+            this->idx, srilm.pattern, srilm.order, false, false);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
 }
@@ -660,7 +677,8 @@ TYPED_TEST(LMTest, PerplexityMKN)
 {
     for (unsigned int i = 0; i < this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
-        double perplexity = sentence_perplexity_kneser_ney(this->idx, kenlm.pattern, kenlm.order, true, false);
+        double perplexity = sentence_perplexity_kneser_ney(
+            this->idx, kenlm.pattern, kenlm.order, true, false);
         EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
     }
 }

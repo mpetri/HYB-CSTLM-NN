@@ -19,12 +19,12 @@ private:
     bv_type m_bv;
     typename bv_type::rank_1_type m_bv_rank;
     vector_type m_counts_fb;
-//    vector_type m_counts_fb1;
-//    vector_type m_counts_fb2;
+    //    vector_type m_counts_fb1;
+    //    vector_type m_counts_fb2;
 
     vector_type m_counts_f1prime;
     vector_type m_counts_f2prime;
-    vector_type m_counts_f3pprime;//FIXME naive
+    vector_type m_counts_f3pprime; // FIXME naive
 
     vector_type m_counts_b;
     vector_type m_counts_f1;
@@ -38,12 +38,12 @@ public:
         m_bv = cc.m_bv;
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = cc.m_counts_fb;
-//        m_counts_fb1 = cc.m_counts_fb1;
-//        m_counts_fb2 = cc.m_counts_fb2;
+        //        m_counts_fb1 = cc.m_counts_fb1;
+        //        m_counts_fb2 = cc.m_counts_fb2;
 
-	m_counts_f1prime = cc.m_counts_f1prime;
-	m_counts_f2prime = cc.m_counts_f2prime;
-	m_counts_f3pprime = cc.m_counts_f3pprime;
+        m_counts_f1prime = cc.m_counts_f1prime;
+        m_counts_f2prime = cc.m_counts_f2prime;
+        m_counts_f3pprime = cc.m_counts_f3pprime;
 
         m_counts_b = cc.m_counts_b;
         m_counts_f1 = cc.m_counts_f1;
@@ -56,10 +56,10 @@ public:
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-//        m_counts_fb1 = std::move(cc.m_counts_fb1);
-//        m_counts_fb2 = std::move(cc.m_counts_fb2);
+        //        m_counts_fb1 = std::move(cc.m_counts_fb1);
+        //        m_counts_fb2 = std::move(cc.m_counts_fb2);
 
-	m_counts_f1prime = std::move(cc.m_counts_f1prime);
+        m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
         m_counts_f3pprime = std::move(cc.m_counts_f3pprime);
 
@@ -74,8 +74,8 @@ public:
         m_bv = std::move(cc.m_bv);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-//        m_counts_fb1 = std::move(cc.m_counts_fb1);
-//        m_counts_fb2 = std::move(cc.m_counts_fb2);
+        //        m_counts_fb1 = std::move(cc.m_counts_fb1);
+        //        m_counts_fb2 = std::move(cc.m_counts_fb2);
 
         m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
@@ -89,27 +89,30 @@ public:
     }
 
     template <class t_cst>
-    compressed_counts(collection& col,t_cst& cst, uint64_t max_node_depth, bool mkn_counts)
+    compressed_counts(collection& col, t_cst& cst, uint64_t max_node_depth,
+                      bool mkn_counts)
     {
         utils::lm_mem_monitor::event("compressed_counts");
         m_is_mkn = mkn_counts;
         if (!mkn_counts)
-            initialise_kneser_ney(col,cst, max_node_depth);
+            initialise_kneser_ney(col, cst, max_node_depth);
         else
-            initialise_modified_kneser_ney(col,cst, max_node_depth);
+            initialise_modified_kneser_ney(col, cst, max_node_depth);
     }
 
     template <class t_cst, class t_node_type>
     uint32_t compute_contexts(t_cst& cst, t_node_type node, uint64_t& num_syms)
     {
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+            cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> right(
+            cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
         num_syms = 0;
-        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left,
-                               right);
+        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
+                               preceding_syms, left, right);
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
         for (size_t i = 0; i < num_syms; i++) {
@@ -131,45 +134,51 @@ public:
     }
 
     template <class t_cst, class t_node_type>
-    uint32_t compute_contexts_mkn(t_cst& cst, t_node_type node, uint64_t& num_syms,
-                                  uint64_t& f1prime, uint64_t& f2prime, uint64_t& f3pprime)
+    uint32_t compute_contexts_mkn(t_cst& cst, t_node_type node,
+                                  uint64_t& num_syms, uint64_t& f1prime,
+                                  uint64_t& f2prime, uint64_t& f3pprime)
     {
         f1prime = 0;
         f2prime = 0;
-	f3pprime = 0;
+        f3pprime = 0;
         uint64_t all = 0;
-	auto child = cst.select_child(node, 1);
-         while (child != cst.root()) {
-             auto lb = cst.lb(child);
-             auto rb = cst.rb(child);
+        auto child = cst.select_child(node, 1);
+        while (child != cst.root()) {
+            auto lb = cst.lb(child);
+            auto rb = cst.rb(child);
 
-             static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
-             static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-             static std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
-             typename t_cst::csa_type::size_type num_syms = 0;
-             sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
-             if (num_syms == 1)
+            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+                cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> left(
+                cst.csa.sigma);
+            static std::vector<typename t_cst::csa_type::size_type> right(
+                cst.csa.sigma);
+            typename t_cst::csa_type::size_type num_syms = 0;
+            sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
+                                   preceding_syms, left, right);
+            if (num_syms == 1)
                 f1prime++;
-             if (num_syms == 2)
+            if (num_syms == 2)
                 f2prime++;
-             all++;
-             child = cst.sibling(child);
+            all++;
+            child = cst.sibling(child);
         }
-	f3pprime = all - f1prime - f2prime;
-	
+        f3pprime = all - f1prime - f2prime;
 
-	/* computes fb */
+        /* computes fb */
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
 
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+            cst.csa.sigma);
         static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::size_type> right(
+            cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
         num_syms = 0;
-        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left,
-                               right);
+        sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
+                               preceding_syms, left, right);
 
         for (size_t i = 0; i < num_syms; i++) {
             auto new_lb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + left[i];
@@ -190,7 +199,8 @@ public:
     }
 
     template <class t_cst>
-    void initialise_kneser_ney(collection& col,t_cst& cst, uint64_t max_node_depth)
+    void initialise_kneser_ney(collection& col, t_cst& cst,
+                               uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
@@ -231,38 +241,42 @@ public:
         m_bv = bv_type(tmp_bv);
         m_bv_rank.set_vector(&m_bv);
 
-        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
+        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
+                  << m_bv.size() << " nodes";
     }
 
     // specific MKN implementation, 2-pass
     template <class t_cst>
-    void initialise_modified_kneser_ney(collection& col,t_cst& cst, uint64_t max_node_depth)
+    void initialise_modified_kneser_ney(collection& col, t_cst& cst,
+                                        uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
-        sdsl::util::set_to_value(tmp_bv,0);
+        sdsl::util::set_to_value(tmp_bv, 0);
         auto tmp_buffer_counts_f1 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1"));
         auto tmp_buffer_counts_f2 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2"));
         auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
         auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
-        auto tmp_buffer_counts_f1prime  = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1p"));
+        auto tmp_buffer_counts_f1prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1p"));
         auto tmp_buffer_counts_f2prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2p"));
         auto tmp_buffer_counts_f3pprime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f3p"));
         uint64_t num_syms = 0;
-        uint64_t f1prime = 0, f2prime = 0, f3pprime=0;
+        uint64_t f1prime = 0, f2prime = 0, f3pprime = 0;
         auto root = cst.root();
-        std::vector< std::pair<uint64_t, uint64_t> > child_hist(max_node_depth+2);
+        std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
         for (const auto& child : cst.children(root)) {
             auto itr = cst.begin(child);
             auto end = cst.end(child);
 
-            for(auto& v : child_hist) v = {0,0};
+            for (auto& v : child_hist)
+                v = { 0, 0 };
             // std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
             uint64_t node_depth = 1;
             auto prev = root;
             while (itr != end) {
                 auto node = *itr;
                 // auto node_depth = cst.node_depth(node);
-                if( cst.parent(node) == prev) node_depth++;
+                if (cst.parent(node) == prev)
+                    node_depth++;
 
                 if (itr.visit() == 2) {
                     node_depth--;
@@ -274,14 +288,15 @@ public:
                         // assert(cst.degree(node) >= f12.first + f12.second);
                         tmp_buffer_counts_f1.push_back(f12.first);
                         tmp_buffer_counts_f2.push_back(f12.second);
-                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime, f3pprime);
+                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime,
+                                                      f3pprime);
                         tmp_buffer_counts_fb.push_back(c);
                         tmp_buffer_counts_b.push_back(num_syms);
                         tmp_buffer_counts_f1prime.push_back(f1prime);
                         tmp_buffer_counts_f2prime.push_back(f2prime);
                         tmp_buffer_counts_f3pprime.push_back(f3pprime);
                     }
-                    child_hist[node_depth] = {0,0};
+                    child_hist[node_depth] = { 0, 0 };
                     // child_hist.erase(node_id);
                 } else {
                     /* first visit */
@@ -293,10 +308,9 @@ public:
                     int count = cst.size(node);
                     // auto parent_id = cst.id(cst.parent(node));
                     if (count == 1)
-                        child_hist[node_depth-1].first += 1;
+                        child_hist[node_depth - 1].first += 1;
                     else if (count == 2)
-                        child_hist[node_depth-1].second += 1;
-
+                        child_hist[node_depth - 1].second += 1;
                 }
                 prev = node;
                 ++itr;
@@ -304,23 +318,24 @@ public:
             }
         }
         // store into compressed in-memory data structures
-        m_bv = bv_type(tmp_bv); tmp_bv.resize(0);
+        m_bv = bv_type(tmp_bv);
+        tmp_bv.resize(0);
         m_bv_rank.set_vector(&m_bv);
-        m_counts_f1 = vector_type(tmp_buffer_counts_f1); 
+        m_counts_f1 = vector_type(tmp_buffer_counts_f1);
         m_counts_f2 = vector_type(tmp_buffer_counts_f2);
-        m_counts_fb = vector_type(tmp_buffer_counts_fb); 
-        m_counts_b = vector_type(tmp_buffer_counts_b); 
+        m_counts_fb = vector_type(tmp_buffer_counts_fb);
+        m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
         m_counts_f3pprime = vector_type(tmp_buffer_counts_f3pprime);
-        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of " << m_bv.size() << " nodes";
+        LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
+                  << m_bv.size() << " nodes";
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
                         std::string name = "") const
     {
-        sdsl::structure_tree_node* child
-            = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += sdsl::serialize(m_bv, out, child, "bv");
         written_bytes += sdsl::serialize(m_bv_rank, out, child, "bv_rank");
@@ -334,7 +349,6 @@ public:
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
-
 
     void load(std::istream& in)
     {
@@ -360,7 +374,8 @@ public:
     }
 
     template <class t_cst, class t_node_type>
-    void lookup_f12(t_cst& cst, t_node_type node, uint64_t& f1, uint64_t& f2) const
+    void lookup_f12(t_cst& cst, t_node_type node, uint64_t& f1,
+                    uint64_t& f2) const
     {
         assert(m_is_mkn);
         auto id = cst.id(node);
@@ -378,7 +393,8 @@ public:
     }
 
     template <class t_cst, class t_node_type>
-    void lookup_f123pprime(t_cst& cst, t_node_type node, uint64_t& f1prime, uint64_t& f2prime, uint64_t& f3pprime) const
+    void lookup_f123pprime(t_cst& cst, t_node_type node, uint64_t& f1prime,
+                           uint64_t& f2prime, uint64_t& f3pprime) const
     {
         assert(m_is_mkn);
         auto id = cst.id(node);
@@ -395,5 +411,4 @@ public:
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_b[rank_in_vec];
     }
-
 };
