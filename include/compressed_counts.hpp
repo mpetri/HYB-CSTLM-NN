@@ -24,7 +24,6 @@ private:
 
     vector_type m_counts_f1prime;
     vector_type m_counts_f2prime;
-    vector_type m_counts_f3pprime; // FIXME naive
 
     vector_type m_counts_b;
     vector_type m_counts_f1;
@@ -43,7 +42,6 @@ public:
 
         m_counts_f1prime = cc.m_counts_f1prime;
         m_counts_f2prime = cc.m_counts_f2prime;
-        m_counts_f3pprime = cc.m_counts_f3pprime;
 
         m_counts_b = cc.m_counts_b;
         m_counts_f1 = cc.m_counts_f1;
@@ -60,7 +58,6 @@ public:
 
         m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
-        m_counts_f3pprime = std::move(cc.m_counts_f3pprime);
 
         m_counts_b = std::move(cc.m_counts_b);
         m_counts_f1 = std::move(cc.m_counts_f1);
@@ -77,7 +74,6 @@ public:
 
         m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
-        m_counts_f3pprime = std::move(cc.m_counts_f3pprime);
 
         m_counts_b = std::move(cc.m_counts_b);
         m_counts_f1 = std::move(cc.m_counts_f1);
@@ -133,11 +129,10 @@ public:
     template <class t_cst, class t_node_type>
     uint32_t compute_contexts_mkn(t_cst& cst, t_node_type node,
                                   uint64_t& num_syms, uint64_t& f1prime,
-                                  uint64_t& f2prime, uint64_t& f3pprime)
+                                  uint64_t& f2prime)
     {
         f1prime = 0;
         f2prime = 0;
-        f3pprime = 0;
         uint64_t all = 0;
         auto child = cst.select_child(node, 1);
         while (child != cst.root()) {
@@ -160,7 +155,6 @@ public:
             all++;
             child = cst.sibling(child);
         }
-        f3pprime = all - f1prime - f2prime;
 
         /* computes fb */
         auto total_contexts = 0;
@@ -255,9 +249,8 @@ public:
         auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
         auto tmp_buffer_counts_f1prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1p"));
         auto tmp_buffer_counts_f2prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2p"));
-        auto tmp_buffer_counts_f3pprime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f3p"));
         uint64_t num_syms = 0;
-        uint64_t f1prime = 0, f2prime = 0, f3pprime = 0;
+        uint64_t f1prime = 0, f2prime = 0;
         auto root = cst.root();
         std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
         for (const auto& child : cst.children(root)) {
@@ -285,13 +278,11 @@ public:
                         // assert(cst.degree(node) >= f12.first + f12.second);
                         tmp_buffer_counts_f1.push_back(f12.first);
                         tmp_buffer_counts_f2.push_back(f12.second);
-                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime,
-                                                      f3pprime);
+                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime);
                         tmp_buffer_counts_fb.push_back(c);
                         tmp_buffer_counts_b.push_back(num_syms);
                         tmp_buffer_counts_f1prime.push_back(f1prime);
                         tmp_buffer_counts_f2prime.push_back(f2prime);
-                        tmp_buffer_counts_f3pprime.push_back(f3pprime);
                     }
                     child_hist[node_depth] = { 0, 0 };
                     // child_hist.erase(node_id);
@@ -324,7 +315,6 @@ public:
         m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
-        m_counts_f3pprime = vector_type(tmp_buffer_counts_f3pprime);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
     }
@@ -342,7 +332,6 @@ public:
         written_bytes += sdsl::serialize(m_counts_f2, out, child, "counts_f2");
         written_bytes += sdsl::serialize(m_counts_f1prime, out, child, "counts_f1p");
         written_bytes += sdsl::serialize(m_counts_f2prime, out, child, "counts_f2p");
-        written_bytes += sdsl::serialize(m_counts_f3pprime, out, child, "counts_f3p");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -357,7 +346,6 @@ public:
         sdsl::load(m_counts_f2, in);
         sdsl::load(m_counts_f1prime, in);
         sdsl::load(m_counts_f2prime, in);
-        sdsl::load(m_counts_f3pprime, in);
         m_is_mkn = (m_counts_f1.size() > 0);
     }
 
@@ -391,14 +379,13 @@ public:
 
     template <class t_cst, class t_node_type>
     void lookup_f123pprime(t_cst& cst, t_node_type node, uint64_t& f1prime,
-                           uint64_t& f2prime, uint64_t& f3pprime) const
+                           uint64_t& f2prime) const
     {
         assert(m_is_mkn);
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
         f1prime = m_counts_f1prime[rank_in_vec];
         f2prime = m_counts_f2prime[rank_in_vec];
-        f3pprime = m_counts_f3pprime[rank_in_vec];
     }
 
     template <class t_cst, class t_node_type>

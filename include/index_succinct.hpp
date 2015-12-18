@@ -370,9 +370,8 @@ public:
         f1prime = f2prime = f3pprime = 0;
         uint64_t all = 0;
         if (full_match) {
-            m_n1plusfrontback.lookup_f123pprime(
-                m_cst, node, f1prime, f2prime,
-                f3pprime); // FIXME change the name n1plusfrontback
+            m_n1plusfrontback.lookup_f123pprime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
+	    f3pprime = m_cst.degree(node)-f1prime-f2prime;
             /*
       // pattern matches the edge label
       auto child = m_cst.select_child(node, 1);
