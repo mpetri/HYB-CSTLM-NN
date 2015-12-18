@@ -370,49 +370,14 @@ public:
         f1prime = f2prime = f3pprime = 0;
         uint64_t all = 0;
         if (full_match) {
-            m_n1plusfrontback.lookup_f123pprime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
+            m_n1plusfrontback.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
 	    f3pprime = m_cst.degree(node)-f1prime-f2prime;
-            /*
-      // pattern matches the edge label
-      auto child = m_cst.select_child(node, 1);
-      all =
-      while (child != m_cst.root()) {
-          auto lb = m_cst.lb(child);
-          auto rb = m_cst.rb(child);
-
-          static std::vector<typename t_cst::csa_type::value_type>
-      preceding_syms(m_cst.csa.sigma);
-          static std::vector<typename t_cst::csa_type::size_type>
-      left(m_cst.csa.sigma);
-          static std::vector<typename t_cst::csa_type::size_type>
-      right(m_cst.csa.sigma);
-          typename t_cst::csa_type::size_type num_syms = 0;
-          sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-      preceding_syms, left, right);
-          if (num_syms == 1)
-              n1++;
-          if (num_syms == 2)
-              n2++;
-          all++;
-          child = m_cst.sibling(child);
-      }*/
         } else {
-            // FIXME this can be replaced ny N1PlusBack of this node?
             // pattern is part of the edge label
-            auto lb = m_cst.lb(node);
-            auto rb = m_cst.rb(node);
-            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
-                m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> left(
-                m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> right(
-                m_cst.csa.sigma);
-            typename t_cst::csa_type::size_type num_syms = 0;
-            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                   preceding_syms, left, right);
-            if (num_syms == 1)
+	    uint64_t num_symsprime = N1PlusBack(node, pattern_begin, pattern_end);
+            if (num_symsprime == 1)
                 f1prime++;
-            if (num_syms == 2)
+            if (num_symsprime == 2)
                 f2prime++;
             all++;
             f3pprime = all - f1prime - f2prime;
@@ -506,22 +471,6 @@ public:
                     child = m_cst.sibling(child);
                 }
             }
-            /*
-      // ehsan: replaced the above block with this
-      // pattern matches the edge label
-      auto child = m_cst.select_child(node, 1);
-      while (child != m_cst.root()) {
-          auto c = m_cst.size(child);
-          //LOG(INFO) << "\ttop -- child " << child << " count " << c;
-          if (c == 1)
-              n1 += 1;
-          else if (c == 2)
-              n2 += 1;
-          else if (c >= 3)
-              n3p += 1;
-          child = m_cst.sibling(child);
-      }
-          */
         } else {
             // pattern is part of the edge label
             uint64_t symbol = *(pattern_end - 1);

@@ -378,7 +378,7 @@ public:
     }
 
     template <class t_cst, class t_node_type>
-    void lookup_f123pprime(t_cst& cst, t_node_type node, uint64_t& f1prime,
+    void lookup_f12prime(t_cst& cst, t_node_type node, uint64_t& f1prime,
                            uint64_t& f2prime) const
     {
         assert(m_is_mkn);
