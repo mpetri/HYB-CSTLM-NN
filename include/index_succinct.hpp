@@ -193,68 +193,7 @@ public:
     {
         m_precomputed.print(ismkn, ngramsize);
     }
-    /*
-      void N123PlusBack(const node_type& node,
-                        pattern_iterator pattern_begin, pattern_iterator,
-                        uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
-      {
-          auto timer = lm_bench::bench(timer_type::N1PlusBack);
 
-          n1 = n2 = n3p = 0;
-          auto size = m_cst.size(node);
-          if (m_cst.is_leaf(node)) {
-              // there's only 1 previous context as this node goes to the end of
-     the corpus
-              if (size == 1)
-                  n1 = 1;
-              else if (size == 2)
-                  n2 = 1;
-              else
-                  n3p = 1;
-          } else {
-              // no pre-storing here; this method is only called when we go
-     beyond the cache limits
-              static std::vector<typename t_cst::csa_type::value_type>
-     preceding_syms(m_cst.csa.sigma);
-              static std::vector<typename t_cst::csa_type::size_type>
-     left(m_cst.csa.sigma);
-              static std::vector<typename t_cst::csa_type::size_type>
-     right(m_cst.csa.sigma);
-
-              auto lb = m_cst.lb(node);
-              auto rb = m_cst.rb(node);
-              typename t_cst::csa_type::size_type num_syms = 0;
-              sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1,
-     num_syms, preceding_syms,
-                                     left, right);
-
-              for (size_t i = 0; i < num_syms; i++) {
-                  auto new_lb =
-     m_cst.csa.C[m_cst.csa.char2comp[preceding_syms[i]]] + left[i];
-                  auto new_rb =
-     m_cst.csa.C[m_cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
-                  auto new_size = (new_rb - new_lb + 1);
-                  if (new_size == 1)
-                      n1 += 1;
-                  else if (new_size == 2)
-                      n2 += 1;
-                  else
-                      n3p += 1;
-              }
-          }
-
-          // adjust for sentinel start of sentence
-          auto symbol = *pattern_begin;
-          if (symbol == PAT_START_SYM) {
-              if (size == 1)
-                  n1 -= 1;
-              else if (size == 2)
-                  n2 -= 1;
-              else
-                  n3p -= 1;
-          }
-      }
-  */
     uint64_t N1PlusFrontBack(const node_type& node,
                              pattern_iterator pattern_begin,
                              pattern_iterator pattern_end) const
@@ -262,7 +201,6 @@ public:
         auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
 
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
-        // ASSUMPTION: node_rev matches the pattern in the reverse tree, m_cst_rev
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
@@ -288,53 +226,6 @@ public:
             }
         }
     }
-    /*
-      void N123PlusFrontBack(const node_type& node,
-                             pattern_iterator pattern_begin, pattern_iterator
-     pattern_end,
-                             uint64_t& n1, uint64_t& n2, uint64_t& n3p) const
-      {
-          auto timer = lm_bench::bench(timer_type::N123PlusFrontBack);
-
-          // ASSUMPTION: node matches the pattern in the forward tree, m_cst
-          // ASSUMPTION: node_rev matches the pattern in the reverse tree,
-     m_cst_rev
-          uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-          if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
-              if (*pattern_begin == PAT_START_SYM) {
-                  N123PlusFront(node, pattern_begin, pattern_end, n1, n2, n3p);
-              } else {
-                  if (pattern_size <= t_max_ngram_count) {
-                      m_n1plusfrontback.lookup_fb123p(m_cst, node, n1, n2, n3p);
-                  } else {
-                      auto n1p = compute_contexts(m_cst, node, n1, n2);
-                      n3p = n1p - n1 - n2;
-                  }
-              }
-          } else {
-              // special case, only one way of extending this pattern to the
-     right
-              if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) ==
-     PAT_END_SYM) {
-                  // pattern must be 13xyz41 -> #P(*3xyz4*) == 0
-                  n1 = n2 = n3p = 0;
-              } else if (*pattern_begin == PAT_START_SYM) {
-                  // pattern must be 13xyzA -> #P(*3xyz*) == 1
-                  auto size = m_cst.size(node);
-                  n1 = n2 = n3p = 0;
-                  if (size == 1)
-                      n1 = 1;
-                  else if (size == 2)
-                      n2 = 1;
-                  else
-                      n3p = 1;
-              } else {
-                  // pattern must be *xyzA -> #P(*xyz*) == N1PlusBack
-                  N123PlusBack(node, pattern_begin, pattern_end, n1, n2, n3p);
-              }
-          }
-      }
-  */
     // Computes N_1+( abc * )
     uint64_t N1PlusFront(const node_type& node, pattern_iterator pattern_begin,
                          pattern_iterator pattern_end) const
@@ -360,6 +251,7 @@ public:
         return N1plus_front;
     }
 
+    // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of
     void N123PlusFrontPrime(const node_type& node, pattern_iterator pattern_begin,
                             pattern_iterator pattern_end, uint64_t& f1prime,
                             uint64_t& f2prime, uint64_t& f3pprime) const
@@ -382,63 +274,6 @@ public:
             all++;
             f3pprime = all - f1prime - f2prime;
         }
-    }
-
-    // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of
-    // MKN
-    void N123PlusFront_lower(const node_type& node,
-                             pattern_iterator pattern_begin,
-                             pattern_iterator pattern_end, uint64_t& n1,
-                             uint64_t& n2, uint64_t& n3p) const
-    {
-        uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
-        bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
-        n1 = n2 = n3p = 0;
-        uint64_t all = 0;
-        if (full_match) {
-            // pattern matches the edge label
-            auto child = m_cst.select_child(node, 1);
-            while (child != m_cst.root()) {
-                auto lb = m_cst.lb(child);
-                auto rb = m_cst.rb(child);
-
-                static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
-                    m_cst.csa.sigma);
-                static std::vector<typename t_cst::csa_type::size_type> left(
-                    m_cst.csa.sigma);
-                static std::vector<typename t_cst::csa_type::size_type> right(
-                    m_cst.csa.sigma);
-                typename t_cst::csa_type::size_type num_syms = 0;
-                sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                       preceding_syms, left, right);
-                if (num_syms == 1)
-                    n1++;
-                if (num_syms == 2)
-                    n2++;
-                all++;
-                child = m_cst.sibling(child);
-            }
-        } else {
-            // pattern is part of the edge label
-            auto lb = m_cst.lb(node);
-            auto rb = m_cst.rb(node);
-
-            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
-                m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> left(
-                m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> right(
-                m_cst.csa.sigma);
-            typename t_cst::csa_type::size_type num_syms = 0;
-            sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                   preceding_syms, left, right);
-            if (num_syms == 1)
-                n1++;
-            if (num_syms == 2)
-                n2++;
-            all++;
-        }
-        n3p = all - n1 - n2;
     }
 
     // Computes N_1( abc * ), N_2( abc * ), N_3+( abc * ); needed for modified

@@ -64,7 +64,7 @@ struct precomputed_stats {
         D2_cnt.resize(size);
         D3_cnt.resize(size);
 
-        // compute the counts & continuation counts from the CST (reversed)
+        // compute the counts & continuation counts from the CST
         ncomputer(col, cst);
 
         for (auto size = 1ULL; size <= max_ngram_len; size++) {
@@ -233,7 +233,7 @@ private:
 template <class t_cst>
 void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 {
-    // load up reversed text and store in a bitvector for locating sentinel
+    // load up text and store in a bitvector for locating sentinel
     // symbols
     sdsl::bit_vector sentinel_bv;
     {
