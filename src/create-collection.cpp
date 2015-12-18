@@ -96,6 +96,8 @@ int main(int argc, const char* argv[])
     dict.max_load_factor(0.2);
     std::vector<std::pair<uint64_t, std::string> > dict_ids;
     size_t max_id = 0;
+    uint64_t initial_sigma = 0;
+    uint64_t pruned_sigma = 0;
     {
         LOG(INFO) << "tokenize text";
         std::unordered_map<std::string, uint64_t> tdict;
@@ -114,6 +116,8 @@ int main(int argc, const char* argv[])
         std::sort(dict_ids.begin(), dict_ids.end(),
                   std::greater<std::pair<uint64_t, std::string> >());
 
+        initial_sigma = dict_ids.size();
+
         LOG(INFO) << "remove low freq (<" << args.min_symbol_freq << ") symbols";
         for (size_t i = 0; i < dict_ids.size(); i++) {
             if (dict_ids[i].first < args.min_symbol_freq) {
@@ -126,6 +130,7 @@ int main(int argc, const char* argv[])
                 break;
             }
         }
+        pruned_sigma = dict_ids.size();
 
         LOG(INFO) << "create id mapping";
         uint64_t cur_id = NUM_SPECIAL_SYMS;
@@ -135,6 +140,9 @@ int main(int argc, const char* argv[])
             cur_id++;
         }
     }
+    uint64_t num_non_freq_syms = 0;
+    uint64_t num_sentences = 0;
+    uint64_t num_tokens = 0;
     LOG(INFO) << "2nd pass to transform the integers";
     {
         std::ofstream corpus_word;
@@ -148,7 +156,6 @@ int main(int argc, const char* argv[])
         std::ifstream ifs(args.input_file);
         std::string line;
         buf.push_back(EOS_SYM); // file starts with EOS_SYM
-        uint64_t num_non_freq_syms = 0;
         while (std::getline(ifs, line)) {
             buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
             auto line_tokens = parse_line(line, args.byte_alphabet);
@@ -171,6 +178,7 @@ int main(int argc, const char* argv[])
                 corpus_word << "\n";
             buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
             buf.push_back(EOS_SYM);
+            num_sentences++;
         }
         { // include special 'UNK' sentence to ensure symbol included in CST
             buf.push_back(UNKNOWN_SYM);
@@ -179,6 +187,7 @@ int main(int argc, const char* argv[])
             buf.push_back(EOS_SYM);
         }
         buf.push_back(EOF_SYM);
+        num_tokens = buf.size();
         if (args.write_corpus)
             corpus_word.close();
         LOG(INFO) << "text size = " << buf.size();
@@ -204,5 +213,24 @@ int main(int argc, const char* argv[])
             cur_id++;
         }
     }
+    LOG(INFO) << "write stats file";
+    {
+        std::ofstream ofs(args.collection_dir + "/" + KEY_PREFIX + KEY_STATS);
+        ofs << "initial_vocab_size="<<initial_sigma<<"\n";
+        LOG(INFO) << "initial_vocab_size="<<initial_sigma;
+        ofs << "pruned_vocab_size="<<pruned_sigma<<"\n";
+        LOG(INFO) << "pruned_vocab_size="<<pruned_sigma;
+        ofs << "num_non_freq_syms="<<num_non_freq_syms<<"\n";
+        LOG(INFO) << "num_non_freq_syms="<<num_non_freq_syms;
+        ofs << "num_sentences="<<num_sentences<<"\n";
+        LOG(INFO) << "num_sentences="<<num_sentences;
+        ofs << "num_tokens="<<num_tokens<<"\n";
+        LOG(INFO) << "num_tokens="<<num_tokens;
+        ofs << "raw_size_in_bytes="<<sdsl::util::file_size(args.input_file)<<"\n";
+        LOG(INFO) << "raw_size_in_bytes="<<sdsl::util::file_size(args.input_file);
+        ofs << "min_symbol_freq=" << args.min_symbol_freq<<"\n";
+        LOG(INFO) << "min_symbol_freq="<<args.min_symbol_freq;
+    }
+
     return 0;
 }
