@@ -46,7 +46,11 @@ LMQueryMKN<t_idx, t_atom>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize)
     : m_idx(idx)
     , m_ngramsize(ngramsize)
 {
-    m_last_nodes_incl.push_back(m_idx->m_cst.root());
+    auto root = m_idx->m_cst.root();
+    auto node = root;
+    auto r = backward_search_wrapper(m_idx->m_cst, node, PAT_START_SYM);
+    assert(r >= 0);
+    m_last_nodes_incl = std::vector<t_node>({root, node});
     m_pattern.push_back(PAT_START_SYM);
 }
 
@@ -88,21 +92,15 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
                 node_incl_vec.push_back(node_incl);
         }
 
-
-	//FIXME what is going on here?
+        // recycle the node_incl matches from the last call to append_symbol
+        // to serve as the node_excl values
         if (i >= 2) {
-	/*
             node_excl_it++;
             if (node_excl_it == m_last_nodes_incl.end()) {
                 break;
             } else {
                 node_excl = *node_excl_it;
             }
-	*/
-	     //FIXME this passes the unit-test but not the above commented block
-	     if (backward_search_wrapper(m_idx->m_cst, node_excl, *start) <= 0)
-                break;
-
         }
 
         double D1, D2, D3p;
