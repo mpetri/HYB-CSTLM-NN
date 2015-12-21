@@ -18,6 +18,7 @@
 #include "kn.hpp"
 #include "kn_modified.hpp"
 #include "query.hpp"
+#include "query_kn.hpp"
 
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
@@ -27,6 +28,12 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
     if (ismkn) {
         double final_score = 0;
         LMQueryMKN<t_idx,typename t_pattern::value_type> query(&idx, ngramsize);
+        for (const auto& word : word_vec)
+            final_score += log10(query.append_symbol(word));
+        return final_score;
+    } else {
+        double final_score = 0;
+        LMQueryKN<t_idx,typename t_pattern::value_type> query(&idx, ngramsize);
         for (const auto& word : word_vec)
             final_score += log10(query.append_symbol(word));
         return final_score;
