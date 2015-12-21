@@ -65,6 +65,8 @@ void create_and_store(collection& col, bool use_mkn)
 
 int main(int argc, const char* argv[])
 {
+    mem_monitor m("/dev/null");
+
     log::start_log(argc, argv);
 
     /* parse command line */
@@ -77,5 +79,12 @@ int main(int argc, const char* argv[])
         using index_type = index_succinct<default_cst_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
+
+    auto mem_stats = m.get_current_stats();
+    double peak_mem = mem_stats.VmPeak;
+    double text_size_raw = col.raw_size_in_bytes;
+    double memory_usage = peak_mem / (text_size_raw+1.0);
+    LOG(INFO) << "mem usage = " << memory_usage << "n";
+
     return 0;
 }
