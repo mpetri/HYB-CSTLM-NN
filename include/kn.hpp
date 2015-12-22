@@ -46,10 +46,10 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
 
         // update the two searches into the CST
         if (ok) {
-            ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
+            ok = backward_search_wrapper(idx, node_incl, *start);
         }
         if (i >= 2) {
-            if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0)
+            if (backward_search_wrapper(idx, node_excl, *start) <= 0)
                 break;
         }
 
@@ -61,7 +61,7 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
             d = idx.m_cst.size(node_excl);
         } else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : D;
-            d = idx.m_precomputed.N1plus_dotdot;
+            d = idx.m_discounts.N1plus_dotdot;
         } else {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack(node_excl, start, pattern_end - 1);

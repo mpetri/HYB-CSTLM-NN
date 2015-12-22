@@ -93,7 +93,7 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
               std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count;
+    for (size_t cgram = 2; cgram <= this->idx.m_discounts.max_ngram_count;
          cgram++) {
         std::unordered_map<std::vector<uint64_t>, uint64_t, uint64_vector_hasher>
             ngram_counts;
@@ -133,13 +133,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.m_precomputed.n1[cgram], act_n1)
+        EXPECT_EQ(this->idx.m_discounts.n1[cgram], act_n1)
             << "n1[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n2[cgram], act_n2)
+        EXPECT_EQ(this->idx.m_discounts.n2[cgram], act_n2)
             << "n2[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n3[cgram], act_n3)
+        EXPECT_EQ(this->idx.m_discounts.n3[cgram], act_n3)
             << "n3[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n4[cgram], act_n4)
+        EXPECT_EQ(this->idx.m_discounts.n4[cgram], act_n4)
             << "n4[" << cgram << "] count incorrect!";
     }
 }
@@ -151,7 +151,7 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
               std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_precomputed.max_ngram_count;
+    for (size_t cgram = 2; cgram <= this->idx.m_discounts.max_ngram_count;
          cgram++) {
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
                            uint64_vector_hasher> ngram_counts;
@@ -224,13 +224,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.m_precomputed.n1_cnt[cgram], act_n1_cnt)
+        EXPECT_EQ(this->idx.m_discounts.n1_cnt[cgram], act_n1_cnt)
             << "n1_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n2_cnt[cgram], act_n2_cnt)
+        EXPECT_EQ(this->idx.m_discounts.n2_cnt[cgram], act_n2_cnt)
             << "n2_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n3_cnt[cgram], act_n3_cnt)
+        EXPECT_EQ(this->idx.m_discounts.n3_cnt[cgram], act_n3_cnt)
             << "n3_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_precomputed.n4_cnt[cgram], act_n4_cnt)
+        EXPECT_EQ(this->idx.m_discounts.n4_cnt[cgram], act_n4_cnt)
             << "n4_cnt[" << cgram << "] count incorrect!";
     }
 }
@@ -255,7 +255,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
     }
     size_t act_N1plus_dotdot = uniq_bigrams.size();
     /* compare counts */
-    EXPECT_EQ(this->idx.m_precomputed.N1plus_dotdot, act_N1plus_dotdot)
+    EXPECT_EQ(this->idx.m_discounts.N1plus_dotdot, act_N1plus_dotdot)
         << "N1plus_dotdot count incorrect!";
 }
 
@@ -278,7 +278,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
             act_N3plus_dot++;
     }
     /* compare counts */
-    EXPECT_EQ(this->idx.m_precomputed.N3plus_dot, act_N3plus_dot)
+    EXPECT_EQ(this->idx.m_discounts.N3plus_dot, act_N3plus_dot)
         << "N3plus_dot count incorrect!";
 }
 
@@ -291,7 +291,7 @@ TYPED_TEST(LMTest, N1PlusBack)
 
     // (2) for all n-gram sizes
 
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusBack counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
@@ -346,7 +346,7 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         std::unordered_map<std::vector<uint64_t>,
@@ -402,7 +402,7 @@ TYPED_TEST(LMTest, N1PlusFront)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         std::unordered_map<std::vector<uint64_t>, std::unordered_set<uint64_t>,
@@ -456,7 +456,7 @@ TYPED_TEST(LMTest, N123PlusFront)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         typedef std::map<uint64_t, uint64_t> t_symbol_counts;
@@ -533,7 +533,7 @@ TYPED_TEST(LMTest, N123PlusBack)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         typedef std::map<uint64_t, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
@@ -599,7 +599,7 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_precomputed.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         typedef std::map<std::pair<uint64_t, uint64_t>, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;

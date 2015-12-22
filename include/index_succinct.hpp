@@ -25,11 +25,11 @@ public:
     typedef typename t_cst::string_type string_type;
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
-
+    typedef compressed_counts<> ccounts_type;
 public: // data
     cst_type m_cst;
-    precomputed_stats m_precomputed;
-    compressed_counts<> m_n1plusfrontback;
+    precomputed_stats m_discounts;
+    ccounts_type m_precomputed;
     vocab_type m_vocab;
 
 public:
@@ -50,21 +50,21 @@ public:
         } else {
             sdsl::load_from_file(m_cst, cst_file);
         }
-        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
+        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
         if (!utils::file_exists(discounts_file)) {
             lm_construct_timer timer("DISCOUNTS");
-            m_precomputed = precomputed_stats(col, m_cst, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_precomputed, discounts_file);
+            m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count, is_mkn);
+            sdsl::store_to_file(m_discounts, discounts_file);
         } else {
-            sdsl::load_from_file(m_precomputed, discounts_file);
+            sdsl::load_from_file(m_discounts, discounts_file);
         }
-        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_n1plusfrontback) + ".sdsl";
+        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
         if (!utils::file_exists(precomputed_file)) {
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
-            m_n1plusfrontback = compressed_counts<>(col, m_cst, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_n1plusfrontback, precomputed_file);
+            m_precomputed = ccounts_type(col, m_cst, t_max_ngram_count, is_mkn);
+            sdsl::store_to_file(m_precomputed, precomputed_file);
         } else {
-            sdsl::load_from_file(m_n1plusfrontback, precomputed_file);
+            sdsl::load_from_file(m_precomputed, precomputed_file);
         }
         {
             lm_construct_timer timer("VOCAB");
@@ -78,8 +78,8 @@ public:
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
         written_bytes += m_cst.serialize(out, child, "CST");
-        written_bytes += m_precomputed.serialize(out, child, "Precomputed_Stats");
-        written_bytes += m_n1plusfrontback.serialize(out, child, "Prestored N1plusfrontback");
+        written_bytes += m_discounts.serialize(out, child, "Precomputed_Stats");
+        written_bytes += m_precomputed.serialize(out, child, "Prestored N1plusfrontback");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
@@ -88,8 +88,8 @@ public:
     void load(std::istream& in)
     {
         m_cst.load(in);
+        sdsl::load(m_discounts, in);
         sdsl::load(m_precomputed, in);
-        sdsl::load(m_n1plusfrontback, in);
         sdsl::load(m_vocab, in);
     }
 
@@ -97,8 +97,8 @@ public:
     {
         if (this != &a) {
             m_cst.swap(a.m_cst);
+            std::swap(m_discounts, a.m_discounts);
             std::swap(m_precomputed, a.m_precomputed);
-            std::swap(m_n1plusfrontback, a.m_n1plusfrontback);
             m_vocab.swap(a.m_vocab);
         }
     }
@@ -113,13 +113,6 @@ public:
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
 
-        // std::cout << "N1PlusBack_from_forward -- pattern ";
-        // std::copy(pattern_begin, pattern_end,
-        // std::ostream_iterator<uint64_t>(std::cout, " "));
-        // std::cout << std::endl;
-        // std::cout << "\tnode is " << node << " root is " << m_cst.root() <<
-        // std::endl;
-
         uint64_t n1plus_back;
         if (m_cst.is_leaf(node)) {
             // std::cout << "\tleaf\n";
@@ -127,7 +120,7 @@ public:
             // FIXME: does this really follow? Yes, there's only 1 previous context as
             // this node goes to the end of the corpus
         } else if (m_cst.depth(node) <= t_max_ngram_count) {
-            n1plus_back = m_n1plusfrontback.lookup_b(m_cst, node);
+            n1plus_back = m_precomputed.lookup_b(m_cst, node);
             // std::cout << "\tnon-leaf\n";
         } else {
             // std::cout << "\tdepth exceeded\n";
@@ -167,9 +160,9 @@ public:
         // discounts stay flat beyond this (a reasonable guess)
         level = std::min(level, (uint64_t)t_max_ngram_count);
         if (cnt)
-            return m_precomputed.Y_cnt[level];
+            return m_discounts.Y_cnt[level];
         else
-            return m_precomputed.Y[level];
+            return m_discounts.Y[level];
     }
 
     void mkn_discount(uint64_t level, double& D1, double& D2, double& D3p,
@@ -179,19 +172,19 @@ public:
         // discounts stay flat beyond this (a reasonable guess)
         level = std::min(level, (uint64_t)t_max_ngram_count);
         if (cnt) {
-            D1 = m_precomputed.D1_cnt[level];
-            D2 = m_precomputed.D2_cnt[level];
-            D3p = m_precomputed.D3_cnt[level];
+            D1 = m_discounts.D1_cnt[level];
+            D2 = m_discounts.D2_cnt[level];
+            D3p = m_discounts.D3_cnt[level];
         } else {
-            D1 = m_precomputed.D1[level];
-            D2 = m_precomputed.D2[level];
-            D3p = m_precomputed.D3[level];
+            D1 = m_discounts.D1[level];
+            D2 = m_discounts.D2[level];
+            D3p = m_discounts.D3[level];
         }
     }
 
     void print_params(bool ismkn, uint32_t ngramsize) const
     {
-        m_precomputed.print(ismkn, ngramsize);
+        m_discounts.print(ismkn, ngramsize);
     }
 
     uint64_t N1PlusFrontBack(const node_type& node,
@@ -207,7 +200,7 @@ public:
                 return m_cst.degree(node);
             } else {
                 if (pattern_size <= t_max_ngram_count) {
-                    return m_n1plusfrontback.lookup_fb(m_cst, node);
+                    return m_precomputed.lookup_fb(m_cst, node);
                 } else {
                     return compute_contexts(m_cst, node);
                 }
@@ -262,7 +255,7 @@ public:
         f1prime = f2prime = f3pprime = 0;
         uint64_t all = 0;
         if (full_match) {
-            m_n1plusfrontback.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
+            m_precomputed.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
 	    f3pprime = m_cst.degree(node)-f1prime-f2prime;
         } else {
             // pattern is part of the edge label
@@ -282,6 +275,7 @@ public:
                        pattern_iterator pattern_end, uint64_t& n1, uint64_t& n2,
                        uint64_t& n3p) const
     {
+        auto timer = lm_bench::bench(timer_type::N123PlusFront);
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
@@ -290,12 +284,13 @@ public:
 
             if (pattern_size <= t_max_ngram_count) {
                 // FIXME: this bit is currently broken
-                m_n1plusfrontback.lookup_f12(m_cst, node, n1, n2);
+                m_precomputed.lookup_f12(m_cst, node, n1, n2);
                 n3p = m_cst.degree(node) - n1 - n2;
             } else {
                 // loop over the children
                 auto child = m_cst.select_child(node, 1);
-                while (child != m_cst.root()) {
+                auto root = m_cst.root();
+                while (child != root) {
                     auto c = m_cst.size(child);
                     if (c == 1)
                         n1 += 1;
@@ -393,10 +388,10 @@ public:
                     // need to know how many of the children have cst.size(new_node) == 1
                     // or 2
                     uint64_t delta1 = 0, delta2 = 0;
-                    if (m_n1plusfrontback.is_precomputed(cst, new_node)) {
+                    if (m_precomputed.is_precomputed(cst, new_node)) {
                         // efficient way to compute based on earlier pass computing f1 and
                         // f2 values
-                        m_n1plusfrontback.lookup_f12(cst, new_node, delta1, delta2);
+                        m_precomputed.lookup_f12(cst, new_node, delta1, delta2);
                         // LOG(INFO) << " LOOKUP        node " << new_node << " delta1 " <<
                         // delta1 << " delta2 " << delta2;
                     } else {

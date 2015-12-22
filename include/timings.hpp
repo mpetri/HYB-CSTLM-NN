@@ -40,9 +40,13 @@ enum class timer_type {
     backward_search,
     highestorder,
     lowerorder,
-    lowestorder
+    lowestorder,
+    lookup_b,
+    lookup_f12prime,
+    lookup_fb,
+    lookup_f12
 };
-const uint64_t num_timer_types = 8;
+const uint64_t num_timer_types = 16;
 
 std::string timer_type_to_str(int type)
 {
@@ -72,6 +76,14 @@ std::string timer_type_to_str(int type)
         return "lowerorder";
     case timer_type::lowestorder:
         return "lowestorder";
+    case timer_type::lookup_b:
+        return "lookup_b";
+    case timer_type::lookup_f12prime:
+        return "lookup_f12prime";
+    case timer_type::lookup_fb:
+        return "lookup_fb";
+    case timer_type::lookup_f12:
+        return "lookup_f12";
     }
     return "SHOULD NEVER HAPPEN";
 }
@@ -125,11 +137,11 @@ public:
         auto& d = data();
         LOG(INFO) << "TIMINGS";
         for (size_t i = 0; i < num_timer_types; i++) {
-            LOG(INFO) << std::setw(17) << timer_type_to_str(i)
-                      << " Calls=" << std::setw(10) << d.num_calls[i]
-                      << " Total=" << std::setw(10) << std::setprecision(6)
+            LOG(INFO) << std::setw(19) << timer_type_to_str(i)
+                      << " Calls=" << std::setw(11) << d.num_calls[i]
+                      << " Total=" << std::setw(11) << std::setprecision(6)
                       << duration_cast<milliseconds>(d.total_time[i]).count() / 1000.0f << " sec"
-                      << " Avg=" << std::setw(10)
+                      << " Avg=" << std::setw(11)
                       << d.total_time[i].count() / (d.num_calls[i] == 0 ? 1 : d.num_calls[i]) << " ns";
         }
     }
@@ -148,26 +160,26 @@ bool forward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
 }
 
 // factored out for timing
-template <class t_csa>
-bool backward_search_wrapper(const t_csa& csa, typename t_csa::size_type l,
-                             typename t_csa::size_type r,
-                             typename t_csa::char_type c,
-                             typename t_csa::size_type& l_res,
-                             typename t_csa::size_type& r_res)
+template <class t_idx>
+bool backward_search_wrapper(const t_idx& idx, typename t_idx::size_type l,
+                             typename t_idx::csa_type::size_type r,
+                             typename t_idx::csa_type::char_type c,
+                             typename t_idx::csa_type::size_type& l_res,
+                             typename t_idx::csa_type::size_type& r_res)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
-    return backward_search(csa, l, r, c, l_res, r_res);
+    return backward_search(idx.m_cst.csa, l, r, c, l_res, r_res);
 }
 
 // convenience function
-template <class t_cst>
-bool backward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
-                             const typename t_cst::char_type c)
+template <class t_idx>
+bool backward_search_wrapper(const t_idx& idx, typename t_idx::cst_type::node_type& v,
+                             const typename t_idx::csa_type::char_type c)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
-    typename t_cst::size_type l = cst.lb(v), r = cst.rb(v);
-    backward_search(cst.csa, l, r, c, l, r);
+    typename t_idx::size_type l = idx.m_cst.lb(v), r = idx.m_cst.rb(v);
+    backward_search(idx.m_cst.csa, l, r, c, l, r);
     if (r >= l)
-        v = cst.node(l, r);
+        v = idx.m_cst.node(l, r);
     return (r >= l);
 }

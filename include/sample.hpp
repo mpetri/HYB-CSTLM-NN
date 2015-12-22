@@ -43,7 +43,7 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
     if (ctxsize < size) {
         t_pat_iter start = pattern_end - (ctxsize + 1);
         if (*start != UNKNOWN_SYM) {
-            auto ok = backward_search_wrapper(idx.m_cst, node, *start);
+            auto ok = backward_search_wrapper(idx, node, *start);
             if (ok) {
                 next = _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
                                            node, ctxsize + 1, rng);
@@ -61,7 +61,7 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
     if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
         d = idx.m_cst.size(node);
     } else if (i == 1 || ngramsize == 1) {
-        d = idx.m_precomputed.N1plus_dotdot;
+        d = idx.m_discounts.N1plus_dotdot;
     } else {
         d = idx.N1PlusFrontBack(node, start, pattern_end);
     }

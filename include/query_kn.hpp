@@ -48,7 +48,8 @@ LMQueryKN<t_idx, t_atom>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
 {
     auto root = m_idx->m_cst.root();
     auto node = root;
-    auto r = backward_search_wrapper(m_idx->m_cst, node, PAT_START_SYM);
+    auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
+    (void)r;
     assert(r >= 0);
     m_last_nodes_incl = std::vector<t_node>({root, node});
     m_pattern.push_back(PAT_START_SYM);
@@ -87,7 +88,7 @@ double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
         if (i > 1 && *start == UNKNOWN_SYM)
             break;
         if (ok) {
-            ok = backward_search_wrapper(m_idx->m_cst, node_incl, *start);
+            ok = backward_search_wrapper(*m_idx, node_incl, *start);
             if (ok)
                 node_incl_vec.push_back(node_incl);
         }
@@ -110,7 +111,7 @@ double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
             d = m_idx->m_cst.size(node_excl);
         } else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : D;
-            d = m_idx->m_precomputed.N1plus_dotdot;
+            d = m_idx->m_discounts.N1plus_dotdot;
         } else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
             d = m_idx->N1PlusFrontBack(node_excl, start, pattern_end - 1);

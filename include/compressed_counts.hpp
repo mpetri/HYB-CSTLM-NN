@@ -13,18 +13,15 @@ template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::dac_vector<> >
 struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_bv bv_type;
+    typedef typename bv_type::rank_1_type rank_type;
     typedef t_vec vector_type;
 
 private:
     bv_type m_bv;
-    typename bv_type::rank_1_type m_bv_rank;
+    rank_type m_bv_rank;
     vector_type m_counts_fb;
-    //    vector_type m_counts_fb1;
-    //    vector_type m_counts_fb2;
-
     vector_type m_counts_f1prime;
     vector_type m_counts_f2prime;
-
     vector_type m_counts_b;
     vector_type m_counts_f1;
     vector_type m_counts_f2;
@@ -35,14 +32,11 @@ public:
     compressed_counts(const compressed_counts& cc)
     {
         m_bv = cc.m_bv;
+        m_bv_rank = cc.m_bv_rank;
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = cc.m_counts_fb;
-        //        m_counts_fb1 = cc.m_counts_fb1;
-        //        m_counts_fb2 = cc.m_counts_fb2;
-
         m_counts_f1prime = cc.m_counts_f1prime;
         m_counts_f2prime = cc.m_counts_f2prime;
-
         m_counts_b = cc.m_counts_b;
         m_counts_f1 = cc.m_counts_f1;
         m_counts_f2 = cc.m_counts_f2;
@@ -51,14 +45,11 @@ public:
     compressed_counts(compressed_counts&& cc)
     {
         m_bv = std::move(cc.m_bv);
+        m_bv_rank = std::move(cc.m_bv_rank);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-        //        m_counts_fb1 = std::move(cc.m_counts_fb1);
-        //        m_counts_fb2 = std::move(cc.m_counts_fb2);
-
         m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
-
         m_counts_b = std::move(cc.m_counts_b);
         m_counts_f1 = std::move(cc.m_counts_f1);
         m_counts_f2 = std::move(cc.m_counts_f2);
@@ -67,11 +58,9 @@ public:
     compressed_counts& operator=(compressed_counts&& cc)
     {
         m_bv = std::move(cc.m_bv);
+        m_bv_rank = std::move(cc.m_bv_rank);
         m_bv_rank.set_vector(&m_bv);
         m_counts_fb = std::move(cc.m_counts_fb);
-        //        m_counts_fb1 = std::move(cc.m_counts_fb1);
-        //        m_counts_fb2 = std::move(cc.m_counts_fb2);
-
         m_counts_f1prime = std::move(cc.m_counts_f1prime);
         m_counts_f2prime = std::move(cc.m_counts_f2prime);
 
@@ -194,6 +183,7 @@ public:
                                uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
+        sdsl::util::set_to_value(tmp_bv, 0);
         auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
         auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
         uint64_t num_syms = 0;
@@ -230,7 +220,8 @@ public:
         m_counts_b = vector_type(tmp_buffer_counts_b);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_bv = bv_type(tmp_bv);
-        m_bv_rank.set_vector(&m_bv);
+        tmp_bv.resize(0);
+        m_bv_rank = rank_type(&m_bv);
 
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
@@ -308,11 +299,11 @@ public:
         // store into compressed in-memory data structures
         m_bv = bv_type(tmp_bv);
         tmp_bv.resize(0);
-        m_bv_rank.set_vector(&m_bv);
+        m_bv_rank = rank_type(&m_bv);
         m_counts_f1 = vector_type(tmp_buffer_counts_f1);
         m_counts_f2 = vector_type(tmp_buffer_counts_f2);
-        m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_counts_b = vector_type(tmp_buffer_counts_b);
+        m_counts_fb = vector_type(tmp_buffer_counts_fb);
         m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
@@ -339,7 +330,8 @@ public:
     void load(std::istream& in)
     {
         sdsl::load(m_bv, in);
-        m_bv_rank.load(in, &m_bv);
+        sdsl::load(m_bv_rank, in);
+        m_bv_rank.set_vector(&m_bv);
         sdsl::load(m_counts_fb, in);
         sdsl::load(m_counts_b, in);
         sdsl::load(m_counts_f1, in);
@@ -362,8 +354,10 @@ public:
     void lookup_f12(t_cst& cst, t_node_type node, uint64_t& f1,
                     uint64_t& f2) const
     {
+        auto timer = lm_bench::bench(timer_type::lookup_f12);
         assert(m_is_mkn);
         auto id = cst.id(node);
+        // LOG(INFO) << "lookup_f12(" << id << ")";
         auto rank_in_vec = m_bv_rank(id);
         f1 = m_counts_f1[rank_in_vec];
         f2 = m_counts_f2[rank_in_vec];
@@ -372,7 +366,9 @@ public:
     template <class t_cst, class t_node_type>
     uint64_t lookup_fb(t_cst& cst, t_node_type node) const
     {
+        auto timer = lm_bench::bench(timer_type::lookup_fb);
         auto id = cst.id(node);
+        // LOG(INFO) << "lookup_fb(" << id << ")";
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_fb[rank_in_vec];
     }
@@ -381,8 +377,10 @@ public:
     void lookup_f12prime(t_cst& cst, t_node_type node, uint64_t& f1prime,
                            uint64_t& f2prime) const
     {
+        auto timer = lm_bench::bench(timer_type::lookup_f12prime);
         assert(m_is_mkn);
         auto id = cst.id(node);
+        // LOG(INFO) << "lookup_f12prime(" << id << ")";
         auto rank_in_vec = m_bv_rank(id);
         f1prime = m_counts_f1prime[rank_in_vec];
         f2prime = m_counts_f2prime[rank_in_vec];
@@ -391,7 +389,9 @@ public:
     template <class t_cst, class t_node_type>
     uint64_t lookup_b(t_cst& cst, t_node_type node) const
     {
+        auto timer = lm_bench::bench(timer_type::lookup_b);
         auto id = cst.id(node);
+        // LOG(INFO) << "lookup_b(" << id << ")";
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_b[rank_in_vec];
     }

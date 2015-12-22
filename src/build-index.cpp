@@ -65,7 +65,7 @@ void create_and_store(collection& col, bool use_mkn)
 
 int main(int argc, const char* argv[])
 {
-    mem_monitor m("/dev/null");
+    mem_monitor m("/dev/null",std::chrono::milliseconds(5000));
 
     log::start_log(argc, argv);
 
@@ -84,6 +84,7 @@ int main(int argc, const char* argv[])
     double peak_mem = mem_stats.VmPeak;
     double text_size_raw = col.raw_size_in_bytes;
     double memory_usage = peak_mem / (text_size_raw+1.0);
+    LOG(INFO) << "mem usage = " << mem_stats.VmPeak << " bytes";
     LOG(INFO) << "mem usage = " << memory_usage << "n";
 
     return 0;

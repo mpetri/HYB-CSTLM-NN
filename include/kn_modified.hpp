@@ -45,11 +45,11 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         // update the two searches into the CST
         if (ok) {
             //    LOG(INFO)<<"**start is: "<<idx.m_vocab.id2token(*start)<<endl;
-            ok = backward_search_wrapper(idx.m_cst, node_incl, *start);
+            ok = backward_search_wrapper(idx, node_incl, *start);
         }
         if (i >= 2) {
             //    LOG(INFO)<<"*start is: "<<idx.m_vocab.id2token(*start)<<endl;
-            if (backward_search_wrapper(idx.m_cst, node_excl, *start) <= 0)
+            if (backward_search_wrapper(idx, node_excl, *start) <= 0)
                 break;
         }
 
@@ -67,7 +67,7 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
             // LOG(INFO)<<"Highest Level: "<<c<<endl;
         } else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
-            d = idx.m_precomputed.N1plus_dotdot;
+            d = idx.m_discounts.N1plus_dotdot;
             // LOG(INFO)<<"denominator: "<<d<<endl;
             // LOG(INFO)<<"Lowest Level: "<<c<<endl;
         } else {
@@ -97,8 +97,8 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
             idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         } else if (i == 1 || ngramsize == 1) {
-            n1 = idx.m_precomputed.n1_cnt[1];
-            n2 = idx.m_precomputed.n2_cnt[1];
+            n1 = idx.m_discounts.n1_cnt[1];
+            n2 = idx.m_discounts.n2_cnt[1];
             n3p = (idx.vocab_size() - 2) - (n1 + n2);
         } else {
             if (!isfishy)
