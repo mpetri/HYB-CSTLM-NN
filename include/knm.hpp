@@ -31,11 +31,11 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
         for (const auto& word : word_vec) {
             auto prob = query.append_symbol(word);
             final_score += log10(prob);
-            LOG(INFO) << "\tprob: " << idx.m_vocab.id2token(word) << " is: " << prob;
+            //LOG(INFO) << "\tprob: " << idx.m_vocab.id2token(word) << " is: " << prob;
         }
-        LOG(INFO) << "sentence_logprob_kneser_ney for: " 
-                  << idx.m_vocab.id2token(word_vec.begin(), word_vec.end()) 
-                  << " returning: " << final_score;
+        //LOG(INFO) << "sentence_logprob_kneser_ney for: " 
+                  //<< idx.m_vocab.id2token(word_vec.begin(), word_vec.end()) 
+                  //<< " returning: " << final_score;
         return final_score;
     } else {
         double final_score = 0;
