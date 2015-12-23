@@ -138,8 +138,12 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
             m_idx->N123PlusFrontPrime(node_excl, start, pattern_end - 1, n1, n2, n3p);
         }
 
+        // n3p is dodgy
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
+
+        //LOG(INFO) << "\t\ti = " << i << " p = " << p << " c = " << c << " gamma " << gamma << " d = " << d;
+        //LOG(INFO) << "\t\t\t" << D1 << ":" << n1 << ":" << D2 << ":" << n2 << ":" << D3p << ":" << n3p;
     }
 
     m_last_nodes_incl = node_incl_vec;

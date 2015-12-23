@@ -228,7 +228,7 @@ int execute(const cmdargs_t& args)
         LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
     } else {
-        LOG(FATAL) << "index does not exist. build it first";
+        LOG(FATAL) << "index " << index_file << " does not exist. build it first";
         return EXIT_FAILURE;
     }
 

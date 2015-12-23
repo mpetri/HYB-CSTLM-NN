@@ -255,8 +255,30 @@ public:
         f1prime = f2prime = f3pprime = 0;
         uint64_t all = 0;
         if (full_match) {
-            m_precomputed.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
-	    f3pprime = m_cst.degree(node)-f1prime-f2prime;
+            if (m_precomputed.is_precomputed(m_cst, node)) {
+                m_precomputed.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
+                all = m_cst.degree(node);
+            } else {
+                for (auto child = m_cst.select_child(node, 1); child != m_cst.root(); child = m_cst.sibling(child)) {
+                    auto lb = m_cst.lb(child);
+                    auto rb = m_cst.rb(child);
+
+                    static std::vector<typename t_cst::csa_type::value_type> preceding_syms(m_cst.csa.sigma);
+                    static std::vector<typename t_cst::csa_type::size_type> left(m_cst.csa.sigma);
+                    static std::vector<typename t_cst::csa_type::size_type> right(m_cst.csa.sigma);
+                    typename t_cst::csa_type::size_type num_syms = 0;
+                    sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
+                    if (num_syms == 1)
+                        f1prime++;
+                    if (num_syms == 2)
+                        f2prime++;
+                    all++;
+                    child = m_cst.sibling(child);
+                }
+
+            }
+            f3pprime = all - f1prime - f2prime;
+            //LOG(INFO) << "\t\t\tN123PlusFrontPrime -- looking up stuff: degree " << m_cst.degree(node) << " and f1',f2' are " << f1prime << ", " << f2prime;
         } else {
             // pattern is part of the edge label
 	    uint64_t num_symsprime = N1PlusBack(node, pattern_begin, pattern_end);
@@ -264,8 +286,9 @@ public:
                 f1prime++;
             if (num_symsprime == 2)
                 f2prime++;
-            all++;
+            all++; // FIXME: is this right, all is 1? can't see how this might overflow
             f3pprime = all - f1prime - f2prime;
+            //LOG(INFO) << "\t\t\tN123PlusFrontPrime -- on edge: all is " << all << " and f1',f2' are " << f1prime << ", " << f2prime;
         }
     }
 

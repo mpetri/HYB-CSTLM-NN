@@ -28,8 +28,14 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
     if (ismkn) {
         double final_score = 0;
         LMQueryMKN<t_idx,typename t_pattern::value_type> query(&idx, ngramsize);
-        for (const auto& word : word_vec)
-            final_score += log10(query.append_symbol(word));
+        for (const auto& word : word_vec) {
+            auto prob = query.append_symbol(word);
+            final_score += log10(prob);
+            LOG(INFO) << "\tprob: " << idx.m_vocab.id2token(word) << " is: " << prob;
+        }
+        LOG(INFO) << "sentence_logprob_kneser_ney for: " 
+                  << idx.m_vocab.id2token(word_vec.begin(), word_vec.end()) 
+                  << " returning: " << final_score;
         return final_score;
     } else {
         double final_score = 0;
