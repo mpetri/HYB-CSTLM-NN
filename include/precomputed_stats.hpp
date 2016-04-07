@@ -249,10 +249,10 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     t_rank_bv sentinel_rank(&sentinel_bv);
     t_select_bv sentinel_select(&sentinel_bv);
 
-    std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+    std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
         cst.csa.sigma);
-    std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-    std::vector<typename t_cst::csa_type::size_type> right(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+    std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(cst.csa.sigma);
     uint64_t num_syms;
 
     /* load SA to speed up edge call */

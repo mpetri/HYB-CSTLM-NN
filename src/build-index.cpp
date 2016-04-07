@@ -78,8 +78,11 @@ int main(int argc, const char* argv[])
     /* parse collection directory */
     collection col(args.collection_dir);
     /* create indexes */
-    {
-        using index_type = index_succinct<default_cst_type>;
+    if(col.alphabet == alphabet_type::byte_alphabet) {
+        using index_type = index_succinct<default_cst_byte_type>;
+        create_and_store<index_type>(col, args.use_mkn);
+    } else {
+        using index_type = index_succinct<default_cst_int_type>;
         create_and_store<index_type>(col, args.use_mkn);
     }
 

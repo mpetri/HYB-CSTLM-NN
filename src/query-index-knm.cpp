@@ -28,7 +28,6 @@ typedef struct cmdargs {
     bool isbackward;
     bool isstored;
     bool isreranking;
-    bool byte_alphabet;
 } cmdargs_t;
 
 std::vector<uint32_t> ngram_occurrences;
@@ -46,7 +45,6 @@ void print_usage(const char* program)
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
     fprintf(stdout, "  -f : use the fishy MKN (default = accurate).\n");
     fprintf(stdout, "  -r : doing reranking (default = language modelling).\n");
-    fprintf(stdout, "  -1 : byte parsing.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -59,7 +57,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.isfishy = false;
     args.ngramsize = 1;
     args.isreranking = false;
-    args.byte_alphabet = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mfbsr1")) != -1) {
         switch (op) {
         case 'p':
@@ -80,9 +77,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
         case 'r':
             args.isreranking = true;
             break;
-        case '1':
-            args.byte_alphabet = true;
-            break;
         }
     }
     if (args.collection_dir == "" || args.pattern_file == "") {
@@ -99,7 +93,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 //            search
 template <class t_idx>
 void run_queries(const t_idx& idx,
-    const std::vector<std::vector<uint64_t> > patterns,
+    const std::vector< typename t_idx::pattern_type > patterns,
     uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
@@ -108,7 +102,7 @@ void run_queries(const t_idx& idx,
     std::chrono::nanoseconds total_time(0);
     // uint64_t ind = 1;
     lm_bench::reset();
-    for (std::vector<uint64_t> pattern : patterns) {
+    for (auto pattern : patterns) {
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M += pattern_size + 1; // +1 for adding </s>
@@ -140,7 +134,7 @@ void run_queries(const t_idx& idx,
 
 template <class t_idx>
 void run_reranker(const t_idx& idx,
-    const std::vector<std::vector<uint64_t> > patterns,
+    const std::vector<typename t_idx::pattern_type> patterns,
     const std::vector<std::vector<std::string> > orig_patterns,
     uint64_t ngramsize, bool ismkn, bool isfishy)
 {
@@ -153,7 +147,7 @@ void run_reranker(const t_idx& idx,
     // uint64_t candidate_idx = 1;//line number to find the unconverted sentence
     uint64_t source_idx = idx.m_vocab.token2id("0");
     lm_bench::reset();
-    std::vector<uint64_t> best;
+    typename t_idx::pattern_type best;
     uint64_t index = 0;
     std::ofstream output;
     output.open("output.rrank");
@@ -201,10 +195,10 @@ void run_reranker(const t_idx& idx,
               << " ms";
 }
 
-std::vector<std::string> parse_line(const std::string& line, bool byte)
+std::vector<std::string> parse_line(const std::string& line, alphabet_type alpha)
 {
     std::vector<std::string> line_tokens;
-    if (byte) {
+    if (alpha == alphabet_type::byte_alphabet) {
         for (const auto& chr : line) {
             line_tokens.push_back(std::string(1, chr));
         }
@@ -220,11 +214,11 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
 }
 
 template <class t_idx>
-int execute(const cmdargs_t& args)
+int execute(collection& col,const cmdargs_t& args)
 {
     /* load index */
     t_idx idx;
-    auto index_file = args.collection_dir + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+    auto index_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(index_file)) {
         LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
@@ -238,20 +232,20 @@ int execute(const cmdargs_t& args)
     idx.print_params(args.ismkn, args.ngramsize);
 
     /* load patterns */
-    std::vector<std::vector<uint64_t> > patterns;
+    std::vector<typename t_idx::pattern_type> patterns;
     std::vector<std::vector<std::string> > orig_patterns;
     if (utils::file_exists(args.pattern_file)) {
         std::ifstream ifile(args.pattern_file);
         LOG(INFO) << "reading input file '" << args.pattern_file << "'";
         std::string line;
         while (std::getline(ifile, line)) {
-            auto line_tokens = parse_line(line, args.byte_alphabet);
-            std::vector<uint64_t> tokens;
+            auto line_tokens = parse_line(line, col.alphabet);
+            typename t_idx::pattern_type tokens;
             std::vector<std::string> orig_tokens;
-            for (const auto& word : line_tokens) {
+            for (const auto& token : line_tokens) {
                 if (args.isreranking)
-                    orig_tokens.push_back(word);
-                uint64_t num = idx.m_vocab.token2id(word, UNKNOWN_SYM);
+                    orig_tokens.push_back(token);
+                auto num = idx.m_vocab.token2id(token, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
             if (args.isreranking) {
@@ -259,8 +253,6 @@ int execute(const cmdargs_t& args)
                 orig_patterns.push_back(orig_tokens);
             }
             patterns.push_back(tokens);
-            // LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(),
-            // tokens.end());
         }
     }
     else {
@@ -286,8 +278,16 @@ int main(int argc, const char* argv[])
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
 
-    typedef index_succinct<default_cst_type> index_type;
-    execute<index_type>(args);
+    collection col(args.collection_dir);
+    if(col.alphabet == alphabet_type::byte_alphabet) {
+        typedef index_succinct<default_cst_byte_type> index_type;
+        execute<index_type>(col,args);
+    } else {
+        typedef index_succinct<default_cst_int_type> index_type;
+        execute<index_type>(col,args);
+    }
+
+
 
     sdsl::memory_monitor::stop();
     LOG(INFO) << "MemoryPeak in query Time " << sdsl::memory_monitor::peak()

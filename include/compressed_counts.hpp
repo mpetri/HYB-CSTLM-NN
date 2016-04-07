@@ -72,7 +72,7 @@ public:
     }
 
     template <class t_cst>
-    compressed_counts(collection& col, t_cst& cst, uint64_t max_node_depth,
+    compressed_counts(collection& col, t_cst& cst, uint64_t /*max_node_depth*/,
         bool mkn_counts)
     {
         m_is_mkn = mkn_counts;
@@ -87,10 +87,10 @@ public:
     template <class t_cst, class t_node_type>
     uint32_t compute_contexts(t_cst& cst, t_node_type node, uint64_t& num_syms)
     {
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
             cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> right(
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
             cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
@@ -132,11 +132,11 @@ public:
             auto lb = cst.lb(child);
             auto rb = cst.rb(child);
 
-            static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+            static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
                 cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> left(
+            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
                 cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::size_type> right(
+            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
                 cst.csa.sigma);
             typename t_cst::csa_type::size_type num_syms = 0;
             sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
@@ -153,10 +153,10 @@ public:
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
 
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
             cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> right(
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
             cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
