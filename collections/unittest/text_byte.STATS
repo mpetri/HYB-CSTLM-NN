@@ -1,0 +1,5 @@
+initial_vocab_size=12
+num_sentences=200
+num_tokens=17318
+raw_size_in_bytes=17518
+min_symbol_freq=0

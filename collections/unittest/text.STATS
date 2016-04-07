@@ -1,0 +1,7 @@
+initial_vocab_size=1105
+pruned_vocab_size=1105
+num_non_freq_syms=0
+num_sentences=200
+num_tokens=5675
+raw_size_in_bytes=17518
+min_symbol_freq=0

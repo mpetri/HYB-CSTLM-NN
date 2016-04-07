@@ -38,7 +38,7 @@ struct precomputed_stats {
     precomputed_stats() = default;
 
     template <class t_cst>
-    precomputed_stats(collection& col, t_cst& cst, uint64_t max_ngram_len, bool)
+    precomputed_stats(collection& col, t_cst& cst, uint64_t max_ngram_len)
         : max_ngram_count(max_ngram_len)
         , N1plus_dotdot(0)
         , N3plus_dot(0)
@@ -237,7 +237,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     // symbols
     sdsl::bit_vector sentinel_bv;
     {
-        sdsl::read_only_mapped_buffer<> TEXT(col.file_map[KEY_TEXT]);
+        sdsl::read_only_mapped_buffer<t_cst::csa_type::alphabet_category::WIDTH> TEXT(col.file_map[KEY_TEXT]);
         sentinel_bv.resize(TEXT.size());
         sdsl::util::set_to_value(sentinel_bv, 0);
         for (uint64_t i = 0; i < TEXT.size(); ++i) {

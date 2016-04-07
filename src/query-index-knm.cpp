@@ -93,7 +93,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 //            search
 template <class t_idx>
 void run_queries(const t_idx& idx,
-    const std::vector< typename t_idx::pattern_type > patterns,
+    const std::vector<typename t_idx::pattern_type> patterns,
     uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
@@ -214,7 +214,7 @@ std::vector<std::string> parse_line(const std::string& line, alphabet_type alpha
 }
 
 template <class t_idx>
-int execute(collection& col,const cmdargs_t& args)
+int execute(collection& col, const cmdargs_t& args)
 {
     /* load index */
     t_idx idx;
@@ -279,15 +279,14 @@ int main(int argc, const char* argv[])
     cmdargs_t args = parse_args(argc, argv);
 
     collection col(args.collection_dir);
-    if(col.alphabet == alphabet_type::byte_alphabet) {
+    if (col.alphabet == alphabet_type::byte_alphabet) {
         typedef index_succinct<default_cst_byte_type> index_type;
-        execute<index_type>(col,args);
-    } else {
-        typedef index_succinct<default_cst_int_type> index_type;
-        execute<index_type>(col,args);
+        execute<index_type>(col, args);
     }
-
-
+    else {
+        typedef index_succinct<default_cst_int_type> index_type;
+        execute<index_type>(col, args);
+    }
 
     sdsl::memory_monitor::stop();
     LOG(INFO) << "MemoryPeak in query Time " << sdsl::memory_monitor::peak()

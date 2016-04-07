@@ -26,6 +26,7 @@ public:
     typedef std::vector<typename csa_type::value_type> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
     typedef compressed_counts<> ccounts_type;
+    static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;
 
 public: // data
     cst_type m_cst;
@@ -43,7 +44,10 @@ public:
             sdsl::cache_config cfg;
             cfg.delete_files = false;
             cfg.dir = col.path + "/tmp/";
-            cfg.id = "TMP";
+            if (col.alphabet == alphabet_type::byte_alphabet)
+                cfg.id = "TMPBYTE";
+            else
+                cfg.id = "TMP";
             cfg.file_map[sdsl::conf::KEY_SA] = col.file_map[KEY_SA];
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
             cfg.file_map[sdsl::conf::KEY_TEXT] = col.file_map[KEY_TEXT];
@@ -53,16 +57,21 @@ public:
         else {
             sdsl::load_from_file(m_cst, cst_file);
         }
-        auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
+        auto discounts_file = col.path + "/tmp/DISCOUNTS-MAXN=" + std::to_string(t_max_ngram_count) + "-BYTE="
+            + std::to_string(byte_alphabet) + "-"
+            + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
         if (!utils::file_exists(discounts_file)) {
             lm_construct_timer timer("DISCOUNTS");
-            m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count, is_mkn);
+            m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count);
             sdsl::store_to_file(m_discounts, discounts_file);
         }
         else {
             sdsl::load_from_file(m_discounts, discounts_file);
         }
-        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
+        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-MAXN="
+            + std::to_string(t_max_ngram_count) + "-BYTE="
+            + std::to_string(byte_alphabet) + "-"
+            + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
         if (!utils::file_exists(precomputed_file)) {
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
             m_precomputed = ccounts_type(col, m_cst, t_max_ngram_count, is_mkn);

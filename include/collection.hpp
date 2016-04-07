@@ -25,7 +25,8 @@ std::vector<std::string> collection_keys = { KEY_TEXT, KEY_TEXTREV, KEY_SA,
 
 enum class alphabet_type {
     byte_alphabet,
-    word_alphabet
+    word_alphabet,
+    unknown_alphabet
 };
 
 struct collection {
@@ -42,7 +43,7 @@ struct collection {
 
     std::map<std::string, std::string> file_map;
     collection() = default;
-    collection(const std::string& p)
+    collection(const std::string& p, alphabet_type a = alphabet_type::unknown_alphabet)
         : path(p + "/")
     {
         if (!utils::directory_exists(path)) {
@@ -59,7 +60,7 @@ struct collection {
         std::string patterns_directory = path + "/patterns/";
         utils::create_directory(patterns_directory);
 
-        alphabet = determine_alphabet_type();
+        alphabet = determine_alphabet_type(a);
 
         /* make sure the necessary files are present */
         if (!utils::file_exists(path + "/" + prefix + KEY_TEXT)) {
@@ -80,18 +81,19 @@ struct collection {
         }
         if (file_map.count(KEY_SA) == 0) {
             lm_construct_timer timer(KEY_SA);
-            if(alphabet == alphabet_type::byte_alphabet) {
+            if (alphabet == alphabet_type::byte_alphabet) {
                 sdsl::int_vector<8> text;
-                sdsl::load_from_file(text,file_map[KEY_TEXT].c_str());
+                sdsl::load_from_file(text, file_map[KEY_TEXT].c_str());
                 sdsl::int_vector<> sa;
                 sa.width(64);
                 sa.resize(text.size());
-                divsufsort64((const unsigned char*) text.data(), (int64_t*)sa.data(), text.size());
+                divsufsort64((const unsigned char*)text.data(), (int64_t*)sa.data(), text.size());
                 sdsl::util::bit_compress(sa);
                 auto sa_path = path + "/" + prefix + KEY_SA;
                 sdsl::store_to_file(sa, sa_path);
                 file_map[KEY_SA] = sa_path;
-            } else {
+            }
+            else {
                 sdsl::int_vector<> sa;
                 sdsl::qsufsort::construct_sa(sa, file_map[KEY_TEXT].c_str(), 0);
                 auto sa_path = path + "/" + prefix + KEY_SA;
@@ -143,17 +145,28 @@ struct collection {
         }
     }
 
-    alphabet_type determine_alphabet_type() {
-        if( utils::file_exists(path + "/" + KEY_PREFIX_BYTE + KEY_TEXT)) {
+    alphabet_type determine_alphabet_type(alphabet_type a)
+    {
+        // predefined value?
+        if (a == alphabet_type::byte_alphabet) {
             prefix = KEY_PREFIX_BYTE;
             return alphabet_type::byte_alphabet;
         }
-        if( utils::file_exists(path + "/" + KEY_PREFIX + KEY_TEXT)) {
+        if (a == alphabet_type::word_alphabet) {
+            prefix = KEY_PREFIX;
+            return alphabet_type::word_alphabet;
+        }
+        // use files available instead
+        if (utils::file_exists(path + "/" + KEY_PREFIX_BYTE + KEY_TEXT)) {
+            prefix = KEY_PREFIX_BYTE;
+            return alphabet_type::byte_alphabet;
+        }
+        if (utils::file_exists(path + "/" + KEY_PREFIX + KEY_TEXT)) {
             prefix = KEY_PREFIX;
             return alphabet_type::word_alphabet;
         }
         LOG(FATAL) << "could not determine alphabet type. invalid collection dir?";
-        return  alphabet_type::word_alphabet;
+        return alphabet_type::word_alphabet;
     }
 
     std::string temp_file(std::string id)

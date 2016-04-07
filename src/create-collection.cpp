@@ -92,41 +92,45 @@ int main(int argc, const char* argv[])
     /* create collection dir */
     utils::create_directory(args.collection_dir);
 
-    if(args.byte_alphabet) {
+    if (args.byte_alphabet) {
         // handle byte alphabet faster
         LOG(INFO) << "determine symbol frequencies";
-        std::array<uint64_t,256> syms{0};
+        std::array<uint64_t, 256> syms{ 0 };
         {
-            std::array<uint8_t,1024*1024> buf{0};
+            std::array<uint8_t, 1024 * 1024> buf{ 0 };
             auto f = std::fopen(args.input_file.c_str(), "r");
-            if(!f) {
+            if (!f) {
                 LOG(FATAL) << "could not open input file '" << args.input_file << "'";
             }
             size_t bytes_read = 0;
-            while( (bytes_read = std::fread(buf.data(),1,buf.size(),f)) != 0 ) {
-                for(size_t i=0;i<bytes_read;i++) syms[buf[i]]++;
+            while ((bytes_read = std::fread(buf.data(), 1, buf.size(), f)) != 0) {
+                for (size_t i = 0; i < bytes_read; i++)
+                    syms[buf[i]]++;
             }
             std::fclose(f);
         }
         // check that we have at least NUM_SPECIAL_SYMS free bytes
         size_t free_syms = 0;
         size_t init_sigma = 0;
-        for(size_t i=0;i<256;i++) {
-            if(syms[i] == 0) free_syms++;
-            else init_sigma++;
+        for (size_t i = 0; i < 256; i++) {
+            if (syms[i] == 0)
+                free_syms++;
+            else
+                init_sigma++;
         }
-        if(free_syms < NUM_SPECIAL_SYMS) {
+        if (free_syms < NUM_SPECIAL_SYMS) {
             LOG(FATAL) << "not enough free byte symbols in input text to insert special symbols";
         }
         // find the correct mapping for the special symbols
         LOG(INFO) << "map special symbols";
-        for(size_t j=0;j<NUM_SPECIAL_SYMS;j++) {
-            if(syms[j] == 0) {
+        for (size_t j = 0; j < NUM_SPECIAL_SYMS; j++) {
+            if (syms[j] == 0) {
                 syms[j] = j;
                 LOG(INFO) << "MAP " << j << " -> " << j;
-            } else {
-                for(size_t i=NUM_SPECIAL_SYMS;i<256;i++) {
-                    if(syms[i] == 0 ) {
+            }
+            else {
+                for (size_t i = NUM_SPECIAL_SYMS; i < 256; i++) {
+                    if (syms[i] == 0) {
                         syms[j] = i;
                         LOG(INFO) << "MAP " << j << " -> " << i;
                         syms[i] = std::numeric_limits<uint64_t>::max();
@@ -147,7 +151,7 @@ int main(int argc, const char* argv[])
             while (std::getline(ifs, line)) {
                 out.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
                 for (uint8_t chr : line) {
-                    if(chr < NUM_SPECIAL_SYMS) {
+                    if (chr < NUM_SPECIAL_SYMS) {
                         // need to replace sym with other symbol
                         chr = syms[chr];
                     }
@@ -176,11 +180,12 @@ int main(int argc, const char* argv[])
             ofs << "<S> 3\n";
             ofs << "</S> 4\n";
             // write the real vocab
-            for(size_t i=0;i<NUM_SPECIAL_SYMS;i++) {
-                if(syms[i] != i) ofs << i << " " << syms[i] << std::endl;
+            for (size_t i = 0; i < NUM_SPECIAL_SYMS; i++) {
+                if (syms[i] != i)
+                    ofs << i << " " << syms[i] << std::endl;
             }
-            for(size_t i=NUM_SPECIAL_SYMS;i<256;i++) {
-                if(syms[i] != 0 && syms[i] != std::numeric_limits<uint64_t>::max())
+            for (size_t i = NUM_SPECIAL_SYMS; i < 256; i++) {
+                if (syms[i] != 0 && syms[i] != std::numeric_limits<uint64_t>::max())
                     ofs << i << " " << i << std::endl;
             }
         }
@@ -199,7 +204,8 @@ int main(int argc, const char* argv[])
             ofs << "min_symbol_freq=" << 0 << "\n";
             LOG(INFO) << "min_symbol_freq=" << 0;
         }
-    } else {
+    }
+    else {
         /* (1) create dict */
         std::unordered_map<std::string, uint64_t> dict;
         dict.max_load_factor(0.2);
@@ -342,7 +348,6 @@ int main(int argc, const char* argv[])
             LOG(INFO) << "min_symbol_freq=" << args.min_symbol_freq;
         }
     }
-
 
     return 0;
 }
