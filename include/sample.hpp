@@ -19,18 +19,18 @@
 
 template <class t_idx, class t_pat_iter, class t_rng>
 uint64_t sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
-                            t_pat_iter pattern_end, uint64_t ngramsize,
-                            t_rng& rng)
+    t_pat_iter pattern_end, uint64_t ngramsize,
+    t_rng& rng)
 {
     return _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
-                               idx.m_cst.root(), 0, rng);
+        idx.m_cst.root(), 0, rng);
 }
 
 template <class t_idx, class t_pat_iter, class t_rng>
 uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
-                             t_pat_iter pattern_end, uint64_t ngramsize,
-                             typename t_idx::cst_type::node_type node,
-                             uint64_t ctxsize, t_rng& rng)
+    t_pat_iter pattern_end, uint64_t ngramsize,
+    typename t_idx::cst_type::node_type node,
+    uint64_t ctxsize, t_rng& rng)
 {
     size_t size = std::distance(pattern_begin, pattern_end);
 
@@ -46,7 +46,7 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
             auto ok = backward_search_wrapper(idx, node, *start);
             if (ok) {
                 next = _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
-                                           node, ctxsize + 1, rng);
+                    node, ctxsize + 1, rng);
                 if (next != EOF_SYM)
                     return next;
             }
@@ -60,9 +60,11 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
     auto start = (pattern_end - i + 1);
     if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
         d = idx.m_cst.size(node);
-    } else if (i == 1 || ngramsize == 1) {
+    }
+    else if (i == 1 || ngramsize == 1) {
         d = idx.m_discounts.N1plus_dotdot;
-    } else {
+    }
+    else {
         d = idx.N1PlusFrontBack(node, start, pattern_end);
     }
 
@@ -100,16 +102,18 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
                 child = idx.m_cst.sibling(child);
             }
             assert(false && "you shouldn't reach this line");
-        } else {
+        }
+        else {
             // backoff
             LOG(INFO) << "\tbacking off";
             next = EOF_SYM;
         }
-    } else {
+    }
+    else {
         // FIXME: somewhat wasteful, could be done in one iterator
         static std::vector<uint64_t> unigrams_cs(unigram_counts(idx));
         static std::discrete_distribution<uint64_t> unigrams(unigrams_cs.begin(),
-                                                             unigrams_cs.end());
+            unigrams_cs.end());
         unigrams_cs.clear();
         next = unigrams(rng);
         LOG(INFO) << "\tsampled unigram";
@@ -131,7 +135,8 @@ std::vector<uint64_t> unigram_counts(const t_idx& idx)
         if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM) {
             pattern[0] = i;
             weights.push_back(idx.N1PlusBack(child, pattern.begin(), pattern.end()));
-        } else {
+        }
+        else {
             weights.push_back(0);
         }
         ++i;
@@ -141,8 +146,8 @@ std::vector<uint64_t> unigram_counts(const t_idx& idx)
 
 template <class t_idx, class t_pat_iter, class t_rng>
 uint64_t sample_next_symbol2(const t_idx& idx, t_pat_iter pattern_begin,
-                             t_pat_iter pattern_end, uint64_t ngramsize,
-                             t_rng& rng)
+    t_pat_iter pattern_end, uint64_t ngramsize,
+    t_rng& rng)
 {
     // size_t size = std::distance(pattern_begin, pattern_end);
 
@@ -157,9 +162,10 @@ uint64_t sample_next_symbol2(const t_idx& idx, t_pat_iter pattern_begin,
         if (next >= NUM_SPECIAL_SYMS || next == PAT_END_SYM || next == UNKNOWN_SYM) {
             pattern.back() = next;
             auto prob = prob_kneser_ney_single(idx, pattern.begin(), pattern.end(),
-                                               ngramsize);
+                ngramsize);
             total += prob;
-        } else {
+        }
+        else {
             probs.push_back(0);
         }
     }

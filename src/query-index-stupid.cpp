@@ -72,7 +72,7 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
         lb_num_prev = lb_num;
         rb_num_prev = rb_num;
         sdsl::backward_search(csa_rev, lb_num, rb_num, full_pattern.begin(),
-                              full_pattern.end(), lb_num, rb_num);
+            full_pattern.end(), lb_num, rb_num);
         numer = rb_num - lb_num + 1;
         // missing patterns || unknown words
         if (lb_num > rb_num || (lb_num < 0 || rb_num > N)) {
@@ -84,14 +84,15 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
         lb_denom_prev = lb_denom;
         if (m >= 2) {
             sdsl::backward_search(csa_rev, lb_denom, rb_denom,
-                                  context_pattern.begin(), context_pattern.end(),
-                                  lb_denom, rb_denom);
+                context_pattern.begin(), context_pattern.end(),
+                lb_denom, rb_denom);
         }
         denom = rb_denom - lb_denom + 1;
         score = numer / denom;
         if (lb_num != rb_num) {
             full_pattern[0] = PRev[m];
-        } else {
+        }
+        else {
             // re-use the previous search interval
             lb_num = lb_num_prev;
             rb_num = rb_num_prev;
@@ -103,7 +104,8 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
                 context_pattern[0] = PRev[m];
             else
                 context_pattern.push_back(PRev[m]);
-        } else {
+        }
+        else {
             // re-use the previous search interval
             lb_denom = lb_denom_prev;
             rb_denom = rb_denom_prev;
@@ -117,7 +119,7 @@ double stupidbackoff(const t_csa& csa_rev, const std::deque<uint64_t>& PRev)
 
 template <class t_idx>
 double run_query_stupid(const t_idx& idx,
-                        const std::vector<uint64_t>& word_vec)
+    const std::vector<uint64_t>& word_vec)
 {
     double final_score = 1;
     std::deque<uint64_t> pattern;
@@ -149,7 +151,8 @@ void run_queries(t_idx& idx, const std::string& pattern_file)
             LOG(INFO) << "Pattern " << patterns.size() + 1 << " = " << tokens;
             patterns.push_back(tokens);
         }
-    } else {
+    }
+    else {
         LOG(FATAL) << "Cannot read pattern file '" << pattern_file << "'";
     }
     LOG(INFO) << "Processing " << patterns.size() << " patterns";

@@ -85,7 +85,8 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
         for (const auto& chr : line) {
             line_tokens.push_back(std::string(1, chr));
         }
-    } else {
+    }
+    else {
         std::istringstream input(line);
         std::string word;
         while (std::getline(input, word, ' ')) {
@@ -104,7 +105,8 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
     if (utils::file_exists(index_file)) {
         LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
-    } else {
+    }
+    else {
         LOG(FATAL) << "index does not exist. build it first";
         return EXIT_FAILURE;
     }
@@ -128,7 +130,8 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
             }
             patterns.push_back(tokens);
         }
-    } else {
+    }
+    else {
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
     }
 
@@ -146,7 +149,7 @@ int load_data_and_sample(cmdargs_t& args, t_rng& rng)
         uint64_t next;
         do {
             next = sample_next_symbol(idx, pattern.begin(), pattern.end(),
-                                      args.ngramsize, rng);
+                args.ngramsize, rng);
             pattern.push_back(next);
         } while (next != PAT_END_SYM);
         auto stop = clock::now();
@@ -177,14 +180,15 @@ int main(int argc, const char* argv[])
     t_rng rng;
     auto now = std::chrono::system_clock::now();
     rng.seed(std::chrono::duration_cast<std::chrono::seconds>(
-                 now.time_since_epoch()).count());
+                 now.time_since_epoch())
+                 .count());
 
     /* load data, sample */
     return load_data_and_sample<index_type, t_rng>(args, rng);
 }
 
 std::string as_string(const std::vector<uint64_t>& wids,
-                      const vocab_uncompressed& vocab)
+    const vocab_uncompressed& vocab)
 {
     std::ostringstream oss;
     bool first = true;

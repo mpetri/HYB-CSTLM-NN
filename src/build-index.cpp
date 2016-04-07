@@ -51,21 +51,24 @@ void create_and_store(collection& col, bool use_mkn)
     auto stop = clock::now();
     LOG(INFO) << "index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     stop - start).count() / 1000.0f;
+                     stop - start)
+                     .count()
+            / 1000.0f;
     auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     std::ofstream ofs(output_file);
     if (ofs.is_open()) {
         LOG(INFO) << "writing index to file : " << output_file;
         auto bytes = sdsl::serialize(idx, ofs);
         LOG(INFO) << "index size : " << bytes / (1024 * 1024) << " MB";
-    } else {
+    }
+    else {
         LOG(FATAL) << "cannot write index to file : " << output_file;
     }
 }
 
 int main(int argc, const char* argv[])
 {
-    mem_monitor m("/dev/null",std::chrono::milliseconds(5000));
+    mem_monitor m("/dev/null", std::chrono::milliseconds(5000));
 
     log::start_log(argc, argv);
 
@@ -83,7 +86,7 @@ int main(int argc, const char* argv[])
     auto mem_stats = m.get_current_stats();
     double peak_mem = mem_stats.VmPeak;
     double text_size_raw = col.raw_size_in_bytes;
-    double memory_usage = peak_mem / (text_size_raw+1.0);
+    double memory_usage = peak_mem / (text_size_raw + 1.0);
     LOG(INFO) << "mem usage = " << mem_stats.VmPeak << " bytes";
     LOG(INFO) << "mem usage = " << memory_usage << "n";
 

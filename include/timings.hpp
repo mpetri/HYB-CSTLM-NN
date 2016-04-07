@@ -150,9 +150,9 @@ public:
 // factored out for timing
 template <class t_cst>
 bool forward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
-                            const typename t_cst::size_type d,
-                            const typename t_cst::char_type c,
-                            typename t_cst::size_type& char_pos)
+    const typename t_cst::size_type d,
+    const typename t_cst::char_type c,
+    typename t_cst::size_type& char_pos)
 {
     auto timer = lm_bench::bench(timer_type::forward_search);
     auto ok = forward_search(cst, v, d, c, char_pos);
@@ -162,10 +162,10 @@ bool forward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
 // factored out for timing
 template <class t_idx>
 bool backward_search_wrapper(const t_idx& idx, typename t_idx::size_type l,
-                             typename t_idx::csa_type::size_type r,
-                             typename t_idx::csa_type::char_type c,
-                             typename t_idx::csa_type::size_type& l_res,
-                             typename t_idx::csa_type::size_type& r_res)
+    typename t_idx::csa_type::size_type r,
+    typename t_idx::csa_type::char_type c,
+    typename t_idx::csa_type::size_type& l_res,
+    typename t_idx::csa_type::size_type& r_res)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     return backward_search(idx.m_cst.csa, l, r, c, l_res, r_res);
@@ -174,7 +174,7 @@ bool backward_search_wrapper(const t_idx& idx, typename t_idx::size_type l,
 // convenience function
 template <class t_idx>
 bool backward_search_wrapper(const t_idx& idx, typename t_idx::cst_type::node_type& v,
-                             const typename t_idx::csa_type::char_type c)
+    const typename t_idx::csa_type::char_type c)
 {
     auto timer = lm_bench::bench(timer_type::backward_search);
     typename t_idx::size_type l = idx.m_cst.lb(v), r = idx.m_cst.rb(v);

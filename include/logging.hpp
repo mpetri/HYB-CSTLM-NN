@@ -23,7 +23,7 @@ struct log {
         el::Configurations c;
         c.setGlobally(el::ConfigurationType::Enabled, "true");
         c.setGlobally(el::ConfigurationType::Format,
-                      "%datetime{%H:%m:%s} %level: %msg");
+            "%datetime{%H:%m:%s} %level: %msg");
         c.setGlobally(el::ConfigurationType::ToFile, "false");
         if (print_to_stdout)
             c.setGlobally(el::ConfigurationType::ToStandardOutput, "true");
@@ -33,7 +33,7 @@ struct log {
     }
 
     inline static void start_log(int argc, const char** argv,
-                                 bool print_to_stdout = true)
+        bool print_to_stdout = true)
     {
         START_EASYLOGGINGPP(argc, argv);
         load_default_config(print_to_stdout);

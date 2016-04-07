@@ -46,7 +46,8 @@ public:
                     // if a parent contains a sentinel then we just flag this and move on
                     has_sentinel[node_id] = 1;
                     offsets[node_id] = 0;
-                } else {
+                }
+                else {
                     // check if edge contains sentinel and where
                     auto parent_depth = cst.depth(node);
                     auto depth = cst.depth(node); // can be expensive for leaves, but we
@@ -94,12 +95,13 @@ public:
             auto rank_in_vec = m_bv_rank(id);
             offset = m_offsets[rank_in_vec];
             return true;
-        } else
+        }
+        else
             return false;
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
-                        std::string name = "") const
+        std::string name = "") const
     {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;

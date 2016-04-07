@@ -89,7 +89,7 @@ struct precomputed_stats {
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
-                        std::string name = "") const
+        std::string name = "") const
     {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
@@ -156,11 +156,11 @@ struct precomputed_stats {
 
     template <class t_nums>
     void display_vec(const char* name, const t_nums& nums,
-                     size_t ngramsize) const
+        size_t ngramsize) const
     {
         LOG(INFO) << name << " = "
                   << t_nums(nums.begin() + 1,
-                            nums.begin() + std::min(ngramsize + 1, nums.size()));
+                         nums.begin() + std::min(ngramsize + 1, nums.size()));
     }
 
     void print(bool ismkn, uint32_t ngramsize) const
@@ -214,9 +214,9 @@ private:
     template <class t_cst>
     typename t_cst::size_type
     distance_to_sentinel(sdsl::read_only_mapped_buffer<>& SA,
-                         t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
-                         const t_cst& cst, const typename t_cst::node_type& node,
-                         const typename t_cst::size_type& offset) const
+        t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
+        const t_cst& cst, const typename t_cst::node_type& node,
+        const typename t_cst::size_type& offset) const
     {
         auto i = cst.lb(node);
         auto text_offset = SA[i];
@@ -299,11 +299,13 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                     if (counter == UNKNOWN_SYM || counter == PAT_END_SYM) {
                         // only need to consider one symbol for UNK, <S>, </S> edges
                         max_n = 1;
-                    } else {
+                    }
+                    else {
                         // need to consider several symbols -- minimum of
                         // 1) edge length; 2) threshold; 3) reaching the </S> token
                         auto distance = distance_to_sentinel(SA, sentinel_rank, sentinel_select, cst,
-                                                             node, parent_depth) + 1;
+                                            node, parent_depth)
+                            + 1;
                         max_n = std::min(max_ngram_count, depth);
                         if (distance <= max_n) {
                             max_n = distance;
@@ -319,14 +321,15 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                         // also when freq = 1 the pattern can only be preceeded by one
                         // symbol
                         n1plus_back = freq;
-                    } else {
+                    }
+                    else {
                         // no need to adjust for EOS symbol, as this only happens when
                         // symbol = <S>
                         auto lb = cst.lb(node);
                         auto rb = cst.rb(node);
                         num_syms = 0;
                         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                               preceding_syms, left, right);
+                            preceding_syms, left, right);
                         n1plus_back = num_syms;
                     }
 

@@ -22,8 +22,8 @@
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
 double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
-                           t_pat_iter pattern_end, uint64_t ngramsize,
-                           bool isfishy)
+    t_pat_iter pattern_end, uint64_t ngramsize,
+    bool isfishy)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0 / (idx.m_vocab.size() - 4); // p -- FIXME: should we subtract
@@ -65,12 +65,14 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
             d = idx.m_cst.size(node_excl);
             // LOG(INFO)<<"denominator: "<<d<<endl;
             // LOG(INFO)<<"Highest Level: "<<c<<endl;
-        } else if (i == 1 || ngramsize == 1) {
+        }
+        else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
             d = idx.m_discounts.N1plus_dotdot;
             // LOG(INFO)<<"denominator: "<<d<<endl;
             // LOG(INFO)<<"Lowest Level: "<<c<<endl;
-        } else {
+        }
+        else {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack(node_excl, start, pattern_end - 1);
             // LOG(INFO)<<"denominator: "<<d<<endl;
@@ -81,10 +83,12 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         if (c == 1) {
             // LOG(INFO)<<"D1 is: "<<D1<<endl;
             c -= D1;
-        } else if (c == 2) {
+        }
+        else if (c == 2) {
             // LOG(INFO)<<"D2 is: "<<D2<<endl;
             c -= D2;
-        } else if (c >= 3) {
+        }
+        else if (c >= 3) {
             // LOG(INFO)<<"D3p is: "<<D3p<<endl;
             c -= D3p;
         }
@@ -96,16 +100,18 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         // Discount.cc
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
             idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
-        } else if (i == 1 || ngramsize == 1) {
+        }
+        else if (i == 1 || ngramsize == 1) {
             n1 = idx.m_discounts.n1_cnt[1];
             n2 = idx.m_discounts.n2_cnt[1];
             n3p = (idx.vocab_size() - 2) - (n1 + n2);
-        } else {
+        }
+        else {
             if (!isfishy)
                 idx.N123PlusFrontPrime(node_excl, start, pattern_end - 1, n1, n2, n3p);
             else
                 idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2,
-                                  n3p); // FishyVersion}
+                    n3p); // FishyVersion}
         }
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;

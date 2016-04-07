@@ -66,7 +66,8 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
         for (const auto& chr : line) {
             line_tokens.push_back(std::string(1, chr));
         }
-    } else {
+    }
+    else {
         std::istringstream input(line);
         std::string word;
         while (std::getline(input, word, ' ')) {
@@ -114,7 +115,7 @@ int main(int argc, const char* argv[])
             dict_ids.emplace_back(did.second, did.first);
         }
         std::sort(dict_ids.begin(), dict_ids.end(),
-                  std::greater<std::pair<uint64_t, std::string> >());
+            std::greater<std::pair<uint64_t, std::string> >());
 
         initial_sigma = dict_ids.size();
 
@@ -167,7 +168,8 @@ int main(int argc, const char* argv[])
                     buf.push_back(NOT_FREQ_SYM);
                     isreplaced = true;
                     num_non_freq_syms++;
-                } else {
+                }
+                else {
                     if (args.write_corpus)
                         corpus_word << tok + " ";
                     auto num = itr->second;
@@ -216,20 +218,20 @@ int main(int argc, const char* argv[])
     LOG(INFO) << "write stats file";
     {
         std::ofstream ofs(args.collection_dir + "/" + KEY_PREFIX + KEY_STATS);
-        ofs << "initial_vocab_size="<<initial_sigma<<"\n";
-        LOG(INFO) << "initial_vocab_size="<<initial_sigma;
-        ofs << "pruned_vocab_size="<<pruned_sigma<<"\n";
-        LOG(INFO) << "pruned_vocab_size="<<pruned_sigma;
-        ofs << "num_non_freq_syms="<<num_non_freq_syms<<"\n";
-        LOG(INFO) << "num_non_freq_syms="<<num_non_freq_syms;
-        ofs << "num_sentences="<<num_sentences<<"\n";
-        LOG(INFO) << "num_sentences="<<num_sentences;
-        ofs << "num_tokens="<<num_tokens<<"\n";
-        LOG(INFO) << "num_tokens="<<num_tokens;
-        ofs << "raw_size_in_bytes="<<sdsl::util::file_size(args.input_file)<<"\n";
-        LOG(INFO) << "raw_size_in_bytes="<<sdsl::util::file_size(args.input_file);
-        ofs << "min_symbol_freq=" << args.min_symbol_freq<<"\n";
-        LOG(INFO) << "min_symbol_freq="<<args.min_symbol_freq;
+        ofs << "initial_vocab_size=" << initial_sigma << "\n";
+        LOG(INFO) << "initial_vocab_size=" << initial_sigma;
+        ofs << "pruned_vocab_size=" << pruned_sigma << "\n";
+        LOG(INFO) << "pruned_vocab_size=" << pruned_sigma;
+        ofs << "num_non_freq_syms=" << num_non_freq_syms << "\n";
+        LOG(INFO) << "num_non_freq_syms=" << num_non_freq_syms;
+        ofs << "num_sentences=" << num_sentences << "\n";
+        LOG(INFO) << "num_sentences=" << num_sentences;
+        ofs << "num_tokens=" << num_tokens << "\n";
+        LOG(INFO) << "num_tokens=" << num_tokens;
+        ofs << "raw_size_in_bytes=" << sdsl::util::file_size(args.input_file) << "\n";
+        LOG(INFO) << "raw_size_in_bytes=" << sdsl::util::file_size(args.input_file);
+        ofs << "min_symbol_freq=" << args.min_symbol_freq << "\n";
+        LOG(INFO) << "min_symbol_freq=" << args.min_symbol_freq;
     }
 
     return 0;

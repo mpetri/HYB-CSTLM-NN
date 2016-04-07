@@ -51,7 +51,7 @@ LMQueryMKN<t_idx, t_atom>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize)
     auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
     (void)r;
     assert(r >= 0);
-    m_last_nodes_incl = std::vector<t_node>({root, node});
+    m_last_nodes_incl = std::vector<t_node>({ root, node });
     m_pattern.push_back(PAT_START_SYM);
 }
 
@@ -71,7 +71,7 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
 #else
     // fast way, tracking state
     typedef typename t_idx::cst_type::node_type t_node;
-    double p = 1.0 / (m_idx->m_vocab.size() - 4); 
+    double p = 1.0 / (m_idx->m_vocab.size() - 4);
     t_node node_incl = m_idx->m_cst.root(); // v_F^all matching the full pattern, including last item
     auto node_excl_it = m_last_nodes_incl.begin(); // v_F     matching only the context, excluding last item
     t_node node_excl = *node_excl_it;
@@ -99,7 +99,8 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
             node_excl_it++;
             if (node_excl_it == m_last_nodes_incl.end()) {
                 break;
-            } else {
+            }
+            else {
                 node_excl = *node_excl_it;
             }
         }
@@ -111,30 +112,36 @@ double LMQueryMKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
         if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
             c = (ok) ? m_idx->m_cst.size(node_incl) : 0;
             d = m_idx->m_cst.size(node_excl);
-        } else if (i == 1 || m_ngramsize == 1) {
+        }
+        else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
             d = m_idx->m_discounts.N1plus_dotdot;
-        } else {
+        }
+        else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
             d = m_idx->N1PlusFrontBack(node_excl, start, pattern_end - 1);
         }
 
         if (c == 1) {
             c -= D1;
-        } else if (c == 2) {
+        }
+        else if (c == 2) {
             c -= D2;
-        } else if (c >= 3) {
+        }
+        else if (c >= 3) {
             c -= D3p;
         }
 
-        uint64_t n1=0, n2=0, n3p=0;
+        uint64_t n1 = 0, n2 = 0, n3p = 0;
         if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
             m_idx->N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
-        } else if (i == 1 || m_ngramsize == 1) {
+        }
+        else if (i == 1 || m_ngramsize == 1) {
             n1 = m_idx->m_discounts.n1_cnt[1];
             n2 = m_idx->m_discounts.n2_cnt[1];
             n3p = (m_idx->vocab_size() - 2) - (n1 + n2);
-        } else {
+        }
+        else {
             m_idx->N123PlusFrontPrime(node_excl, start, pattern_end - 1, n1, n2, n3p);
         }
 

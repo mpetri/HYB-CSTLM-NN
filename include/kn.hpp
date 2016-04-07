@@ -22,7 +22,7 @@
 // Uses only a forward CST and backward search.
 template <class t_idx, class t_pat_iter>
 double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
-                       t_pat_iter pattern_end, uint64_t ngramsize)
+    t_pat_iter pattern_end, uint64_t ngramsize)
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0;
@@ -59,10 +59,12 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
             c = (ok) ? idx.m_cst.size(node_incl) : 0;
             d = idx.m_cst.size(node_excl);
-        } else if (i == 1 || ngramsize == 1) {
+        }
+        else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : D;
             d = idx.m_discounts.N1plus_dotdot;
-        } else {
+        }
+        else {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
             d = idx.N1PlusFrontBack(node_excl, start, pattern_end - 1);
         }
@@ -71,7 +73,8 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         if (i > 1) {
             double q = idx.N1PlusFront(node_excl, start, pattern_end - 1);
             p = (std::max(c - D, 0.0) + D * q * p) / d;
-        } else {
+        }
+        else {
             p = c / d;
         }
     }

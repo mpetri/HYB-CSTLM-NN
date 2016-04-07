@@ -20,7 +20,7 @@ const std::string KEY_VOCAB = "VOCAB";
 const std::string KEY_STATS = "STATS";
 
 std::vector<std::string> collection_keys = { KEY_TEXT, KEY_TEXTREV, KEY_SA,
-                                             KEY_SAREV, KEY_VOCAB };
+    KEY_SAREV, KEY_VOCAB };
 
 struct collection {
     std::string path;
@@ -80,44 +80,43 @@ struct collection {
             std::ifstream ifs(path + "/" + KEY_PREFIX + KEY_STATS);
             std::string s;
             while (std::getline(ifs, s)) {
-                if( s.find("initial_vocab_size=") != std::string::npos) {
+                if (s.find("initial_vocab_size=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    initial_vocab_size = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    initial_vocab_size = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("pruned_vocab_size=") != std::string::npos) {
+                if (s.find("pruned_vocab_size=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    pruned_vocab_size = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    pruned_vocab_size = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("num_non_freq_syms=") != std::string::npos) {
+                if (s.find("num_non_freq_syms=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    num_non_freq_syms = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    num_non_freq_syms = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("num_sentences=") != std::string::npos) {
+                if (s.find("num_sentences=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    num_sentences = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    num_sentences = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("num_tokens=") != std::string::npos) {
+                if (s.find("num_tokens=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    num_tokens = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    num_tokens = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("raw_size_in_bytes=") != std::string::npos) {
+                if (s.find("raw_size_in_bytes=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    raw_size_in_bytes = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    raw_size_in_bytes = std::strtoull(val.c_str(), NULL, 10);
                 }
-                if( s.find("min_symbol_freq=") != std::string::npos) {
+                if (s.find("min_symbol_freq=") != std::string::npos) {
                     auto pos = s.find("=");
-                    auto val = s.substr(pos+1);
-                    min_symbol_freq = std::strtoull(val.c_str(),NULL,10);
+                    auto val = s.substr(pos + 1);
+                    min_symbol_freq = std::strtoull(val.c_str(), NULL, 10);
                 }
             }
         }
-
     }
 
     std::string temp_file(std::string id)

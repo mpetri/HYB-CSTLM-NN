@@ -14,7 +14,7 @@
 using namespace std::chrono;
 
 template <class t_cst, class t_vocab = vocab_uncompressed,
-          uint32_t t_max_ngram_count = 10>
+    uint32_t t_max_ngram_count = 10>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -26,6 +26,7 @@ public:
     typedef std::vector<uint64_t> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
     typedef compressed_counts<> ccounts_type;
+
 public: // data
     cst_type m_cst;
     precomputed_stats m_discounts;
@@ -47,7 +48,8 @@ public:
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXT];
             construct(m_cst, col.file_map[KEY_TEXT], cfg, 0);
             sdsl::store_to_file(m_cst, cst_file);
-        } else {
+        }
+        else {
             sdsl::load_from_file(m_cst, cst_file);
         }
         auto discounts_file = col.path + "/tmp/DISCOUNTS-" + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
@@ -55,7 +57,8 @@ public:
             lm_construct_timer timer("DISCOUNTS");
             m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count, is_mkn);
             sdsl::store_to_file(m_discounts, discounts_file);
-        } else {
+        }
+        else {
             sdsl::load_from_file(m_discounts, discounts_file);
         }
         auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-" + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
@@ -63,7 +66,8 @@ public:
             lm_construct_timer timer("PRECOMPUTED_COUNTS");
             m_precomputed = ccounts_type(col, m_cst, t_max_ngram_count, is_mkn);
             sdsl::store_to_file(m_precomputed, precomputed_file);
-        } else {
+        }
+        else {
             sdsl::load_from_file(m_precomputed, precomputed_file);
         }
         {
@@ -73,7 +77,7 @@ public:
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
-                        std::string name = "") const
+        std::string name = "") const
     {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
@@ -109,7 +113,7 @@ public:
     }
 
     uint64_t N1PlusBack(const node_type& node, pattern_iterator pattern_begin,
-                        pattern_iterator) const
+        pattern_iterator) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
 
@@ -119,10 +123,12 @@ public:
             n1plus_back = 1;
             // FIXME: does this really follow? Yes, there's only 1 previous context as
             // this node goes to the end of the corpus
-        } else if (m_cst.depth(node) <= t_max_ngram_count) {
+        }
+        else if (m_cst.depth(node) <= t_max_ngram_count) {
             n1plus_back = m_precomputed.lookup_b(m_cst, node);
             // std::cout << "\tnon-leaf\n";
-        } else {
+        }
+        else {
             // std::cout << "\tdepth exceeded\n";
             // when depth is exceeded, we don't precompute the N1+FB/N1+B scores
             // so we need to compute these explictly
@@ -138,7 +144,7 @@ public:
             auto rb = m_cst.rb(node);
             typename t_cst::csa_type::size_type num_syms = 0;
             sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                   preceding_syms, left, right);
+                preceding_syms, left, right);
             n1plus_back = num_syms;
         }
 
@@ -166,7 +172,7 @@ public:
     }
 
     void mkn_discount(uint64_t level, double& D1, double& D2, double& D3p,
-                      bool cnt = false) const
+        bool cnt = false) const
     {
         // trim to the maximum computed length, assuming that
         // discounts stay flat beyond this (a reasonable guess)
@@ -175,7 +181,8 @@ public:
             D1 = m_discounts.D1_cnt[level];
             D2 = m_discounts.D2_cnt[level];
             D3p = m_discounts.D3_cnt[level];
-        } else {
+        }
+        else {
             D1 = m_discounts.D1[level];
             D2 = m_discounts.D2[level];
             D3p = m_discounts.D3[level];
@@ -188,8 +195,8 @@ public:
     }
 
     uint64_t N1PlusFrontBack(const node_type& node,
-                             pattern_iterator pattern_begin,
-                             pattern_iterator pattern_end) const
+        pattern_iterator pattern_begin,
+        pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
 
@@ -198,22 +205,27 @@ public:
         if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             if (*pattern_begin == PAT_START_SYM) {
                 return m_cst.degree(node);
-            } else {
+            }
+            else {
                 if (pattern_size <= t_max_ngram_count) {
                     return m_precomputed.lookup_fb(m_cst, node);
-                } else {
+                }
+                else {
                     return compute_contexts(m_cst, node);
                 }
             }
-        } else {
+        }
+        else {
             // special case, only one way of extending this pattern to the right
             if (*pattern_begin == PAT_START_SYM && *(pattern_end - 1) == PAT_END_SYM) {
                 /* pattern must be 13xyz41 -> #P(*3xyz4*) == 0 */
                 return 0;
-            } else if (*pattern_begin == PAT_START_SYM) {
+            }
+            else if (*pattern_begin == PAT_START_SYM) {
                 /* pattern must be 13xyzA -> #P(*3xyz*) == 1 */
                 return 1;
-            } else {
+            }
+            else {
                 /* pattern must be *xyzA -> #P(*xyz*) == N1PlusBack */
                 return N1PlusBack(node, pattern_begin, pattern_end);
             }
@@ -221,7 +233,7 @@ public:
     }
     // Computes N_1+( abc * )
     uint64_t N1PlusFront(const node_type& node, pattern_iterator pattern_begin,
-                         pattern_iterator pattern_end) const
+        pattern_iterator pattern_end) const
     {
         auto timer = lm_bench::bench(timer_type::N1PlusFront);
 
@@ -231,7 +243,8 @@ public:
         if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
             // pattern matches the edge label
             N1plus_front = m_cst.degree(node);
-        } else {
+        }
+        else {
             // pattern is part of the edge label
             N1plus_front = 1;
         }
@@ -246,8 +259,8 @@ public:
 
     // computes N1(abc *), N_2(abc *), N_3+(abc *) needed for the lower level of
     void N123PlusFrontPrime(const node_type& node, pattern_iterator pattern_begin,
-                            pattern_iterator pattern_end, uint64_t& f1prime,
-                            uint64_t& f2prime, uint64_t& f3pprime) const
+        pattern_iterator pattern_end, uint64_t& f1prime,
+        uint64_t& f2prime, uint64_t& f3pprime) const
     {
         auto timer = lm_bench::bench(timer_type::N123PlusFrontPrime);
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
@@ -258,7 +271,8 @@ public:
             if (m_precomputed.is_precomputed(m_cst, node)) {
                 m_precomputed.lookup_f12prime(m_cst, node, f1prime, f2prime); // FIXME change the name n1plusfrontback
                 all = m_cst.degree(node);
-            } else {
+            }
+            else {
                 for (auto child = m_cst.select_child(node, 1); child != m_cst.root(); child = m_cst.sibling(child)) {
                     auto lb = m_cst.lb(child);
                     auto rb = m_cst.rb(child);
@@ -275,13 +289,13 @@ public:
                     all++;
                     child = m_cst.sibling(child);
                 }
-
             }
             f3pprime = all - f1prime - f2prime;
             //LOG(INFO) << "\t\t\tN123PlusFrontPrime -- looking up stuff: degree " << m_cst.degree(node) << " and f1',f2' are " << f1prime << ", " << f2prime;
-        } else {
+        }
+        else {
             // pattern is part of the edge label
-	    uint64_t num_symsprime = N1PlusBack(node, pattern_begin, pattern_end);
+            uint64_t num_symsprime = N1PlusBack(node, pattern_begin, pattern_end);
             if (num_symsprime == 1)
                 f1prime++;
             if (num_symsprime == 2)
@@ -295,8 +309,8 @@ public:
     // Computes N_1( abc * ), N_2( abc * ), N_3+( abc * ); needed for modified
     // Kneser-Ney smoothing
     void N123PlusFront(const node_type& node, pattern_iterator pattern_begin,
-                       pattern_iterator pattern_end, uint64_t& n1, uint64_t& n2,
-                       uint64_t& n3p) const
+        pattern_iterator pattern_end, uint64_t& n1, uint64_t& n2,
+        uint64_t& n3p) const
     {
         auto timer = lm_bench::bench(timer_type::N123PlusFront);
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
@@ -309,7 +323,8 @@ public:
                 // FIXME: this bit is currently broken
                 m_precomputed.lookup_f12(m_cst, node, n1, n2);
                 n3p = m_cst.degree(node) - n1 - n2;
-            } else {
+            }
+            else {
                 // loop over the children
                 auto child = m_cst.select_child(node, 1);
                 auto root = m_cst.root();
@@ -324,7 +339,8 @@ public:
                     child = m_cst.sibling(child);
                 }
             }
-        } else {
+        }
+        else {
             // pattern is part of the edge label
             uint64_t symbol = *(pattern_end - 1);
             if (symbol != PAT_END_SYM) {
@@ -350,7 +366,7 @@ public:
         auto rb = cst.rb(node);
         typename t_cst::csa_type::size_type num_syms = 0;
         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                               preceding_syms, left, right);
+            preceding_syms, left, right);
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
         for (size_t i = 0; i < num_syms; i++) {
@@ -358,12 +374,14 @@ public:
             auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
             if (new_lb == new_rb) {
                 total_contexts++;
-            } else {
+            }
+            else {
                 auto new_node = cst.node(new_lb, new_rb);
 
                 if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
                     total_contexts++;
-                } else {
+                }
+                else {
                     auto deg = cst.degree(new_node);
                     total_contexts += deg;
                 }
@@ -373,7 +391,7 @@ public:
     }
 
     uint64_t compute_contexts(const t_cst& cst, const node_type& node,
-                              uint64_t& count1, uint64_t& count2) const
+        uint64_t& count1, uint64_t& count2) const
     {
         static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
             cst.csa.sigma);
@@ -384,7 +402,7 @@ public:
         auto rb = cst.rb(node);
         typename t_cst::csa_type::size_type num_syms = 0;
         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                               preceding_syms, left, right);
+            preceding_syms, left, right);
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
         count1 = 0;
@@ -395,7 +413,8 @@ public:
             if (new_lb == new_rb) {
                 total_contexts++;
                 count1++; // size = 1, as [lb, rb] covers single entry
-            } else {
+            }
+            else {
                 auto new_node = cst.node(new_lb, new_rb);
                 if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
                     total_contexts++;
@@ -405,7 +424,8 @@ public:
                         count1++;
                     else if (size == 2)
                         count2++;
-                } else {
+                }
+                else {
                     auto deg = cst.degree(new_node);
                     total_contexts += deg;
                     // need to know how many of the children have cst.size(new_node) == 1
@@ -417,7 +437,8 @@ public:
                         m_precomputed.lookup_f12(cst, new_node, delta1, delta2);
                         // LOG(INFO) << " LOOKUP        node " << new_node << " delta1 " <<
                         // delta1 << " delta2 " << delta2;
-                    } else {
+                    }
+                    else {
                         // inefficient way
                         for (const auto& child : cst.children(new_node)) {
                             auto size = cst.size(child);

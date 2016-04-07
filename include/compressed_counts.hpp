@@ -73,13 +73,15 @@ public:
 
     template <class t_cst>
     compressed_counts(collection& col, t_cst& cst, uint64_t max_node_depth,
-                      bool mkn_counts)
+        bool mkn_counts)
     {
         m_is_mkn = mkn_counts;
-        if (!mkn_counts)
-            initialise_kneser_ney(col, cst, max_node_depth);
-        else
-            initialise_modified_kneser_ney(col, cst, max_node_depth);
+        for (size_t i = 2; i < 20; i++) {
+            if (!mkn_counts)
+                initialise_kneser_ney(col, cst, i);
+            else
+                initialise_modified_kneser_ney(col, cst, i);
+        }
     }
 
     template <class t_cst, class t_node_type>
@@ -94,7 +96,7 @@ public:
         auto rb = cst.rb(node);
         num_syms = 0;
         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                               preceding_syms, left, right);
+            preceding_syms, left, right);
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
         for (size_t i = 0; i < num_syms; i++) {
@@ -102,11 +104,13 @@ public:
             auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
             if (new_lb == new_rb) {
                 total_contexts++;
-            } else {
+            }
+            else {
                 auto new_node = cst.node(new_lb, new_rb);
                 if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
                     total_contexts++;
-                } else {
+                }
+                else {
                     auto deg = cst.degree(new_node);
                     total_contexts += deg;
                 }
@@ -117,8 +121,8 @@ public:
 
     template <class t_cst, class t_node_type>
     uint32_t compute_contexts_mkn(t_cst& cst, t_node_type node,
-                                  uint64_t& num_syms, uint64_t& f1prime,
-                                  uint64_t& f2prime)
+        uint64_t& num_syms, uint64_t& f1prime,
+        uint64_t& f2prime)
     {
         f1prime = 0;
         f2prime = 0;
@@ -136,7 +140,7 @@ public:
                 cst.csa.sigma);
             typename t_cst::csa_type::size_type num_syms = 0;
             sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                                   preceding_syms, left, right);
+                preceding_syms, left, right);
             if (num_syms == 1)
                 f1prime++;
             if (num_syms == 2)
@@ -158,18 +162,20 @@ public:
         auto rb = cst.rb(node);
         num_syms = 0;
         sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
-                               preceding_syms, left, right);
+            preceding_syms, left, right);
 
         for (size_t i = 0; i < num_syms; i++) {
             auto new_lb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + left[i];
             auto new_rb = cst.csa.C[cst.csa.char2comp[preceding_syms[i]]] + right[i] - 1;
             if (new_lb == new_rb) {
                 total_contexts++;
-            } else {
+            }
+            else {
                 auto new_node = cst.node(new_lb, new_rb);
                 if (cst.is_leaf(new_node) || cst.depth(new_node) != node_depth + 1) {
                     total_contexts++;
-                } else {
+                }
+                else {
                     auto deg = cst.degree(new_node);
                     total_contexts += deg;
                 }
@@ -180,7 +186,7 @@ public:
 
     template <class t_cst>
     void initialise_kneser_ney(collection& col, t_cst& cst,
-                               uint64_t max_node_depth)
+        uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         sdsl::util::set_to_value(tmp_bv, 0);
@@ -205,7 +211,8 @@ public:
                         tmp_buffer_counts_fb.push_back(c);
                         tmp_buffer_counts_b.push_back(num_syms);
                     }
-                } else {
+                }
+                else {
                     /* first visit */
                     if (!cst.is_leaf(node)) {
                         auto depth = cst.depth(node);
@@ -230,7 +237,7 @@ public:
     // specific MKN implementation, 2-pass
     template <class t_cst>
     void initialise_modified_kneser_ney(collection& col, t_cst& cst,
-                                        uint64_t max_node_depth)
+        uint64_t max_node_depth)
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         sdsl::util::set_to_value(tmp_bv, 0);
@@ -277,7 +284,8 @@ public:
                     }
                     child_hist[node_depth] = { 0, 0 };
                     // child_hist.erase(node_id);
-                } else {
+                }
+                else {
                     /* first visit */
                     if (!cst.is_leaf(node)) {
                         if (node_depth > max_node_depth) {
@@ -308,10 +316,22 @@ public:
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
+
+        LOG(INFO) << max_node_depth << ";"
+                  << m_bv_rank(m_bv.size()) << ";"
+                  << m_bv.size() << ";"
+                  << sdsl::size_in_bytes(m_bv) + sdsl::size_in_bytes(m_bv_rank) << ";"
+                  << sdsl::size_in_bytes(m_counts_f1) << ";"
+                  << sdsl::size_in_bytes(m_counts_f2) << ";"
+                  << sdsl::size_in_bytes(m_counts_b) << ";"
+                  << sdsl::size_in_bytes(m_counts_fb) << ";"
+                  << sdsl::size_in_bytes(m_counts_f1prime) << ";"
+                  << sdsl::size_in_bytes(m_counts_f2prime) << ";"
+                  << sdsl::size_in_bytes(cst);
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
-                        std::string name = "") const
+        std::string name = "") const
     {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;
@@ -352,7 +372,7 @@ public:
 
     template <class t_cst, class t_node_type>
     void lookup_f12(t_cst& cst, t_node_type node, uint64_t& f1,
-                    uint64_t& f2) const
+        uint64_t& f2) const
     {
         auto timer = lm_bench::bench(timer_type::lookup_f12);
         assert(m_is_mkn);
@@ -375,7 +395,7 @@ public:
 
     template <class t_cst, class t_node_type>
     void lookup_f12prime(t_cst& cst, t_node_type node, uint64_t& f1prime,
-                           uint64_t& f2prime) const
+        uint64_t& f2prime) const
     {
         auto timer = lm_bench::bench(timer_type::lookup_f12prime);
         assert(m_is_mkn);

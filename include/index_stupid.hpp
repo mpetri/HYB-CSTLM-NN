@@ -38,7 +38,8 @@ public:
             cfg.file_map[sdsl::conf::KEY_TEXT_INT] = col.file_map[KEY_TEXTREV];
             construct(m_csa_rev, col.file_map[KEY_TEXTREV], cfg, 0);
             sdsl::store_to_file(m_csa_rev, csa_file);
-        } else {
+        }
+        else {
             sdsl::load_from_file(m_csa_rev, csa_file);
         }
 
@@ -49,7 +50,7 @@ public:
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
-                        std::string name = "") const
+        std::string name = "") const
     {
         sdsl::structure_tree_node* child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
         size_type written_bytes = 0;

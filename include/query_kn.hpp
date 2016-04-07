@@ -51,7 +51,7 @@ LMQueryKN<t_idx, t_atom>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
     auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
     (void)r;
     assert(r >= 0);
-    m_last_nodes_incl = std::vector<t_node>({root, node});
+    m_last_nodes_incl = std::vector<t_node>({ root, node });
     m_pattern.push_back(PAT_START_SYM);
 }
 
@@ -99,29 +99,33 @@ double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
             node_excl_it++;
             if (node_excl_it == m_last_nodes_incl.end()) {
                 break;
-            } else {
+            }
+            else {
                 node_excl = *node_excl_it;
             }
         }
 
-	double D = m_idx->discount(i, i == 1 || i != m_ngramsize);
-	double c, d;
+        double D = m_idx->discount(i, i == 1 || i != m_ngramsize);
+        double c, d;
         if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
             c = (ok) ? m_idx->m_cst.size(node_incl) : 0;
             d = m_idx->m_cst.size(node_excl);
-        } else if (i == 1 || m_ngramsize == 1) {
+        }
+        else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : D;
             d = m_idx->m_discounts.N1plus_dotdot;
-        } else {
+        }
+        else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
             d = m_idx->N1PlusFrontBack(node_excl, start, pattern_end - 1);
         }
 
-	// update the running probability
+        // update the running probability
         if (i > 1) {
             double q = m_idx->N1PlusFront(node_excl, start, pattern_end - 1);
             p = (std::max(c - D, 0.0) + D * q * p) / d;
-        } else {
+        }
+        else {
             p = c / d;
         }
     }

@@ -99,8 +99,8 @@ cmdargs_t parse_args(int argc, const char* argv[])
 //            search
 template <class t_idx>
 void run_queries(const t_idx& idx,
-                 const std::vector<std::vector<uint64_t> > patterns,
-                 uint64_t ngramsize, bool ismkn, bool isfishy)
+    const std::vector<std::vector<uint64_t> > patterns,
+    uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -140,9 +140,9 @@ void run_queries(const t_idx& idx,
 
 template <class t_idx>
 void run_reranker(const t_idx& idx,
-                  const std::vector<std::vector<uint64_t> > patterns,
-                  const std::vector<std::vector<std::string> > orig_patterns,
-                  uint64_t ngramsize, bool ismkn, bool isfishy)
+    const std::vector<std::vector<uint64_t> > patterns,
+    const std::vector<std::vector<std::string> > orig_patterns,
+    uint64_t ngramsize, bool ismkn, bool isfishy)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -161,11 +161,11 @@ void run_reranker(const t_idx& idx,
         if (pattern[0] != source_idx) {
             LOG(INFO) << "Pattern is: "
                       << std::vector<std::string>(orig_patterns[best_idx].begin(),
-                                                  orig_patterns[best_idx].end())
+                             orig_patterns[best_idx].end())
                       << " pplx = " << min;
             std::ostringstream sp("", std::ios_base::ate);
             std::copy(orig_patterns[best_idx].begin(), orig_patterns[best_idx].end(),
-                      std::ostream_iterator<std::string>(sp, " "));
+                std::ostream_iterator<std::string>(sp, " "));
             output << sp.str() << std::endl;
 
             min = 1000000;
@@ -174,7 +174,7 @@ void run_reranker(const t_idx& idx,
         }
         source_idx = pattern[0]; // stores the source sentence id in n-best submission
         pattern.erase(pattern.begin(),
-                      pattern.begin() + 2); // removes sentence_index, and |||
+            pattern.begin() + 2); // removes sentence_index, and |||
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
         M = pattern_size + 1; // +1 for adding </s>
@@ -208,7 +208,8 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
         for (const auto& chr : line) {
             line_tokens.push_back(std::string(1, chr));
         }
-    } else {
+    }
+    else {
         std::istringstream input(line);
         std::string word;
         while (std::getline(input, word, ' ')) {
@@ -227,7 +228,8 @@ int execute(const cmdargs_t& args)
     if (utils::file_exists(index_file)) {
         LOG(INFO) << "loading index from file '" << index_file << "'";
         sdsl::load_from_file(idx, index_file);
-    } else {
+    }
+    else {
         LOG(FATAL) << "index " << index_file << " does not exist. build it first";
         return EXIT_FAILURE;
     }
@@ -260,7 +262,8 @@ int execute(const cmdargs_t& args)
             // LOG(INFO) << "\tpattern: " << idx.m_vocab.id2token(tokens.begin(),
             // tokens.end());
         }
-    } else {
+    }
+    else {
         LOG(FATAL) << "cannot read pattern file '" << args.pattern_file << "'";
         return EXIT_FAILURE;
     }
@@ -268,7 +271,7 @@ int execute(const cmdargs_t& args)
     /* run the querying or reranking */
     if (args.isreranking)
         run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn,
-                     args.isfishy);
+            args.isfishy);
     else
         run_queries(idx, patterns, args.ngramsize, args.ismkn, args.isfishy);
 
