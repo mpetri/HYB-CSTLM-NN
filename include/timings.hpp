@@ -10,6 +10,8 @@
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
 
+namespace cstlm {
+
 struct lm_construct_timer {
     watch::time_point start;
     std::string name;
@@ -182,4 +184,5 @@ bool backward_search_wrapper(const t_idx& idx, typename t_idx::cst_type::node_ty
     if (r >= l)
         v = idx.m_cst.node(l, r);
     return (r >= l);
+}
 }

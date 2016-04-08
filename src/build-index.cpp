@@ -5,6 +5,8 @@
 #include "index_types.hpp"
 #include "logging.hpp"
 
+using namespace cstlm;
+
 typedef struct cmdargs {
     std::string collection_dir;
     bool use_mkn;

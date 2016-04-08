@@ -11,6 +11,8 @@
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
+namespace cstlm {
+
 struct log {
     inline static void load_default_config(bool print_to_stdout)
     {
@@ -39,3 +41,4 @@ struct log {
         load_default_config(print_to_stdout);
     }
 };
+}

@@ -9,6 +9,8 @@
 #include "logging.hpp"
 #include "utils.hpp"
 
+namespace cstlm {
+
 template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::dac_vector<> >
 struct compressed_counts {
     typedef sdsl::int_vector<>::size_type size_type;
@@ -416,3 +418,4 @@ public:
         return m_counts_b[rank_in_vec];
     }
 };
+}

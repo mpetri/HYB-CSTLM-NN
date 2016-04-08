@@ -20,6 +20,8 @@
 #include "query.hpp"
 #include "query_kn.hpp"
 
+namespace cstlm {
+
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
     uint64_t& /*M*/, uint64_t ngramsize,
@@ -100,4 +102,5 @@ uint64_t patternId(const t_idx& idx, const t_pattern& word_vec)
         rb);
     auto node = idx.m_cst.node(lb, rb);
     return idx.m_cst.id(node);
+}
 }

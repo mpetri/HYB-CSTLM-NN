@@ -17,6 +17,8 @@
 
 #include "logging.hpp"
 
+using namespace cstlm;
+
 using namespace std::chrono;
 
 typedef struct cmdargs {

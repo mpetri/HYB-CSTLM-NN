@@ -16,6 +16,8 @@
 #include "index_succinct.hpp"
 #include "constants.hpp"
 
+namespace cstlm {
+
 // Returns the Kneser-Ney probability of the n-gram defined
 // by [pattern_begin, pattern_end) where the last value is being
 // predicted given the previous values in the pattern.
@@ -128,4 +130,5 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
     }
 
     return p;
+}
 }

@@ -1,7 +1,4 @@
 #pragma once
-
-//#define STATELESS_QUERY
-
 #include <sdsl/int_vector.hpp>
 #include <sdsl/int_vector_mapper.hpp>
 #include "sdsl/suffix_arrays.hpp"
@@ -20,6 +17,9 @@
 #ifdef STATELESS_QUERY
 #include "kn.hpp"
 #endif
+namespace cstlm {
+
+//#define STATELESS_QUERY
 
 // Returns the Kneser-Ney probability of a sentence, word at a
 // time. Words are supplied using the append_symbol method which
@@ -168,4 +168,5 @@ int LMQueryKN<t_idx, t_atom>::compare(const LMQueryKN& other) const
             return +1;
     }
     return 0;
+}
 }

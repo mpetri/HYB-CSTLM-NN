@@ -11,6 +11,8 @@
 
 #include <sdsl/suffix_arrays.hpp>
 
+namespace cstlm {
+
 using namespace std::chrono;
 
 template <class t_cst, class t_vocab = vocab_uncompressed,
@@ -468,3 +470,4 @@ public:
         return total_contexts;
     }
 };
+}

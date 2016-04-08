@@ -6,12 +6,12 @@
 
 #include <unordered_set>
 
-typedef testing::Types<
-    // index_succinct<default_cst_type,default_cst_rev_type>,
-    index_succinct<default_cst_int_type> > Implementations;
+using namespace cstlm;
 
-typedef testing::Types<index_succinct<default_cst_byte_type>,
-    index_succinct<default_cst_int_type> > AllImplementations;
+typedef testing::Types<cstlm::index_succinct<cstlm::default_cst_int_type> > Implementations;
+
+typedef testing::Types<cstlm::index_succinct<default_cst_byte_type>,
+    cstlm::index_succinct<cstlm::default_cst_int_type> > AllImplementations;
 
 struct triplet {
     std::vector<uint64_t> pattern;

@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <stdexcept>
 
+namespace cstlm {
+
 class vocab_uncompressed {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -116,3 +118,4 @@ public:
 
     size_type size() const { return m_i2t.size(); }
 };
+}

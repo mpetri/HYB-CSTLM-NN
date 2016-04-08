@@ -11,6 +11,8 @@
 #include "constants.hpp"
 #include "timings.hpp"
 
+namespace cstlm {
+
 const std::string KEY_PREFIX = "text.";
 const std::string KEY_PREFIX_BYTE = "text_byte.";
 const std::string KEY_TEXT = "TEXT";
@@ -174,3 +176,4 @@ struct collection {
         return path + "/tmp/" + id + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
     }
 };
+}

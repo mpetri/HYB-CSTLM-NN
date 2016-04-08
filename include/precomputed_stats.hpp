@@ -7,6 +7,8 @@
 #include "sdsl/int_vector_mapper.hpp"
 #include "sdsl/int_vector_mapped_buffer.hpp"
 
+namespace cstlm {
+
 struct precomputed_stats {
     typedef sdsl::int_vector<>::size_type size_type;
     uint64_t max_ngram_count;
@@ -412,4 +414,5 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
         }
         ++counter;
     }
+}
 }

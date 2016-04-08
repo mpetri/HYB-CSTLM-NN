@@ -7,6 +7,8 @@
 #include "collection.hpp"
 #include "logging.hpp"
 
+using namespace cstlm;
+
 typedef struct cmdargs {
     std::string input_file;
     std::string collection_dir;
