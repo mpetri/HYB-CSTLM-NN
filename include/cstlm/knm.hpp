@@ -29,7 +29,7 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
 {
     if (ismkn) {
         double final_score = 0;
-        LMQueryMKN<t_idx, typename t_pattern::value_type> query(&idx, ngramsize);
+        LMQueryMKN<t_idx> query(&idx, ngramsize);
         for (const auto& word : word_vec) {
             auto prob = query.append_symbol(word);
             final_score += log10(prob);
@@ -42,7 +42,7 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
     }
     else {
         double final_score = 0;
-        LMQueryKN<t_idx, typename t_pattern::value_type> query(&idx, ngramsize);
+        LMQueryKN<t_idx> query(&idx, ngramsize);
         for (const auto& word : word_vec)
             final_score += log10(query.append_symbol(word));
         return final_score;

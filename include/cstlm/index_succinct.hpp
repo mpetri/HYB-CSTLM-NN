@@ -25,7 +25,8 @@ public:
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::node_type node_type;
     typedef typename t_cst::string_type string_type;
-    typedef std::vector<typename csa_type::value_type> pattern_type;
+    typedef typename csa_type::value_type value_type;
+    typedef std::vector<value_type> pattern_type;
     typedef typename pattern_type::const_iterator pattern_iterator;
     typedef compressed_counts<> ccounts_type;
     static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;

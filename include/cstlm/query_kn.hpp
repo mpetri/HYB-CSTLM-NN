@@ -26,23 +26,26 @@ namespace cstlm {
 // returns the conditional probability of that word given all
 // previous words.
 
-template <class t_idx, class t_atom>
+template <class t_idx>
 class LMQueryKN {
+    using value_type = typename t_idx::value_type;
+    using node_type = typename t_idx::cst_type::node_type;
+    using index_type = t_idx;
+
 public:
     LMQueryKN(const t_idx* idx, uint64_t ngramsize);
-    double append_symbol(const t_atom& symbol);
+    double append_symbol(const value_type& symbol);
     int compare(const LMQueryKN& other) const;
 
 private:
-    const t_idx* m_idx;
+    const index_type* m_idx;
     uint64_t m_ngramsize;
-    typedef typename t_idx::cst_type::node_type t_node;
-    std::vector<t_node> m_last_nodes_incl;
-    std::deque<t_atom> m_pattern;
+    std::vector<node_type> m_last_nodes_incl;
+    std::deque<value_type> m_pattern;
 };
 
-template <class t_idx, class t_atom>
-LMQueryKN<t_idx, t_atom>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
+template <class t_idx>
+LMQueryKN<t_idx>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
     : m_idx(idx)
     , m_ngramsize(ngramsize)
 {
@@ -51,12 +54,12 @@ LMQueryKN<t_idx, t_atom>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
     auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
     (void)r;
     assert(r >= 0);
-    m_last_nodes_incl = std::vector<t_node>({ root, node });
+    m_last_nodes_incl = std::vector<node_type>({ root, node });
     m_pattern.push_back(PAT_START_SYM);
 }
 
-template <class t_idx, class t_atom>
-double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
+template <class t_idx>
+double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
 {
     if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM)
         return 1;
@@ -64,24 +67,23 @@ double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
     m_pattern.push_back(symbol);
     while (m_ngramsize > 0 && m_pattern.size() > m_ngramsize)
         m_pattern.pop_front();
-    std::vector<t_atom> pattern(m_pattern.begin(), m_pattern.end());
+    std::vector<value_type> pattern(m_pattern.begin(), m_pattern.end());
 #ifdef STATELESS_QUERY
     // slow way
     return prob_kneser_ney(*m_idx, pattern.begin(), pattern.end(), m_ngramsize);
 #else
     // fast way, tracking state
-    typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0;
-    t_node node_incl = m_idx->m_cst.root(); // v_F^all matching the full pattern, including last item
+    node_type node_incl = m_idx->m_cst.root(); // v_F^all matching the full pattern, including last item
     auto node_excl_it = m_last_nodes_incl.begin(); // v_F     matching only the context, excluding last item
-    t_node node_excl = *node_excl_it;
+    node_type node_excl = *node_excl_it;
     auto pattern_begin = pattern.begin();
     auto pattern_end = pattern.end();
 
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end - 1) == UNKNOWN_SYM);
     bool ok = !unk;
-    std::vector<t_node> node_incl_vec({ node_incl });
+    std::vector<node_type> node_incl_vec({ node_incl });
 
     for (unsigned i = 1; i <= size; ++i) {
         auto start = pattern_end - i;
@@ -138,8 +140,8 @@ double LMQueryKN<t_idx, t_atom>::append_symbol(const t_atom& symbol)
 #endif
 }
 
-template <class t_idx, class t_atom>
-int LMQueryKN<t_idx, t_atom>::compare(const LMQueryKN& other) const
+template <class t_idx>
+int LMQueryKN<t_idx>::compare(const LMQueryKN& other) const
 {
     if (m_idx < other.m_idx)
         return -1;
