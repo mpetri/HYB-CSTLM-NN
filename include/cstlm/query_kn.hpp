@@ -33,6 +33,10 @@ class LMQueryKN {
     using index_type = t_idx;
 
 public:
+    LMQueryKN()
+    {
+        m_idx = nullptr;
+    }
     LMQueryKN(const t_idx* idx, uint64_t ngramsize);
     double append_symbol(const value_type& symbol);
     int compare(const LMQueryKN& other) const;
