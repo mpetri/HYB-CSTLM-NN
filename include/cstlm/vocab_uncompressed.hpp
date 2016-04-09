@@ -51,8 +51,15 @@ public:
         return written_bytes;
     }
 
-    // required by Moses
-    std::unordered_map<std::string, uint64_t> vocab_id() const { return m_t2i; }
+    auto begin() const -> decltype(m_t2i.begin())
+    {
+        return m_t2i.begin();
+    }
+
+    auto end() const -> decltype(m_t2i.end())
+    {
+        return m_t2i.end();
+    }
 
     std::string id2token(const uint64_t& id) const
     {
