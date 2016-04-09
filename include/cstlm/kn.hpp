@@ -28,10 +28,8 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
 {
     typedef typename t_idx::cst_type::node_type t_node;
     double p = 1.0;
-    t_node node_incl = idx.m_cst
-                           .root(); // v_F^all matching the full pattern, including last item
-    t_node node_excl = idx.m_cst
-                           .root(); // v_F     matching only the context, excluding last item
+    t_node node_incl = idx.cst.root(); // v_F^all matching the full pattern, including last item
+    t_node node_excl = idx.cst.root(); // v_F     matching only the context, excluding last item
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end - 1) == UNKNOWN_SYM);
     bool ok = !unk;
@@ -59,12 +57,12 @@ double prob_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
         double D = idx.discount(i, i == 1 || i != ngramsize);
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
-            c = (ok) ? idx.m_cst.size(node_incl) : 0;
-            d = idx.m_cst.size(node_excl);
+            c = (ok) ? idx.cst.size(node_incl) : 0;
+            d = idx.cst.size(node_excl);
         }
         else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : D;
-            d = idx.m_discounts.N1plus_dotdot;
+            d = idx.discounts.N1plus_dotdot;
         }
         else {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;

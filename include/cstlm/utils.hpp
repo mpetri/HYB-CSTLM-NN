@@ -12,7 +12,6 @@
 
 #include "logging.hpp"
 #include "timings.hpp"
-#include "mem_monitor.hpp"
 
 namespace cstlm {
 

@@ -53,7 +53,7 @@ LMQueryKN<t_idx>::LMQueryKN(const t_idx* idx, uint64_t ngramsize)
     : m_idx(idx)
     , m_ngramsize(ngramsize)
 {
-    auto root = m_idx->m_cst.root();
+    auto root = m_idx->cst.root();
     auto node = root;
     auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
     (void)r;
@@ -78,7 +78,7 @@ double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
 #else
     // fast way, tracking state
     double p = 1.0;
-    node_type node_incl = m_idx->m_cst.root(); // v_F^all matching the full pattern, including last item
+    node_type node_incl = m_idx->cst.root(); // v_F^all matching the full pattern, including last item
     auto node_excl_it = m_last_nodes_incl.begin(); // v_F     matching only the context, excluding last item
     node_type node_excl = *node_excl_it;
     auto pattern_begin = pattern.begin();
@@ -114,12 +114,12 @@ double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
         double D = m_idx->discount(i, i == 1 || i != m_ngramsize);
         double c, d;
         if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
-            c = (ok) ? m_idx->m_cst.size(node_incl) : 0;
-            d = m_idx->m_cst.size(node_excl);
+            c = (ok) ? m_idx->cst.size(node_incl) : 0;
+            d = m_idx->cst.size(node_excl);
         }
         else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : D;
-            d = m_idx->m_discounts.N1plus_dotdot;
+            d = m_idx->discounts.N1plus_dotdot;
         }
         else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;

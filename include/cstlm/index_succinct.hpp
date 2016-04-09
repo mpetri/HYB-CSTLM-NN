@@ -31,14 +31,35 @@ public:
     typedef compressed_counts<> ccounts_type;
     static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;
 
-public: // data
+private: // data
     cst_type m_cst;
     precomputed_stats m_discounts;
     ccounts_type m_precomputed;
     vocab_type m_vocab;
 
 public:
+    const vocab_type& vocab = m_vocab;
+    const cst_type& cst = m_cst;
+    const precomputed_stats& discounts = m_discounts;
+    const ccounts_type& precomputed = m_precomputed;
+
+public:
     index_succinct() = default;
+    index_succinct(index_succinct<t_cst, t_vocab, t_max_ngram_count>&& idx)
+    {
+        m_vocab = std::move(idx.m_vocab);
+        m_cst = std::move(idx.m_cst);
+        m_discounts = std::move(idx.m_discounts);
+        m_precomputed = std::move(idx.m_precomputed);
+    }
+    index_succinct<t_cst, t_vocab, t_max_ngram_count>& operator=(index_succinct<t_cst, t_vocab, t_max_ngram_count>&& idx)
+    {
+        m_vocab = std::move(idx.m_vocab);
+        m_cst = std::move(idx.m_cst);
+        m_discounts = std::move(idx.m_discounts);
+        m_precomputed = std::move(idx.m_precomputed);
+        return (*this);
+    }
     index_succinct(collection& col, bool is_mkn = false)
     {
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";

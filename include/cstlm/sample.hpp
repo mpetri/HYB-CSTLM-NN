@@ -23,7 +23,7 @@ uint64_t sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
     t_rng& rng)
 {
     return _sample_next_symbol(idx, pattern_begin, pattern_end, ngramsize,
-        idx.m_cst.root(), 0, rng);
+        idx.cst.root(), 0, rng);
 }
 
 template <class t_idx, class t_pat_iter, class t_rng>
@@ -59,7 +59,7 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
     double d;
     auto start = (pattern_end - i + 1);
     if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
-        d = idx.m_cst.size(node);
+        d = idx.cst.size(node);
     }
     else if (i == 1 || ngramsize == 1) {
         d = idx.m_discounts.N1plus_dotdot;
@@ -82,24 +82,24 @@ uint64_t _sample_next_symbol(const t_idx& idx, t_pat_iter pattern_begin,
             double r = uniform(rng) * (d - D * q);
             LOG(INFO) << "\tchild " << r << " of " << d;
             // read off the symbol from the corresponding edge
-            auto child = idx.m_cst.select_child(node, 1);
-            while (child != idx.m_cst.root()) {
+            auto child = idx.cst.select_child(node, 1);
+            while (child != idx.cst.root()) {
                 if ((i == ngramsize) || (*start == PAT_START_SYM)) // condition seems fishy
-                    r -= idx.m_cst.size(child) - D;
+                    r -= idx.cst.size(child) - D;
                 else {
                     // augmented pattern is a bit fishy, may overrun memory
                     r -= idx.N1PlusBack(child, start, pattern_end + 1) - D;
                 }
 
                 LOG(INFO) << "\t\tr now " << r << " after child " << child
-                          << " of size " << idx.m_cst.size();
+                          << " of size " << idx.cst.size();
                 if (r <= 0) {
                     // is i the right index or are we off by one? think this is ok, as
                     // it's 1-indexed
-                    next = idx.m_cst.edge(child, i);
+                    next = idx.cst.edge(child, i);
                     break;
                 }
-                child = idx.m_cst.sibling(child);
+                child = idx.cst.sibling(child);
             }
             assert(false && "you shouldn't reach this line");
         }
@@ -127,11 +127,11 @@ template <class t_idx>
 std::vector<uint64_t> unigram_counts(const t_idx& idx)
 {
     // FIXME: this should be precomputed; and perhaps we can do this faster?
-    auto root = idx.m_cst.root();
+    auto root = idx.cst.root();
     std::vector<uint64_t> pattern(1, NUM_SPECIAL_SYMS); // place-holder pattern
     std::vector<uint64_t> weights;
     uint64_t i = 0;
-    for (const auto& child : idx.m_cst.children(root)) {
+    for (const auto& child : idx.cst.children(root)) {
         if (i >= NUM_SPECIAL_SYMS || i == UNKNOWN_SYM || i == PAT_END_SYM) {
             pattern[0] = i;
             weights.push_back(idx.N1PlusBack(child, pattern.begin(), pattern.end()));

@@ -97,10 +97,10 @@ double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern,
 template <class t_idx, class t_pattern>
 uint64_t patternId(const t_idx& idx, const t_pattern& word_vec)
 {
-    uint64_t lb = 0, rb = idx.m_cst.size() - 1;
-    backward_search(idx.m_cst.csa, lb, rb, word_vec.begin(), word_vec.end(), lb,
+    uint64_t lb = 0, rb = idx.cst.size() - 1;
+    backward_search(idx.cst.csa, lb, rb, word_vec.begin(), word_vec.end(), lb,
         rb);
-    auto node = idx.m_cst.node(lb, rb);
-    return idx.m_cst.id(node);
+    auto node = idx.cst.node(lb, rb);
+    return idx.cst.id(node);
 }
 }

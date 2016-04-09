@@ -28,13 +28,11 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
     bool isfishy)
 {
     typedef typename t_idx::cst_type::node_type t_node;
-    double p = 1.0 / (idx.m_vocab.size() - 4); // p -- FIXME: should we subtract
+    double p = 1.0 / (idx.vocab.size() - 4); // p -- FIXME: should we subtract
     // away sentinels? //ehsan: not
     // sure why -4 works! but it works!
-    t_node node_incl = idx.m_cst
-                           .root(); // v_F^all matching the full pattern, including last item
-    t_node node_excl = idx.m_cst
-                           .root(); // v_F     matching only the context, excluding last item
+    t_node node_incl = idx.cst.root(); // v_F^all matching the full pattern, including last item
+    t_node node_excl = idx.cst.root(); // v_F     matching only the context, excluding last item
     size_t size = std::distance(pattern_begin, pattern_end);
     bool unk = (*(pattern_end - 1) == UNKNOWN_SYM);
     bool ok = !unk;
@@ -61,16 +59,16 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
 
         double c, d;
         if ((i == ngramsize && ngramsize != 1) || (*start == PAT_START_SYM)) {
-            c = (ok) ? idx.m_cst.size(node_incl) : 0;
-            // LOG(INFO)<<"idx.m_cst.size(node_incl) is:
-            // "<<idx.m_cst.size(node_incl)<<endl;
-            d = idx.m_cst.size(node_excl);
+            c = (ok) ? idx.cst.size(node_incl) : 0;
+            // LOG(INFO)<<"idx.cst.size(node_incl) is:
+            // "<<idx.cst.size(node_incl)<<endl;
+            d = idx.cst.size(node_excl);
             // LOG(INFO)<<"denominator: "<<d<<endl;
             // LOG(INFO)<<"Highest Level: "<<c<<endl;
         }
         else if (i == 1 || ngramsize == 1) {
             c = (ok) ? idx.N1PlusBack(node_incl, start, pattern_end) : 0;
-            d = idx.m_discounts.N1plus_dotdot;
+            d = idx.discounts.N1plus_dotdot;
             // LOG(INFO)<<"denominator: "<<d<<endl;
             // LOG(INFO)<<"Lowest Level: "<<c<<endl;
         }
@@ -104,8 +102,8 @@ double prob_mod_kneser_ney(const t_idx& idx, t_pat_iter pattern_begin,
             idx.N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         }
         else if (i == 1 || ngramsize == 1) {
-            n1 = idx.m_discounts.n1_cnt[1];
-            n2 = idx.m_discounts.n2_cnt[1];
+            n1 = idx.discounts.n1_cnt[1];
+            n2 = idx.discounts.n2_cnt[1];
             n3p = (idx.vocab_size() - 2) - (n1 + n2);
         }
         else {

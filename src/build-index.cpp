@@ -5,6 +5,8 @@
 #include "index_types.hpp"
 #include "logging.hpp"
 
+#include "mem_monitor.hpp"
+
 using namespace cstlm;
 
 typedef struct cmdargs {
@@ -72,7 +74,7 @@ int main(int argc, const char* argv[])
 {
     mem_monitor m("/dev/null", std::chrono::milliseconds(5000));
 
-    log::start_log(argc, argv);
+    enable_logging = true;
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);

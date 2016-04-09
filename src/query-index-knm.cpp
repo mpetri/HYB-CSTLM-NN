@@ -274,7 +274,7 @@ int execute(collection& col, const cmdargs_t& args)
 
 int main(int argc, const char* argv[])
 {
-    log::start_log(argc, argv);
+    enable_logging = true;
     sdsl::memory_monitor::start();
 
     /* parse command line */

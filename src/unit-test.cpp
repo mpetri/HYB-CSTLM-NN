@@ -82,7 +82,7 @@ protected:
             std::vector<std::string> x2 = split(x[0], ' ');
             std::vector<uint64_t> pattern;
             for (std::string word : x2) {
-                pattern.push_back(idx.m_vocab.token2id(word, UNKNOWN_SYM));
+                pattern.push_back(idx.vocab.token2id(word, UNKNOWN_SYM));
             }
             tri.pattern = pattern;
             tri.order = std::stoi(x[1]);
@@ -117,11 +117,11 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_discounts.max_ngram_count;
+    for (size_t cgram = 2; cgram <= this->idx.discounts.max_ngram_count;
          cgram++) {
         std::unordered_map<std::vector<value_type>, uint64_t, vector_hasher<value_type> >
             ngram_counts;
@@ -162,13 +162,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
             }
         }
         /* compare counts */
-        EXPECT_EQ(act_n1, this->idx.m_discounts.n1[cgram])
+        EXPECT_EQ(act_n1, this->idx.discounts.n1[cgram])
             << "n1[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n2, this->idx.m_discounts.n2[cgram])
+        EXPECT_EQ(act_n2, this->idx.discounts.n2[cgram])
             << "n2[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n3, this->idx.m_discounts.n3[cgram])
+        EXPECT_EQ(act_n3, this->idx.discounts.n3[cgram])
             << "n3[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n4, this->idx.m_discounts.n4[cgram])
+        EXPECT_EQ(act_n4, this->idx.discounts.n4[cgram])
             << "n4[" << cgram << "] count incorrect!";
     }
 }
@@ -178,11 +178,11 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     /* count the number of ngrams without sentinals */
-    for (size_t cgram = 2; cgram <= this->idx.m_discounts.max_ngram_count;
+    for (size_t cgram = 2; cgram <= this->idx.discounts.max_ngram_count;
          cgram++) {
         std::unordered_map<std::vector<value_type>, std::unordered_set<value_type>,
             vector_hasher<value_type> > ngram_counts;
@@ -258,13 +258,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.m_discounts.n1_cnt[cgram], act_n1_cnt)
+        EXPECT_EQ(this->idx.discounts.n1_cnt[cgram], act_n1_cnt)
             << "n1_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_discounts.n2_cnt[cgram], act_n2_cnt)
+        EXPECT_EQ(this->idx.discounts.n2_cnt[cgram], act_n2_cnt)
             << "n2_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_discounts.n3_cnt[cgram], act_n3_cnt)
+        EXPECT_EQ(this->idx.discounts.n3_cnt[cgram], act_n3_cnt)
             << "n3_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.m_discounts.n4_cnt[cgram], act_n4_cnt)
+        EXPECT_EQ(this->idx.discounts.n4_cnt[cgram], act_n4_cnt)
             << "n4_cnt[" << cgram << "] count incorrect!";
     }
 }
@@ -274,7 +274,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
     std::unordered_set<std::vector<value_type>, vector_hasher<value_type> > uniq_bigrams;
     /* compute c-gram stats */
@@ -292,7 +292,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
     }
     size_t act_N1plus_dotdot = uniq_bigrams.size();
     /* compare counts */
-    EXPECT_EQ(this->idx.m_discounts.N1plus_dotdot, act_N1plus_dotdot)
+    EXPECT_EQ(this->idx.discounts.N1plus_dotdot, act_N1plus_dotdot)
         << "N1plus_dotdot count incorrect!";
 }
 
@@ -301,7 +301,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
     std::unordered_map<value_type, uint64_t> unigram_freqs;
     /* compute c-gram stats */
@@ -317,7 +317,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
             act_N3plus_dot++;
     }
     /* compare counts */
-    EXPECT_EQ(this->idx.m_discounts.N3plus_dot, act_N3plus_dot)
+    EXPECT_EQ(this->idx.discounts.N3plus_dot, act_N3plus_dot)
         << "N3plus_dot count incorrect!";
 }
 
@@ -327,12 +327,12 @@ TYPED_TEST(LMTest, N1PlusBack)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     // (2) for all n-gram sizes
 
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusBack counts
         std::unordered_map<std::vector<value_type>, std::unordered_set<value_type>,
@@ -369,12 +369,12 @@ TYPED_TEST(LMTest, N1PlusBack)
                        [](value_type i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                    this->idx.m_cst.csa.size() - 1, cng.begin(),
+                auto cnt = backward_search(this->idx.cst.csa, 0,
+                    this->idx.cst.csa.size() - 1, cng.begin(),
                     cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
-                    auto actual_count = this->idx.N1PlusBack(this->idx.m_cst.node(lb, rb),
+                    auto actual_count = this->idx.N1PlusBack(this->idx.cst.node(lb, rb),
                         cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusBack_count);
                 }
@@ -389,11 +389,11 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         std::unordered_map<std::vector<value_type>,
@@ -428,14 +428,14 @@ TYPED_TEST(LMTest, N1PlusFrontBack)
                        [](value_type i) { return i == EOF_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                    this->idx.m_cst.csa.size() - 1, cng.begin(),
+                auto cnt = backward_search(this->idx.cst.csa, 0,
+                    this->idx.cst.csa.size() - 1, cng.begin(),
                     cng.end(), lb, rb);
 
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     auto actual_count = this->idx.N1PlusFrontBack(
-                        this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                        this->idx.cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFrontBack_count);
                 }
             }
@@ -449,11 +449,11 @@ TYPED_TEST(LMTest, N1PlusFront)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         std::unordered_map<std::vector<value_type>, std::unordered_set<value_type>,
@@ -489,13 +489,13 @@ TYPED_TEST(LMTest, N1PlusFront)
                        [](value_type i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                    this->idx.m_cst.csa.size() - 1, cng.begin(),
+                auto cnt = backward_search(this->idx.cst.csa, 0,
+                    this->idx.cst.csa.size() - 1, cng.begin(),
                     cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     auto actual_count = this->idx.N1PlusFront(
-                        this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                        this->idx.cst.node(lb, rb), cng.begin(), cng.end());
                     EXPECT_EQ(actual_count, expected_N1PlusFront_count);
                 }
             }
@@ -509,11 +509,11 @@ TYPED_TEST(LMTest, N123PlusFront)
     using pattern_type = typename decltype(this->idx)::pattern_type;
     using value_type = typename pattern_type::value_type;
     pattern_type text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
         std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5;
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5;
          cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         typedef std::map<value_type, uint64_t> t_symbol_counts;
@@ -562,15 +562,15 @@ TYPED_TEST(LMTest, N123PlusFront)
                        [](value_type i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0,
-                    this->idx.m_cst.csa.size() - 1, cng.begin(),
+                auto cnt = backward_search(this->idx.cst.csa, 0,
+                    this->idx.cst.csa.size() - 1, cng.begin(),
                     cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t n1, n2, n3p, n1p;
-                    this->idx.N123PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(),
+                    this->idx.N123PlusFront(this->idx.cst.node(lb, rb), cng.begin(),
                         cng.end(), n1, n2, n3p);
-                    n1p = this->idx.N1PlusFront(this->idx.m_cst.node(lb, rb), cng.begin(),
+                    n1p = this->idx.N1PlusFront(this->idx.cst.node(lb, rb), cng.begin(),
                         cng.end());
 
                     // LOG(INFO) << "pattern is " <<
@@ -591,11 +591,11 @@ TYPED_TEST(LMTest, N123PlusBack)
 {
     // (1) get the text
     std::vector<uint64_t> text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFront counts
         typedef std::map<uint64_t, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
@@ -634,13 +634,13 @@ TYPED_TEST(LMTest, N123PlusBack)
                 && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
+                auto cnt = backward_search(this->idx.cst.csa, 0, this->idx.cst.csa.size() - 1,
                                            cng.begin(), cng.end(), lb, rb);
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t n1, n2, n3p, n1p;
-                    this->idx.N123PlusBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
-                    n1p = this->idx.N1PlusBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    this->idx.N123PlusBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
+                    n1p = this->idx.N1PlusBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end());
 
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
                     EXPECT_EQ(n1, expected_n1);
@@ -657,11 +657,11 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
 {
     // (1) get the text
     std::vector<uint64_t> text;
-    std::copy(this->idx.m_cst.csa.text.begin(), this->idx.m_cst.csa.text.end(),
+    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
               std::back_inserter(text));
 
     // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.m_discounts.max_ngram_count + 5; cgram++) {
+    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5; cgram++) {
         // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
         typedef std::map<std::pair<uint64_t, uint64_t>, uint64_t> t_symbol_counts;
         std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
@@ -701,16 +701,16 @@ TYPED_TEST(LMTest, N123PlusFrontBack)
                                 [](uint64_t i) { return i == EOF_SYM; })) {
                 // (1) perform backward search on reverse csa to get the node [lb,rb]
                 uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.m_cst.csa, 0, this->idx.m_cst.csa.size() - 1,
+                auto cnt = backward_search(this->idx.cst.csa, 0, this->idx.cst.csa.size() - 1,
                                            cng.begin(), cng.end(), lb, rb);
 
                 EXPECT_TRUE(cnt > 0);
                 if (cnt > 0) {
                     uint64_t actual_n1, actual_n2, actual_n3p, actual_n1p;
-                    this->idx.N123PlusFrontBack(this->idx.m_cst.node(lb, rb),
+                    this->idx.N123PlusFrontBack(this->idx.cst.node(lb, rb),
                                                 cng.begin(), cng.end(),
                                                 actual_n1, actual_n2, actual_n3p);
-                    actual_n1p = this->idx.N1PlusFrontBack(this->idx.m_cst.node(lb, rb), cng.begin(), cng.end());
+                    actual_n1p = this->idx.N1PlusFrontBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end());
 
                     //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
                     EXPECT_EQ(actual_n1, expected_n1);
@@ -747,7 +747,7 @@ TYPED_TEST(LMPPxTest, PerplexityMKN)
 
 int main(int argc, char* argv[])
 {
-    log::start_log(argc, (const char**)argv, false);
+    // enable_logging = true;
 
     ::testing::InitGoogleTest(&argc, argv);
 

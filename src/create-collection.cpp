@@ -81,7 +81,7 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
 
 int main(int argc, const char* argv[])
 {
-    log::start_log(argc, argv);
+    enable_logging = true;
     bool isreplaced = false;
 
     LOG(INFO) << "parse command line";
