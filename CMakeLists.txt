@@ -46,7 +46,6 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
                     ${CMAKE_HOME_DIRECTORY}/external/mem_monitor/
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort/include/
-                    ${CMAKE_HOME_DIRECTORY}/external/easyloggingpp/src/
                     )
 
 add_executable(build-index.x src/build-index.cpp)
@@ -57,12 +56,6 @@ target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(query-index-knm.x src/query-index-knm.cpp)
 target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
-
-# add_executable(sample.x src/sample.cpp)
-# target_link_libraries(sample.x sdsl pthread divsufsort divsufsort64)
-
-# add_executable(query-index-stupid.x src/query-index-stupid.cpp)
-# target_link_libraries(query-index-stupid.x sdsl pthread divsufsort divsufsort64)
 
 add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
