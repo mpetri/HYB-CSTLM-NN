@@ -147,7 +147,7 @@ int main(int argc, const char* argv[])
             LOG(INFO) << "write parsed text file";
             std::ifstream ifs(args.input_file);
             std::string line;
-            auto out = sdsl::write_out_buffer<8>::create(args.collection_dir + "/" + KEY_PREFIX_BYTE + KEY_TEXT);
+            auto out = sdsl::int_vector_buffer<8>(args.collection_dir + "/" + KEY_PREFIX_BYTE + KEY_TEXT, std::ios::out);
             out.push_back(EOS_SYM); // file starts with EOS_SYM
 
             while (std::getline(ifs, line)) {
@@ -266,10 +266,8 @@ int main(int argc, const char* argv[])
             if (args.write_corpus) {
                 corpus_word.open(args.collection_dir + "/corpus.WORD");
             }
-
-            auto buf = sdsl::write_out_buffer<0>::create(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT);
             auto int_width = sdsl::bits::hi(max_id) + 1;
-            buf.width(int_width);
+            auto buf = sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT, std::ios::out, 1024 * 1024 * 128, int_width);
             std::ifstream ifs(args.input_file);
             std::string line;
             buf.push_back(EOS_SYM); // file starts with EOS_SYM

@@ -147,7 +147,7 @@ void run_reranker(const t_idx& idx,
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
     // uint64_t candidate_idx = 1;//line number to find the unconverted sentence
-    uint64_t source_idx = idx.m_vocab.token2id("0");
+    uint64_t source_idx = idx.vocab.token2id("0");
     lm_bench::reset();
     typename t_idx::pattern_type best;
     uint64_t index = 0;
@@ -247,7 +247,7 @@ int execute(collection& col, const cmdargs_t& args)
             for (const auto& token : line_tokens) {
                 if (args.isreranking)
                     orig_tokens.push_back(token);
-                auto num = idx.m_vocab.token2id(token, UNKNOWN_SYM);
+                auto num = idx.vocab.token2id(token, UNKNOWN_SYM);
                 tokens.push_back(num);
             }
             if (args.isreranking) {

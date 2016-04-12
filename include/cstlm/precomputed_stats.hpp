@@ -215,7 +215,7 @@ private:
 
     template <class t_cst>
     typename t_cst::size_type
-    distance_to_sentinel(sdsl::read_only_mapped_buffer<>& SA,
+    distance_to_sentinel(sdsl::int_vector_buffer<>& SA,
         t_rank_bv& sentinel_rank, t_select_bv& sentinel_select,
         const t_cst& cst, const typename t_cst::node_type& node,
         const typename t_cst::size_type& offset) const
@@ -239,7 +239,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     // symbols
     sdsl::bit_vector sentinel_bv;
     {
-        sdsl::read_only_mapped_buffer<t_cst::csa_type::alphabet_category::WIDTH> TEXT(col.file_map[KEY_TEXT]);
+        sdsl::int_vector_buffer<t_cst::csa_type::alphabet_category::WIDTH> TEXT(col.file_map[KEY_TEXT]);
         sentinel_bv.resize(TEXT.size());
         sdsl::util::set_to_value(sentinel_bv, 0);
         for (uint64_t i = 0; i < TEXT.size(); ++i) {
@@ -258,7 +258,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     uint64_t num_syms;
 
     /* load SA to speed up edge call */
-    sdsl::read_only_mapped_buffer<> SA(col.file_map[KEY_SA]);
+    sdsl::int_vector_buffer<> SA(col.file_map[KEY_SA]);
 
     // need to visit subtree corresponding to:
     //      <S> -- PAT_START_SYM    (4)

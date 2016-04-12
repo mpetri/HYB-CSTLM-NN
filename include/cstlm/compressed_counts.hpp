@@ -192,8 +192,8 @@ public:
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         sdsl::util::set_to_value(tmp_bv, 0);
-        auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
-        auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
+        auto tmp_buffer_counts_fb = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb"), std::ios::out);
+        auto tmp_buffer_counts_b = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb"), std::ios::out);
         uint64_t num_syms = 0;
 
         auto root = cst.root();
@@ -227,7 +227,9 @@ public:
             }
         }
         m_counts_b = vector_type(tmp_buffer_counts_b);
+        tmp_buffer_counts_b.close(true);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
+        tmp_buffer_counts_fb.close(true);
         m_bv = bv_type(tmp_bv);
         tmp_bv.resize(0);
         m_bv_rank = rank_type(&m_bv);
@@ -243,12 +245,12 @@ public:
     {
         sdsl::bit_vector tmp_bv(cst.nodes());
         sdsl::util::set_to_value(tmp_bv, 0);
-        auto tmp_buffer_counts_f1 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1"));
-        auto tmp_buffer_counts_f2 = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2"));
-        auto tmp_buffer_counts_fb = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_fb"));
-        auto tmp_buffer_counts_b = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_b"));
-        auto tmp_buffer_counts_f1prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f1p"));
-        auto tmp_buffer_counts_f2prime = sdsl::mapped_write_out_buffer<32>::create(col.temp_file("counts_f2p"));
+        auto tmp_buffer_counts_f1 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1"), std::ios::out);
+        auto tmp_buffer_counts_f2 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2"), std::ios::out);
+        auto tmp_buffer_counts_fb = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb"), std::ios::out);
+        auto tmp_buffer_counts_b = sdsl::int_vector_buffer<32>(col.temp_file("counts_b"), std::ios::out);
+        auto tmp_buffer_counts_f1prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p"), std::ios::out);
+        auto tmp_buffer_counts_f2prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p"), std::ios::out);
         uint64_t num_syms = 0;
         uint64_t f1prime = 0, f2prime = 0;
         auto root = cst.root();
@@ -311,11 +313,17 @@ public:
         tmp_bv.resize(0);
         m_bv_rank = rank_type(&m_bv);
         m_counts_f1 = vector_type(tmp_buffer_counts_f1);
+        tmp_buffer_counts_f1.close(true);
         m_counts_f2 = vector_type(tmp_buffer_counts_f2);
+        tmp_buffer_counts_f2.close(true);
         m_counts_b = vector_type(tmp_buffer_counts_b);
+        tmp_buffer_counts_b.close(true);
         m_counts_fb = vector_type(tmp_buffer_counts_fb);
+        tmp_buffer_counts_fb.close(true);
         m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
+        tmp_buffer_counts_f1prime.close(true);
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
+        tmp_buffer_counts_f2prime.close(true);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
 
