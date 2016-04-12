@@ -17,8 +17,14 @@ public:
     LOG() {}
     LOG(typelog type)
     {
-        if (enable_logging)
-            operator<<("[" + getLabel(type) + "] ");
+        if (enable_logging) {
+            auto now = std::chrono::system_clock::now();
+            std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+            static char tstr[256];
+            std::strftime(tstr, sizeof(tstr), "%F-%H:%M:%S", std::localtime(&now_time));
+            operator<<(std::string(tstr) + " [" + getLabel(type) + "] ");
+        }
+            
     }
     ~LOG()
     {
