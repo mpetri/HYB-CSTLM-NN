@@ -74,16 +74,14 @@ public:
     }
 
     template <class t_cst>
-    compressed_counts(collection& col, t_cst& cst, uint64_t /*max_node_depth*/,
+    compressed_counts(collection& col, t_cst& cst, uint64_t max_node_depth,
         bool mkn_counts)
     {
         m_is_mkn = mkn_counts;
-        for (size_t i = 2; i < 20; i++) {
-            if (!mkn_counts)
-                initialise_kneser_ney(col, cst, i);
-            else
-                initialise_modified_kneser_ney(col, cst, i);
-        }
+        if (!mkn_counts)
+            initialise_kneser_ney(col, cst, max_node_depth);
+        else
+            initialise_modified_kneser_ney(col, cst, max_node_depth);
     }
 
     template <class t_cst, class t_node_type>
@@ -326,18 +324,6 @@ public:
         tmp_buffer_counts_f2prime.close(true);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
-
-        LOG(INFO) << max_node_depth << ";"
-                  << m_bv_rank(m_bv.size()) << ";"
-                  << m_bv.size() << ";"
-                  << sdsl::size_in_bytes(m_bv) + sdsl::size_in_bytes(m_bv_rank) << ";"
-                  << sdsl::size_in_bytes(m_counts_f1) << ";"
-                  << sdsl::size_in_bytes(m_counts_f2) << ";"
-                  << sdsl::size_in_bytes(m_counts_b) << ";"
-                  << sdsl::size_in_bytes(m_counts_fb) << ";"
-                  << sdsl::size_in_bytes(m_counts_f1prime) << ";"
-                  << sdsl::size_in_bytes(m_counts_f2prime) << ";"
-                  << sdsl::size_in_bytes(cst);
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
