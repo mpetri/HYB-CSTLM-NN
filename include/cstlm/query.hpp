@@ -15,13 +15,8 @@
 #include "collection.hpp"
 #include "index_succinct.hpp"
 #include "constants.hpp"
-#ifdef STATELESS_QUERY
-#include "kn_modified.hpp"
-#endif
 
 namespace cstlm {
-
-//#define STATELESS_QUERY
 
 // Returns the Kneser-Ney probability of a sentence, word at a
 // time. Words are supplied using the append_symbol method which
@@ -40,7 +35,7 @@ public:
     {
         m_idx = nullptr;
     }
-    LMQueryMKN(const index_type* idx, uint64_t ngramsize);
+    LMQueryMKN(const index_type* idx, uint64_t ngramsize, bool start_sentence = true);
     double append_symbol(const value_type& symbol);
 
     bool operator==(const LMQueryMKN& other) const;
@@ -55,33 +50,33 @@ private:
 };
 
 template <class t_idx>
-LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize)
+LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_sentence)
     : m_idx(idx)
     , m_ngramsize(ngramsize)
 {
     auto root = m_idx->cst.root();
-    auto node = root;
-    auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
-    (void)r;
-    assert(r >= 0);
-    m_last_nodes_incl = std::vector<node_type>({ root, node });
-    m_pattern.push_back(PAT_START_SYM);
+    m_last_nodes_incl.push_back(root);
+    if (start_sentence) {
+        auto node = root;
+        auto r = backward_search_wrapper(*m_idx, node, PAT_START_SYM);
+        (void)r;
+        assert(r >= 0);
+        m_last_nodes_incl.push_back(node);
+        m_pattern.push_back(PAT_START_SYM);
+    }
 }
 
 template <class t_idx>
 double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
 {
     if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM)
-        return 1;
+        return log10(1);
 
     m_pattern.push_back(symbol);
     while (m_ngramsize > 0 && m_pattern.size() > m_ngramsize)
         m_pattern.pop_front();
     std::vector<value_type> pattern(m_pattern.begin(), m_pattern.end());
-#ifdef STATELESS_QUERY
-    // slow way
-    return prob_mod_kneser_ney_single(*m_idx, pattern.begin(), pattern.end(), m_ngramsize);
-#else
+
     // fast way, tracking state
     double p = 1.0 / (m_idx->vocab.size() - 4);
     node_type node_incl = m_idx->cst.root(); // v_F^all matching the full pattern, including last item
@@ -169,8 +164,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
 
-    return p;
-#endif
+    return log10(p);
 }
 
 template <class t_idx>

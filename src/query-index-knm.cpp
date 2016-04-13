@@ -26,7 +26,6 @@ typedef struct cmdargs {
     std::string collection_dir;
     int ngramsize;
     bool ismkn;
-    bool isfishy;
     bool isbackward;
     bool isstored;
     bool isreranking;
@@ -45,7 +44,6 @@ void print_usage(const char* program)
     fprintf(stdout, "  -p <pattern file>  : the pattern file.\n");
     fprintf(stdout, "  -m : use Modified-KN (default = KN).\n");
     fprintf(stdout, "  -n <ngramsize>  : the ngramsize (integer).\n");
-    fprintf(stdout, "  -f : use the fishy MKN (default = accurate).\n");
     fprintf(stdout, "  -r : doing reranking (default = language modelling).\n");
 };
 
@@ -56,7 +54,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.pattern_file = "";
     args.collection_dir = "";
     args.ismkn = false;
-    args.isfishy = false;
     args.ngramsize = 1;
     args.isreranking = false;
     while ((op = getopt(argc, (char* const*)argv, "p:c:n:mfbsr1")) != -1) {
@@ -66,9 +63,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
             break;
         case 'c':
             args.collection_dir = optarg;
-            break;
-        case 'f':
-            args.isfishy = true;
             break;
         case 'm':
             args.ismkn = true;
@@ -96,7 +90,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
 template <class t_idx>
 void run_queries(const t_idx& idx,
     const std::vector<typename t_idx::pattern_type> patterns,
-    uint64_t ngramsize, bool ismkn, bool isfishy)
+    uint64_t ngramsize, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -113,7 +107,7 @@ void run_queries(const t_idx& idx,
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, isfishy);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
         auto stop = clock::now();
 
         // std::ostringstream sp("", std::ios_base::ate);
@@ -138,7 +132,7 @@ template <class t_idx>
 void run_reranker(const t_idx& idx,
     const std::vector<typename t_idx::pattern_type> patterns,
     const std::vector<std::vector<std::string> > orig_patterns,
-    uint64_t ngramsize, bool ismkn, bool isfishy)
+    uint64_t ngramsize, bool ismkn)
 {
     using clock = std::chrono::high_resolution_clock;
     double perplexity = 0;
@@ -178,7 +172,7 @@ void run_reranker(const t_idx& idx,
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, isfishy);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
         auto stop = clock::now();
 
         perplexity = pow(10, -sentenceprob / M);
@@ -264,10 +258,9 @@ int execute(collection& col, const cmdargs_t& args)
 
     /* run the querying or reranking */
     if (args.isreranking)
-        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn,
-            args.isfishy);
+        run_reranker(idx, patterns, orig_patterns, args.ngramsize, args.ismkn);
     else
-        run_queries(idx, patterns, args.ngramsize, args.ismkn, args.isfishy);
+        run_queries(idx, patterns, args.ngramsize, args.ismkn);
 
     return EXIT_SUCCESS;
 }

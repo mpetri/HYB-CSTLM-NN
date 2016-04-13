@@ -730,7 +730,7 @@ TYPED_TEST(LMPPxTest, Perplexity)
     for (unsigned int i = 0; i < this->srilm_triplets.size(); i++) {
         auto srilm = this->srilm_triplets[i];
         double perplexity = sentence_perplexity_kneser_ney(
-            this->idx, srilm.pattern, srilm.order, false, false);
+            this->idx, srilm.pattern, srilm.order, false);
         EXPECT_NEAR(perplexity, srilm.perplexity, 1e-4);
     }
 }
@@ -740,7 +740,7 @@ TYPED_TEST(LMPPxTest, PerplexityMKN)
     for (unsigned int i = 0; i < this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
         double perplexity = sentence_perplexity_kneser_ney(
-            this->idx, kenlm.pattern, kenlm.order, true, false);
+            this->idx, kenlm.pattern, kenlm.order, true);
         EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
     }
 }
