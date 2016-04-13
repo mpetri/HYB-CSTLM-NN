@@ -16,6 +16,6 @@ using default_cst_byte_type = sdsl::cst_sct3<default_csa_byte_type,
     sdsl::lcp_dac<>,
     sdsl::bp_support_sada<64, 16, sdsl::rank_support_v<>, sdsl::select_support_mcl<> > >;
 
-using charlm = index_succinct<default_cst_byte_type, vocab_uncompressed, 50>;
-using wordlm = index_succinct<default_cst_int_type, vocab_uncompressed, 10>;
+using charlm = index_succinct<default_cst_byte_type, 50>;
+using wordlm = index_succinct<default_cst_int_type, 10>;
 }

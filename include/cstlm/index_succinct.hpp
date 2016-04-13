@@ -15,13 +15,12 @@ namespace cstlm {
 
 using namespace std::chrono;
 
-template <class t_cst, class t_vocab = vocab_uncompressed,
-    uint32_t t_max_ngram_count = 10>
+template <class t_cst, uint32_t t_max_ngram_count = 10>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
     typedef t_cst cst_type;
-    typedef t_vocab vocab_type;
+
     typedef typename t_cst::csa_type csa_type;
     typedef typename t_cst::node_type node_type;
     typedef typename t_cst::string_type string_type;
@@ -30,6 +29,7 @@ public:
     typedef typename pattern_type::const_iterator pattern_iterator;
     typedef compressed_counts<> ccounts_type;
     static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;
+    typedef vocab_uncompressed<byte_alphabet> vocab_type;
 
 private: // data
     cst_type m_cst;
@@ -45,14 +45,14 @@ public:
 
 public:
     index_succinct() = default;
-    index_succinct(index_succinct<t_cst, t_vocab, t_max_ngram_count>&& idx)
+    index_succinct(index_succinct<t_cst, t_max_ngram_count>&& idx)
     {
         m_vocab = std::move(idx.m_vocab);
         m_cst = std::move(idx.m_cst);
         m_discounts = std::move(idx.m_discounts);
         m_precomputed = std::move(idx.m_precomputed);
     }
-    index_succinct<t_cst, t_vocab, t_max_ngram_count>& operator=(index_succinct<t_cst, t_vocab, t_max_ngram_count>&& idx)
+    index_succinct<t_cst, t_max_ngram_count>& operator=(index_succinct<t_cst, t_max_ngram_count>&& idx)
     {
         m_vocab = std::move(idx.m_vocab);
         m_cst = std::move(idx.m_cst);

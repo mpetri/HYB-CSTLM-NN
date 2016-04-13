@@ -35,7 +35,14 @@ public:
     }
     LMQueryKN(const t_idx* idx, uint64_t ngramsize, bool start_sentence = true);
     double append_symbol(const value_type& symbol);
-    int compare(const LMQueryKN& other) const;
+    bool operator==(const LMQueryKN& other) const;
+
+    size_t hash() const;
+
+    bool empty() const
+    {
+        return m_last_nodes_incl.size() == 1 && m_last_nodes_incl.back() == m_idx->cst.root();
+    }
 
 private:
     const index_type* m_idx;
@@ -140,34 +147,36 @@ double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
 }
 
 template <class t_idx>
-int LMQueryKN<t_idx>::compare(const LMQueryKN& other) const
+bool LMQueryKN<t_idx>::operator==(const LMQueryKN& other) const
 {
-    if (m_idx < other.m_idx)
-        return -1;
-    if (m_idx > other.m_idx)
-        return +1;
-    if (m_pattern.size() < other.m_pattern.size())
-        return -1;
-    if (m_pattern.size() > other.m_pattern.size())
-        return +1;
-    if (m_last_nodes_incl.size() < other.m_last_nodes_incl.size())
-        return -1;
-    if (m_last_nodes_incl.size() > other.m_last_nodes_incl.size())
-        return +1;
+    if (m_idx != other.m_idx)
+        return false;
+    if (m_pattern.size() != other.m_pattern.size())
+        return false;
+    if (m_last_nodes_incl.size() != other.m_last_nodes_incl.size())
+        return false;
     for (auto i = 0u; i < m_pattern.size(); ++i) {
-        if (m_pattern[i] < other.m_pattern[i])
-            return -1;
-        if (m_pattern[i] > other.m_pattern[i])
-            return +1;
+        if (m_pattern[i] != other.m_pattern[i])
+            return false;
     }
     for (auto i = 0u; i < m_last_nodes_incl.size(); ++i) {
-        // N.b., needs operator<(cst_XXX::node_type, cst_XXX::node_type) and
-        // operator>
-        if (m_last_nodes_incl[i] < other.m_last_nodes_incl[i])
-            return -1;
-        if (m_last_nodes_incl[i] > other.m_last_nodes_incl[i])
-            return +1;
+        if (m_last_nodes_incl[i] != other.m_last_nodes_incl[i])
+            return false;
     }
-    return 0;
+    return true;
+}
+
+template <class t_idx>
+std::size_t LMQueryKN<t_idx>::hash() const
+{
+    std::size_t seed = 0;
+    for (auto& i : m_pattern) {
+        seed ^= i + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    for (auto i = 0u; i < m_last_nodes_incl.size(); ++i) {
+        auto id = m_idx->cst.id(m_last_nodes_incl[i]);
+        seed ^= id + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
 }
 }

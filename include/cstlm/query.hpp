@@ -42,6 +42,11 @@ public:
 
     size_t hash() const;
 
+    bool empty() const
+    {
+        return m_last_nodes_incl.size() == 1 && m_last_nodes_incl.back() == m_idx->cst.root();
+    }
+
 private:
     const index_type* m_idx;
     uint64_t m_ngramsize;

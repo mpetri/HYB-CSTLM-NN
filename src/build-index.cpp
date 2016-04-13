@@ -83,12 +83,10 @@ int main(int argc, const char* argv[])
     collection col(args.collection_dir);
     /* create indexes */
     if (col.alphabet == alphabet_type::byte_alphabet) {
-        using index_type = index_succinct<default_cst_byte_type>;
-        create_and_store<index_type>(col, args.use_mkn);
+        create_and_store<charlm>(col, args.use_mkn);
     }
     else {
-        using index_type = index_succinct<default_cst_int_type>;
-        create_and_store<index_type>(col, args.use_mkn);
+        create_and_store<wordlm>(col, args.use_mkn);
     }
 
     auto mem_stats = m.get_current_stats();

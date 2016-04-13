@@ -275,12 +275,10 @@ int main(int argc, const char* argv[])
 
     collection col(args.collection_dir);
     if (col.alphabet == alphabet_type::byte_alphabet) {
-        typedef index_succinct<default_cst_byte_type> index_type;
-        execute<index_type>(col, args);
+        execute<charlm>(col, args);
     }
     else {
-        typedef index_succinct<default_cst_int_type> index_type;
-        execute<index_type>(col, args);
+        execute<wordlm>(col, args);
     }
 
     sdsl::memory_monitor::stop();

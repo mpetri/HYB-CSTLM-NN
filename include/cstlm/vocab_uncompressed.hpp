@@ -5,6 +5,7 @@
 
 namespace cstlm {
 
+template <bool byte_alphabet>
 class vocab_uncompressed {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -23,6 +24,15 @@ public:
         while (std::getline(vfs, line)) {
             auto sep_pos = line.rfind(' ');
             auto word = line.substr(0, sep_pos);
+            if (byte_alphabet) {
+                try {
+                    auto char_sym = std::stoul(word);
+                    word = std::string(1, char_sym);
+                }
+                catch (...) {
+                    /* could not convert -> just use word */
+                }
+            }
             auto str_id = line.substr(sep_pos);
             uint64_t id = std::strtoull(str_id.c_str(), NULL, 10);
             m_t2i[word] = id;
