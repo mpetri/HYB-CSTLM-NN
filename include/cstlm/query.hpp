@@ -47,6 +47,11 @@ public:
         return m_last_nodes_incl.size() == 1 && m_last_nodes_incl.back() == m_idx->cst.root();
     }
 
+    bool is_start() const
+    {
+        return m_pattern.size() == 1 && m_pattern.back() == PAT_START_SYM;
+    }
+
 private:
     const index_type* m_idx;
     uint64_t m_ngramsize;
