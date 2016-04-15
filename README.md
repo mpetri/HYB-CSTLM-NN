@@ -3,7 +3,7 @@ Welcome to CSTLM
 
 This is a compressed suffix tree based infinite context size language model capable of indexing terabyte sized text collections.
 
-# References
+## References
 
 This code is the basis of the following papers:
 
@@ -11,7 +11,7 @@ This code is the basis of the following papers:
 
 - TBA
 
-# Compile instructions
+## Compile instructions
 
 1. Check out the reprository: `https://github.com/mpetri/cstlm.git`
 2. `git submodule update --init`
@@ -19,7 +19,7 @@ This code is the basis of the following papers:
 4. `cmake ..`
 5. `make -j`
 
-# Run unit tests to ensure correctness
+## Run unit tests to ensure correctness
 
 ```
 cd build
@@ -29,7 +29,7 @@ rm -rf ../collections/unittest/
 ./unit-test.x
 ```
 
-# Usage instructions (Word based language model)
+## Usage instructions (Word based language model)
 
 Create collection:
 
@@ -43,7 +43,7 @@ Build index (including quantities for modified KN)
 ./build-index.x -c ../collections/toy/ -m
 ```
 
-# Usage instructions (Character based language model)
+## Usage instructions (Character based language model)
 
 Create collection:
 
@@ -57,7 +57,7 @@ Build index (including quantities for modified KN)
 ./build-index.x -c ../collections/toy/ -m
 ```
 
-# Moses integration  (Word based language model)
+## Moses integration  (Word based language model)
 
 Compile moses using
 
@@ -79,7 +79,7 @@ Modify moses.ini and replace the KENLM line with
 CSTLM-WORD factor=0 order=10 path=<path to collection>/collections/mono/
 ```
 
-# Moses integration  (Character based language model)
+## Moses integration  (Character based language model)
 
 Compile moses using
 
