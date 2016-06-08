@@ -10,6 +10,7 @@
 #include "utils.hpp"
 
 #include "ThreadPool.h"
+#include "parallel_counts_writer.hpp"
 
 namespace cstlm {
 
@@ -126,6 +127,13 @@ public:
         uint64_t& num_syms, uint64_t& f1prime,
         uint64_t& f2prime)
     {
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
+            cst.csa.sigma);
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
+            cst.csa.sigma);
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
+            cst.csa.sigma);
+
         f1prime = 0;
         f2prime = 0;
         uint64_t all = 0;
@@ -134,12 +142,6 @@ public:
             auto lb = cst.lb(child);
             auto rb = cst.rb(child);
 
-            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
-                cst.csa.sigma);
-            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
-                cst.csa.sigma);
-            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
-                cst.csa.sigma);
             typename t_cst::csa_type::size_type num_syms = 0;
             sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
                 preceding_syms, left, right);
@@ -155,11 +157,6 @@ public:
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
 
-        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
-            cst.csa.sigma);
-        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
-        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
-            cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
         num_syms = 0;
@@ -252,40 +249,44 @@ public:
         auto tmp_buffer_counts_f1prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p"), std::ios::out);
         auto tmp_buffer_counts_f2prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p"), std::ios::out);
 
-        auto root = cst.root();
-
-        struct compute_context_res {
-            uint32_t f1;
-            uint32_t f2;
-            uint32_t fb;
-            uint32_t b;
-            uint32_t f1prime;
-            uint32_t f2prime;
+        auto write_func = [&](const computed_context_result& item) {
+            tmp_buffer_counts_f1.push_back(item.f1);
+            tmp_buffer_counts_f2.push_back(item.f1);
+            tmp_buffer_counts_fb.push_back(item.fb);
+            tmp_buffer_counts_b.push_back(item.b);
+            tmp_buffer_counts_f1prime.push_back(item.f1prime);
+            tmp_buffer_counts_f2prime.push_back(item.f2prime);
         };
+
+        auto root
+            = cst.root();
 
         std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
 
-        int num_threads = std::thread::hardware_concurrency();
-        if (num_threads >= 2)
-            num_threads--; // we are doing the discounts in parallel as well
-
+        int num_threads = std::thread::hardware_concurrency() - 2;
+        LOG(INFO) << "Precompute worker threads = " << num_threads;
         {
-            ThreadPool writer_pool(1); // one thread writes to disk
+            parallel_counts_writer<decltype(write_func)> writer(write_func); // one thread writes to disk
             {
                 ThreadPool worker_pool(num_threads);
+                size_t seq_num = 0;
 
+                const uint64_t buf_size = 2048;
+                std::vector<computed_context_result> buf;
+                buf.resize(buf_size);
+                std::vector<decltype(cst.root())> node_buf;
+                node_buf.resize(buf_size);
+                size_t buf_pos = 0;
                 for (const auto& child : cst.children(root)) {
                     auto itr = cst.begin(child);
                     auto end = cst.end(child);
 
                     for (auto& v : child_hist)
                         v = { 0, 0 };
-                    // std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
                     uint64_t node_depth = 1;
                     auto prev = root;
                     while (itr != end) {
                         auto node = *itr;
-                        // auto node_depth = cst.node_depth(node);
                         if (cst.parent(node) == prev)
                             node_depth++;
 
@@ -299,30 +300,38 @@ public:
                                 auto f1 = f12.first;
                                 auto f2 = f12.second;
 
-                                worker_pool.enqueue(
-                                    [f1, f2, node, &cst, this, &tmp_buffer_counts_f1, &tmp_buffer_counts_f2,
-                                        &tmp_buffer_counts_fb, &tmp_buffer_counts_b, &tmp_buffer_counts_f1prime, &tmp_buffer_counts_f2prime, &writer_pool] {
-                                        compute_context_res res;
-                                        res.f1 = f1;
-                                        res.f2 = f2;
-                                        uint64_t num_syms = 0;
-                                        uint64_t f1prime = 0, f2prime = 0;
-                                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime);
-                                        res.fb = c;
-                                        res.b = num_syms;
-                                        res.f1prime = f1prime;
-                                        res.f2prime = f2prime;
+                                buf[buf_pos].id = seq_num;
+                                buf[buf_pos].f1 = f12.first;
+                                buf[buf_pos].f2 = f12.second;
+                                node_buf[buf_pos] = node;
+                                buf_pos++;
 
-                                        writer_pool.enqueue(
-                                            [&, res] {
-                                                tmp_buffer_counts_f1.push_back(res.f1);
-                                                tmp_buffer_counts_f2.push_back(res.f2);
-                                                tmp_buffer_counts_fb.push_back(res.fb);
-                                                tmp_buffer_counts_b.push_back(res.b);
-                                                tmp_buffer_counts_f1prime.push_back(res.f1prime);
-                                                tmp_buffer_counts_f2prime.push_back(res.f2prime);
-                                            });
-                                    });
+                                if (buf_pos == buf.size()) {
+                                    worker_pool.enqueue(
+                                        [&cst, this, buf, node_buf, &writer] {
+                                            auto copy_buf = buf;
+                                            auto copy_node_buf = node_buf;
+                                            for (size_t i = 0; i < copy_buf.size(); i++) {
+                                                uint64_t num_syms = 0;
+                                                uint64_t f1prime = 0, f2prime = 0;
+                                                auto c = compute_contexts_mkn(cst, copy_node_buf[i], num_syms, f1prime, f2prime);
+                                                copy_buf[i].fb = c;
+                                                copy_buf[i].b = num_syms;
+                                                copy_buf[i].f1prime = f1prime;
+                                                copy_buf[i].f2prime = f2prime;
+                                            }
+                                            writer.enqueue_bulk(copy_buf, copy_buf.size());
+                                            copy_node_buf.clear();
+                                            copy_buf.clear();
+                                        });
+
+                                    buf_pos = 0;
+
+                                    while (writer.queue_size() > 1024 * 1024 * 10) {
+                                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                                    }
+                                }
+                                seq_num++;
                             }
                             child_hist[node_depth] = { 0, 0 };
                             // child_hist.erase(node_id);
@@ -347,7 +356,18 @@ public:
                     }
                 }
 
-                // threadpool destructor ensures eveything is written to disk before we go to the next step
+                if (buf_pos != 0) {
+                    for (size_t i = 0; i < buf_pos; i++) {
+                        uint64_t num_syms = 0;
+                        uint64_t f1prime = 0, f2prime = 0;
+                        auto c = compute_contexts_mkn(cst, node_buf[i], num_syms, f1prime, f2prime);
+                        buf[i].fb = c;
+                        buf[i].b = num_syms;
+                        buf[i].f1prime = f1prime;
+                        buf[i].f2prime = f2prime;
+                    }
+                    writer.enqueue_bulk(buf, buf_pos);
+                }
             }
         }
         //

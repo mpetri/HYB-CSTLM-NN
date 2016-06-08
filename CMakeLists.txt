@@ -42,6 +42,7 @@ endif()
 add_subdirectory(external/sdsl-lite)
 
 include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
+                    ${CMAKE_HOME_DIRECTORY}/include/
                     ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                     ${CMAKE_HOME_DIRECTORY}/external/mem_monitor/
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
