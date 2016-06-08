@@ -11,6 +11,8 @@
 
 #include <sdsl/suffix_arrays.hpp>
 
+#include <future>
+
 namespace cstlm {
 
 using namespace std::chrono;
@@ -81,29 +83,38 @@ public:
         else {
             sdsl::load_from_file(m_cst, cst_file);
         }
-        auto discounts_file = col.path + "/tmp/DISCOUNTS-MAXN=" + std::to_string(t_max_ngram_count) + "-BYTE="
-            + std::to_string(byte_alphabet) + "-"
-            + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
-        if (!utils::file_exists(discounts_file)) {
-            lm_construct_timer timer("DISCOUNTS");
-            m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count);
-            sdsl::store_to_file(m_discounts, discounts_file);
-        }
-        else {
-            sdsl::load_from_file(m_discounts, discounts_file);
-        }
-        auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-MAXN="
-            + std::to_string(t_max_ngram_count) + "-BYTE="
-            + std::to_string(byte_alphabet) + "-"
-            + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
-        if (!utils::file_exists(precomputed_file)) {
-            lm_construct_timer timer("PRECOMPUTED_COUNTS");
-            m_precomputed = ccounts_type(col, m_cst, t_max_ngram_count, is_mkn);
-            sdsl::store_to_file(m_precomputed, precomputed_file);
-        }
-        else {
-            sdsl::load_from_file(m_precomputed, precomputed_file);
-        }
+        // asynchronously build discounts and precomputed counts
+        auto discounts_sync = std::async(std::launch::async, [this, &col] {
+            auto discounts_file = col.path + "/tmp/DISCOUNTS-MAXN=" + std::to_string(t_max_ngram_count) + "-BYTE="
+                + std::to_string(byte_alphabet) + "-"
+                + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
+            if (!utils::file_exists(discounts_file)) {
+                lm_construct_timer timer("DISCOUNTS");
+                m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count);
+                sdsl::store_to_file(m_discounts, discounts_file);
+            }
+            else {
+                sdsl::load_from_file(m_discounts, discounts_file);
+            }
+        });
+        auto precomputed_sync = std::async(std::launch::async, [this, &col, is_mkn] {
+            auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-MAXN="
+                + std::to_string(t_max_ngram_count) + "-BYTE="
+                + std::to_string(byte_alphabet) + "-"
+                + sdsl::util::class_to_hash(m_precomputed) + ".sdsl";
+            if (!utils::file_exists(precomputed_file)) {
+                lm_construct_timer timer("PRECOMPUTED_COUNTS");
+                m_precomputed = ccounts_type(col, m_cst, t_max_ngram_count, is_mkn);
+                sdsl::store_to_file(m_precomputed, precomputed_file);
+            }
+            else {
+                sdsl::load_from_file(m_precomputed, precomputed_file);
+            }
+        });
+
+        discounts_sync.wait();
+        precomputed_sync.wait();
+
         {
             lm_construct_timer timer("VOCAB");
             m_vocab = vocab_type(col);

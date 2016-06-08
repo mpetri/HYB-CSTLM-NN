@@ -9,6 +9,8 @@
 #include "logging.hpp"
 #include "utils.hpp"
 
+#include "ThreadPool.h"
+
 namespace cstlm {
 
 template <class t_bv = sdsl::rrr_vector<15>, class t_vec = sdsl::dac_vector<> >
@@ -132,11 +134,11 @@ public:
             auto lb = cst.lb(child);
             auto rb = cst.rb(child);
 
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
                 cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
                 cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
                 cst.csa.sigma);
             typename t_cst::csa_type::size_type num_syms = 0;
             sdsl::interval_symbols(cst.csa.wavelet_tree, lb, rb + 1, num_syms,
@@ -153,10 +155,10 @@ public:
         auto total_contexts = 0;
         auto node_depth = cst.depth(node);
 
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
             cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
             cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
@@ -249,64 +251,107 @@ public:
         auto tmp_buffer_counts_b = sdsl::int_vector_buffer<32>(col.temp_file("counts_b"), std::ios::out);
         auto tmp_buffer_counts_f1prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p"), std::ios::out);
         auto tmp_buffer_counts_f2prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p"), std::ios::out);
-        uint64_t num_syms = 0;
-        uint64_t f1prime = 0, f2prime = 0;
+
         auto root = cst.root();
+
+        struct compute_context_res {
+            uint32_t f1;
+            uint32_t f2;
+            uint32_t fb;
+            uint32_t b;
+            uint32_t f1prime;
+            uint32_t f2prime;
+        };
+
         std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
-        for (const auto& child : cst.children(root)) {
-            auto itr = cst.begin(child);
-            auto end = cst.end(child);
 
-            for (auto& v : child_hist)
-                v = { 0, 0 };
-            // std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
-            uint64_t node_depth = 1;
-            auto prev = root;
-            while (itr != end) {
-                auto node = *itr;
-                // auto node_depth = cst.node_depth(node);
-                if (cst.parent(node) == prev)
-                    node_depth++;
+        int num_threads = std::thread::hardware_concurrency();
+        if (num_threads >= 2)
+            num_threads--; // we are doing the discounts in parallel as well
 
-                if (itr.visit() == 2) {
-                    node_depth--;
-                    auto str_depth = cst.depth(node);
-                    if (str_depth <= max_node_depth) {
-                        auto node_id = cst.id(node);
-                        tmp_bv[node_id] = 1;
-                        auto& f12 = child_hist[node_depth];
-                        // assert(cst.degree(node) >= f12.first + f12.second);
-                        tmp_buffer_counts_f1.push_back(f12.first);
-                        tmp_buffer_counts_f2.push_back(f12.second);
-                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime);
-                        tmp_buffer_counts_fb.push_back(c);
-                        tmp_buffer_counts_b.push_back(num_syms);
-                        tmp_buffer_counts_f1prime.push_back(f1prime);
-                        tmp_buffer_counts_f2prime.push_back(f2prime);
-                    }
-                    child_hist[node_depth] = { 0, 0 };
-                    // child_hist.erase(node_id);
-                }
-                else {
-                    /* first visit */
-                    if (!cst.is_leaf(node)) {
-                        if (node_depth > max_node_depth) {
-                            itr.skip_subtree();
+        {
+            ThreadPool writer_pool(1); // one thread writes to disk
+            {
+                ThreadPool worker_pool(num_threads);
+
+                for (const auto& child : cst.children(root)) {
+                    auto itr = cst.begin(child);
+                    auto end = cst.end(child);
+
+                    for (auto& v : child_hist)
+                        v = { 0, 0 };
+                    // std::map<uint64_t, std::pair<uint64_t, uint64_t> > child_hist;
+                    uint64_t node_depth = 1;
+                    auto prev = root;
+                    while (itr != end) {
+                        auto node = *itr;
+                        // auto node_depth = cst.node_depth(node);
+                        if (cst.parent(node) == prev)
+                            node_depth++;
+
+                        if (itr.visit() == 2) {
+                            node_depth--;
+                            auto str_depth = cst.depth(node);
+                            if (str_depth <= max_node_depth) {
+                                auto node_id = cst.id(node);
+                                tmp_bv[node_id] = 1;
+                                auto& f12 = child_hist[node_depth];
+                                auto f1 = f12.first;
+                                auto f2 = f12.second;
+
+                                worker_pool.enqueue(
+                                    [f1, f2, node, &cst, this, &tmp_buffer_counts_f1, &tmp_buffer_counts_f2,
+                                        &tmp_buffer_counts_fb, &tmp_buffer_counts_b, &tmp_buffer_counts_f1prime, &tmp_buffer_counts_f2prime, &writer_pool] {
+                                        compute_context_res res;
+                                        res.f1 = f1;
+                                        res.f2 = f2;
+                                        uint64_t num_syms = 0;
+                                        uint64_t f1prime = 0, f2prime = 0;
+                                        auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime);
+                                        res.fb = c;
+                                        res.b = num_syms;
+                                        res.f1prime = f1prime;
+                                        res.f2prime = f2prime;
+
+                                        writer_pool.enqueue(
+                                            [&, res] {
+                                                tmp_buffer_counts_f1.push_back(res.f1);
+                                                tmp_buffer_counts_f2.push_back(res.f2);
+                                                tmp_buffer_counts_fb.push_back(res.fb);
+                                                tmp_buffer_counts_b.push_back(res.b);
+                                                tmp_buffer_counts_f1prime.push_back(res.f1prime);
+                                                tmp_buffer_counts_f2prime.push_back(res.f2prime);
+                                            });
+                                    });
+                            }
+                            child_hist[node_depth] = { 0, 0 };
+                            // child_hist.erase(node_id);
                         }
+                        else {
+                            /* first visit */
+                            if (!cst.is_leaf(node)) {
+                                if (node_depth > max_node_depth) {
+                                    itr.skip_subtree();
+                                }
+                            }
+                            int count = cst.size(node);
+                            // auto parent_id = cst.id(cst.parent(node));
+                            if (count == 1)
+                                child_hist[node_depth - 1].first += 1;
+                            else if (count == 2)
+                                child_hist[node_depth - 1].second += 1;
+                        }
+                        prev = node;
+                        ++itr;
+                        // last_node_depth = depth;
                     }
-                    int count = cst.size(node);
-                    // auto parent_id = cst.id(cst.parent(node));
-                    if (count == 1)
-                        child_hist[node_depth - 1].first += 1;
-                    else if (count == 2)
-                        child_hist[node_depth - 1].second += 1;
                 }
-                prev = node;
-                ++itr;
-                // last_node_depth = depth;
+
+                // threadpool destructor ensures eveything is written to disk before we go to the next step
             }
         }
-        // store into compressed in-memory data structures
+        //
+        LOG(INFO) << "store into compressed in-memory data structures";
         m_bv = bv_type(tmp_bv);
         tmp_bv.resize(0);
         m_bv_rank = rank_type(&m_bv);
