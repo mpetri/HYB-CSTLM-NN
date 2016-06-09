@@ -9,7 +9,6 @@
 #include "logging.hpp"
 #include "utils.hpp"
 
-#include "ThreadPool.h"
 #include "parallel_counts_writer.hpp"
 
 namespace cstlm {

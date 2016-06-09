@@ -132,7 +132,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         }
         else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
-            d = m_idx->discounts.N1plus_dotdot;
+            d = (double)m_idx->discounts.counts.N1plus_dotdot;
         }
         else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
@@ -154,8 +154,8 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
             m_idx->N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
         }
         else if (i == 1 || m_ngramsize == 1) {
-            n1 = m_idx->discounts.n1_cnt[1];
-            n2 = m_idx->discounts.n2_cnt[1];
+            n1 = (double)m_idx->discounts.counts.n1_cnt[1];
+            n2 = (double)m_idx->discounts.counts.n2_cnt[1];
             n3p = (m_idx->vocab_size() - 2) - (n1 + n2);
         }
         else {

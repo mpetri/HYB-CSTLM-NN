@@ -127,7 +127,7 @@ double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
         }
         else if (i == 1 || m_ngramsize == 1) {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : D;
-            d = m_idx->discounts.N1plus_dotdot;
+            d = m_idx->discounts.counts.N1plus_dotdot;
         }
         else {
             c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;

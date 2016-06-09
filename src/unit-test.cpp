@@ -162,13 +162,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX)
             }
         }
         /* compare counts */
-        EXPECT_EQ(act_n1, this->idx.discounts.n1[cgram])
+        EXPECT_EQ(act_n1, this->idx.discounts.counts.n1[cgram])
             << "n1[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n2, this->idx.discounts.n2[cgram])
+        EXPECT_EQ(act_n2, this->idx.discounts.counts.n2[cgram])
             << "n2[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n3, this->idx.discounts.n3[cgram])
+        EXPECT_EQ(act_n3, this->idx.discounts.counts.n3[cgram])
             << "n3[" << cgram << "] count incorrect!";
-        EXPECT_EQ(act_n4, this->idx.discounts.n4[cgram])
+        EXPECT_EQ(act_n4, this->idx.discounts.counts.n4[cgram])
             << "n4[" << cgram << "] count incorrect!";
     }
 }
@@ -258,13 +258,13 @@ TYPED_TEST(LMTest, PrecomputedStats_nX_cnt)
             }
         }
         /* compare counts */
-        EXPECT_EQ(this->idx.discounts.n1_cnt[cgram], act_n1_cnt)
+        EXPECT_EQ(this->idx.discounts.counts.n1_cnt[cgram], act_n1_cnt)
             << "n1_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.discounts.n2_cnt[cgram], act_n2_cnt)
+        EXPECT_EQ(this->idx.discounts.counts.n2_cnt[cgram], act_n2_cnt)
             << "n2_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.discounts.n3_cnt[cgram], act_n3_cnt)
+        EXPECT_EQ(this->idx.discounts.counts.n3_cnt[cgram], act_n3_cnt)
             << "n3_cnt[" << cgram << "] count incorrect!";
-        EXPECT_EQ(this->idx.discounts.n4_cnt[cgram], act_n4_cnt)
+        EXPECT_EQ(this->idx.discounts.counts.n4_cnt[cgram], act_n4_cnt)
             << "n4_cnt[" << cgram << "] count incorrect!";
     }
 }
@@ -292,7 +292,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N1DotPlusPlus)
     }
     size_t act_N1plus_dotdot = uniq_bigrams.size();
     /* compare counts */
-    EXPECT_EQ(this->idx.discounts.N1plus_dotdot, act_N1plus_dotdot)
+    EXPECT_EQ(this->idx.discounts.counts.N1plus_dotdot, act_N1plus_dotdot)
         << "N1plus_dotdot count incorrect!";
 }
 
@@ -317,7 +317,7 @@ TYPED_TEST(LMTest, PrecomputedStats_N3plus_dot)
             act_N3plus_dot++;
     }
     /* compare counts */
-    EXPECT_EQ(this->idx.discounts.N3plus_dot, act_N3plus_dot)
+    EXPECT_EQ(this->idx.discounts.counts.N3plus_dot, act_N3plus_dot)
         << "N3plus_dot count incorrect!";
 }
 
