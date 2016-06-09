@@ -235,11 +235,69 @@ public:
                   << m_bv.size() << " nodes";
     }
 
+    template <class t_cst, class t_node, class t_writer>
+    void precompute_subtree(t_cst& cst, t_node start, t_writer& writer, std::vector<std::pair<uint64_t, uint64_t> >& child_hist, uint64_t max_depth)
+    {
+        for (auto& v : child_hist)
+            v = { 0, 0 };
+        uint64_t node_depth = 1;
+        auto prev = cst.root();
+        auto itr = cst.begin(start);
+        auto end = cst.end(start);
+
+        std::vector<computed_context_result> results;
+        uint64_t num_syms;
+        uint64_t f1prime;
+        uint64_t f2prime;
+        while (itr != end) {
+            auto node = *itr;
+            if (cst.parent(node) == prev)
+                node_depth++;
+
+            if (itr.visit() == 2) {
+                node_depth--;
+                auto str_depth = cst.depth(node);
+                if (str_depth <= max_depth) {
+                    computed_context_result res;
+                    res.node_id = cst.id(node);
+                    auto& f12 = child_hist[node_depth];
+                    res.f1 = f12.first;
+                    res.f2 = f12.second;
+                    auto c = compute_contexts_mkn(cst, node, num_syms, f1prime, f2prime);
+                    res.fb = c;
+                    res.b = num_syms;
+                    res.f1prime = f1prime;
+                    res.f2prime = f2prime;
+                    results.push_back(res);
+                }
+                child_hist[node_depth] = { 0, 0 };
+            }
+            else {
+                /* first visit */
+                if (!cst.is_leaf(node)) {
+                    if (node_depth > max_depth) {
+                        itr.skip_subtree();
+                    }
+                }
+                int count = cst.size(node);
+                if (count == 1)
+                    child_hist[node_depth - 1].first += 1;
+                else if (count == 2)
+                    child_hist[node_depth - 1].second += 1;
+            }
+            prev = node;
+            ++itr;
+        }
+
+        writer.write_results(cst.id(start), results);
+    }
+
     // specific MKN implementation, 2-pass
     template <class t_cst>
     void initialise_modified_kneser_ney(collection& col, t_cst& cst,
         uint64_t max_node_depth)
     {
+        // writing to disk stuff
         sdsl::bit_vector tmp_bv(cst.nodes());
         sdsl::util::set_to_value(tmp_bv, 0);
         auto tmp_buffer_counts_f1 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1"), std::ios::out);
@@ -249,128 +307,71 @@ public:
         auto tmp_buffer_counts_f1prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p"), std::ios::out);
         auto tmp_buffer_counts_f2prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p"), std::ios::out);
 
-        auto write_func = [&](const computed_context_result& item) {
-            tmp_buffer_counts_f1.push_back(item.f1);
-            tmp_buffer_counts_f2.push_back(item.f1);
-            tmp_buffer_counts_fb.push_back(item.fb);
-            tmp_buffer_counts_b.push_back(item.b);
-            tmp_buffer_counts_f1prime.push_back(item.f1prime);
-            tmp_buffer_counts_f2prime.push_back(item.f2prime);
+        auto write_func = [&](const std::vector<computed_context_result>& items) {
+            for (const auto& item : items) {
+                tmp_bv[item.node_id] = 1;
+                tmp_buffer_counts_f1.push_back(item.f1);
+                tmp_buffer_counts_f2.push_back(item.f2);
+                tmp_buffer_counts_fb.push_back(item.fb);
+                tmp_buffer_counts_b.push_back(item.b);
+                tmp_buffer_counts_f1prime.push_back(item.f1prime);
+                tmp_buffer_counts_f2prime.push_back(item.f2prime);
+            }
         };
 
-        auto root
-            = cst.root();
-
-        std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
-
-        int num_threads = std::thread::hardware_concurrency() - 2;
-        LOG(INFO) << "Precompute worker threads = " << num_threads;
-        {
-            parallel_counts_writer<decltype(write_func)> writer(write_func); // one thread writes to disk
-            {
-                ThreadPool worker_pool(num_threads);
-                size_t seq_num = 0;
-
-                const uint64_t buf_size = 2048;
-                std::vector<computed_context_result> buf;
-                buf.resize(buf_size);
-                std::vector<decltype(cst.root())> node_buf;
-                node_buf.resize(buf_size);
-                size_t buf_pos = 0;
-                for (const auto& child : cst.children(root)) {
-                    auto itr = cst.begin(child);
-                    auto end = cst.end(child);
-
-                    for (auto& v : child_hist)
-                        v = { 0, 0 };
-                    uint64_t node_depth = 1;
-                    auto prev = root;
-                    while (itr != end) {
-                        auto node = *itr;
-                        if (cst.parent(node) == prev)
-                            node_depth++;
-
-                        if (itr.visit() == 2) {
-                            node_depth--;
-                            auto str_depth = cst.depth(node);
-                            if (str_depth <= max_node_depth) {
-                                auto node_id = cst.id(node);
-                                tmp_bv[node_id] = 1;
-                                auto& f12 = child_hist[node_depth];
-                                auto f1 = f12.first;
-                                auto f2 = f12.second;
-
-                                buf[buf_pos].id = seq_num;
-                                buf[buf_pos].f1 = f12.first;
-                                buf[buf_pos].f2 = f12.second;
-                                node_buf[buf_pos] = node;
-                                buf_pos++;
-
-                                if (buf_pos == buf.size()) {
-                                    worker_pool.enqueue(
-                                        [&cst, this, buf, node_buf, &writer] {
-                                            auto copy_buf = buf;
-                                            auto copy_node_buf = node_buf;
-                                            for (size_t i = 0; i < copy_buf.size(); i++) {
-                                                uint64_t num_syms = 0;
-                                                uint64_t f1prime = 0, f2prime = 0;
-                                                auto c = compute_contexts_mkn(cst, copy_node_buf[i], num_syms, f1prime, f2prime);
-                                                copy_buf[i].fb = c;
-                                                copy_buf[i].b = num_syms;
-                                                copy_buf[i].f1prime = f1prime;
-                                                copy_buf[i].f2prime = f2prime;
-                                            }
-                                            writer.enqueue_bulk(copy_buf, copy_buf.size());
-                                            copy_node_buf.clear();
-                                            copy_buf.clear();
-                                        });
-
-                                    buf_pos = 0;
-
-                                    while (writer.queue_size() > 1024 * 1024 * 10) {
-                                        std::this_thread::sleep_for(std::chrono::seconds(5));
-                                    }
-                                }
-                                seq_num++;
-                            }
-                            child_hist[node_depth] = { 0, 0 };
-                            // child_hist.erase(node_id);
-                        }
-                        else {
-                            /* first visit */
-                            if (!cst.is_leaf(node)) {
-                                if (node_depth > max_node_depth) {
-                                    itr.skip_subtree();
-                                }
-                            }
-                            int count = cst.size(node);
-                            // auto parent_id = cst.id(cst.parent(node));
-                            if (count == 1)
-                                child_hist[node_depth - 1].first += 1;
-                            else if (count == 2)
-                                child_hist[node_depth - 1].second += 1;
-                        }
-                        prev = node;
-                        ++itr;
-                        // last_node_depth = depth;
-                    }
-                }
-
-                if (buf_pos != 0) {
-                    for (size_t i = 0; i < buf_pos; i++) {
-                        uint64_t num_syms = 0;
-                        uint64_t f1prime = 0, f2prime = 0;
-                        auto c = compute_contexts_mkn(cst, node_buf[i], num_syms, f1prime, f2prime);
-                        buf[i].fb = c;
-                        buf[i].b = num_syms;
-                        buf[i].f1prime = f1prime;
-                        buf[i].f2prime = f2prime;
-                    }
-                    writer.enqueue_bulk(buf, buf_pos);
-                }
-            }
+        // children of the root we are interested in
+        std::vector<uint64_t> nodes;
+        auto root = cst.root();
+        for (const auto& child : cst.children(root)) {
+            nodes.push_back(cst.id(child));
         }
-        //
+
+        // create a writer thread which writes everything to disk in the right order
+        parallel_counts_writer<decltype(write_func)> writer(write_func, nodes);
+
+        // now we split things up
+        std::vector<std::pair<uint64_t, typename t_cst::node_type> > all_nodes;
+        size_t order = 0;
+        for (const auto& child : cst.children(root)) {
+            all_nodes.emplace_back(order, child);
+            order++;
+        }
+
+        // (2a) randomize to get even thread distribution
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(all_nodes.begin(), all_nodes.end(), g);
+
+        // (2b) split up into chunks
+        int num_threads = std::thread::hardware_concurrency();
+        size_t nodes_per_thread = all_nodes.size() / num_threads;
+        auto itr = all_nodes.begin();
+        std::vector<std::future<void> > results;
+        for (auto i = 0; i < num_threads; i++) {
+            auto end = itr + nodes_per_thread;
+            if (i + 1 == num_threads)
+                end = all_nodes.end();
+
+            std::vector<std::pair<uint64_t, typename t_cst::node_type> > thread_nodes(itr, end);
+
+            results.emplace_back(
+                std::async(std::launch::async, [this, max_node_depth, &cst, &writer](std::vector<std::pair<uint64_t, typename t_cst::node_type> > nodes) -> void {
+                    // sort the nodes by id
+                    std::sort(nodes.begin(), nodes.end());
+                    // compute stuff
+                    std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
+                    for (const auto& np : nodes) {
+                        const auto& node = np.second;
+                        precompute_subtree(cst, node, writer, child_hist, max_node_depth);
+                    }
+                }, std::move(thread_nodes)));
+            itr = end;
+        }
+
+        for (auto& fcnt : results) {
+            fcnt.wait();
+        }
+
         LOG(INFO) << "store into compressed in-memory data structures";
         m_bv = bv_type(tmp_bv);
         tmp_bv.resize(0);
@@ -386,6 +387,7 @@ public:
         m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
         tmp_buffer_counts_f1prime.close(true);
         m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
+
         tmp_buffer_counts_f2prime.close(true);
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
