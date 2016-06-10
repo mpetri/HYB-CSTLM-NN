@@ -9,7 +9,7 @@
 #include "logging.hpp"
 #include "utils.hpp"
 
-#include "parallel_counts_writer.hpp"
+#include "counts_writer.hpp"
 
 namespace cstlm {
 
@@ -267,7 +267,7 @@ public:
                     res.b = num_syms;
                     res.f1prime = f1prime;
                     res.f2prime = f2prime;
-                    results.push_back(res);
+                    writer.write_result(res);
                 }
                 child_hist[node_depth] = { 0, 0 };
             }
@@ -287,8 +287,6 @@ public:
             prev = node;
             ++itr;
         }
-
-        writer.write_results(cst.id(start), results);
     }
 
     // specific MKN implementation, 2-pass
@@ -296,98 +294,92 @@ public:
     void initialise_modified_kneser_ney(collection& col, t_cst& cst,
         uint64_t max_node_depth)
     {
-        // writing to disk stuff
-        sdsl::bit_vector tmp_bv(cst.nodes());
-        sdsl::util::set_to_value(tmp_bv, 0);
-        auto tmp_buffer_counts_f1 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1"), std::ios::out);
-        auto tmp_buffer_counts_f2 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2"), std::ios::out);
-        auto tmp_buffer_counts_fb = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb"), std::ios::out);
-        auto tmp_buffer_counts_b = sdsl::int_vector_buffer<32>(col.temp_file("counts_b"), std::ios::out);
-        auto tmp_buffer_counts_f1prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p"), std::ios::out);
-        auto tmp_buffer_counts_f2prime = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p"), std::ios::out);
-
-        auto write_func = [&](const std::vector<computed_context_result>& items) {
-            for (const auto& item : items) {
-                tmp_bv[item.node_id] = 1;
-                tmp_buffer_counts_f1.push_back(item.f1);
-                tmp_buffer_counts_f2.push_back(item.f2);
-                tmp_buffer_counts_fb.push_back(item.fb);
-                tmp_buffer_counts_b.push_back(item.b);
-                tmp_buffer_counts_f1prime.push_back(item.f1prime);
-                tmp_buffer_counts_f2prime.push_back(item.f2prime);
-            }
-        };
-
         // children of the root we are interested in
-        std::vector<uint64_t> nodes;
+        std::vector<typename t_cst::node_type> nodes;
         auto root = cst.root();
         for (const auto& child : cst.children(root)) {
-            nodes.push_back(cst.id(child));
+            nodes.push_back(child);
         }
 
-        // create a writer thread which writes everything to disk in the right order
-        parallel_counts_writer<decltype(write_func)> writer(write_func, nodes);
-
-        // now we split things up
-        std::vector<std::pair<uint64_t, typename t_cst::node_type> > all_nodes;
-        size_t order = 0;
-        for (const auto& child : cst.children(root)) {
-            all_nodes.emplace_back(order, child);
-            order++;
-        }
-
-        // (2a) randomize to get even thread distribution
-        std::random_device rd;
-        std::mt19937 g(rd());
-        std::shuffle(all_nodes.begin(), all_nodes.end(), g);
-
-        // (2b) split up into chunks
+        // now we split things up based on the leafs of each subtree
         int num_threads = std::thread::hardware_concurrency();
-        size_t nodes_per_thread = all_nodes.size() / num_threads;
-        auto itr = all_nodes.begin();
-        std::vector<std::future<void> > results;
+        size_t leafs_per_thread = cst.size() / num_threads;
+        auto itr = nodes.begin();
+        auto sentinal = nodes.end();
+        std::vector<std::future<counts_writer> > results;
         for (auto i = 0; i < num_threads; i++) {
-            auto end = itr + nodes_per_thread;
-            if (i + 1 == num_threads)
-                end = all_nodes.end();
 
-            std::vector<std::pair<uint64_t, typename t_cst::node_type> > thread_nodes(itr, end);
+            size_t cur_num_nodes = 0;
+            auto end = itr;
+            size_t nodes_in_cur_thread = 0;
+            while( end != sentinal && cur_num_nodes < leafs_per_thread ) {
+                const auto& cnode = *end;
+                size_t leafs_in_subtree = cst.size(cnode);
+                cur_num_nodes += leafs_in_subtree;
+                nodes_in_cur_thread++;
+                ++end;
+            }
+            if (i + 1 == num_threads) // process everything
+                end = sentinal;
+
+            LOG(INFO) << "\tThread " << i << " nodes = " << nodes_in_cur_thread;
+
+            std::vector<typename t_cst::node_type> thread_nodes(itr, end);
 
             results.emplace_back(
-                std::async(std::launch::async, [this, max_node_depth, &cst, &writer](std::vector<std::pair<uint64_t, typename t_cst::node_type> > nodes) -> void {
-                    // sort the nodes by id
-                    std::sort(nodes.begin(), nodes.end());
+                std::async(std::launch::async, [this,i, max_node_depth, &cst,&col](std::vector<typename t_cst::node_type> nodes) -> counts_writer {
+                    counts_writer w(i,col);
                     // compute stuff
                     std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
-                    for (const auto& np : nodes) {
-                        const auto& node = np.second;
-                        precompute_subtree(cst, node, writer, child_hist, max_node_depth);
+                    for (const auto& node : nodes) {
+                        precompute_subtree(cst, node, w, child_hist, max_node_depth);
                     }
+                    return w;
                 }, std::move(thread_nodes)));
             itr = end;
         }
 
+        std::vector<counts_writer> written_counts;
         for (auto& fcnt : results) {
-            fcnt.wait();
+            written_counts.emplace_back(fcnt.get());
         }
 
         LOG(INFO) << "store into compressed in-memory data structures";
-        m_bv = bv_type(tmp_bv);
-        tmp_bv.resize(0);
-        m_bv_rank = rank_type(&m_bv);
-        m_counts_f1 = vector_type(tmp_buffer_counts_f1);
-        tmp_buffer_counts_f1.close(true);
-        m_counts_f2 = vector_type(tmp_buffer_counts_f2);
-        tmp_buffer_counts_f2.close(true);
-        m_counts_b = vector_type(tmp_buffer_counts_b);
-        tmp_buffer_counts_b.close(true);
-        m_counts_fb = vector_type(tmp_buffer_counts_fb);
-        tmp_buffer_counts_fb.close(true);
-        m_counts_f1prime = vector_type(tmp_buffer_counts_f1prime);
-        tmp_buffer_counts_f1prime.close(true);
-        m_counts_f2prime = vector_type(tmp_buffer_counts_f2prime);
 
-        tmp_buffer_counts_f2prime.close(true);
+        {
+            counts_merge_helper wh(written_counts);
+            {
+                auto tmp_bv = wh.get_bv(cst.nodes());
+                m_bv = bv_type(tmp_bv);
+                tmp_bv.resize(0);
+                m_bv_rank = rank_type(&m_bv);
+            }
+            {
+                auto counts_f1 = wh.get_counts_f1();
+                m_counts_f1 = vector_type(counts_f1);
+            }
+            {
+                auto counts_f2 = wh.get_counts_f2();
+                m_counts_f2 = vector_type(counts_f2);
+            }
+            {
+                auto counts_b = wh.get_counts_b();
+                m_counts_b = vector_type(counts_b);
+            }
+            {
+                auto counts_fb = wh.get_counts_fb();
+                m_counts_fb = vector_type(counts_fb);
+            }
+            {
+                auto counts_f1p = wh.get_counts_f1prime();
+                m_counts_f1prime = vector_type(counts_f1p);
+            }
+            {
+                auto counts_f2p = wh.get_counts_f2prime();
+                m_counts_f2prime = vector_type(counts_f2p);
+            }
+        }
+
         LOG(INFO) << "precomputed " << m_bv_rank(m_bv.size()) << " entries out of "
                   << m_bv.size() << " nodes";
     }

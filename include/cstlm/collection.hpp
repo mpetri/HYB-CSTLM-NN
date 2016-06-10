@@ -171,9 +171,9 @@ struct collection {
         return alphabet_type::word_alphabet;
     }
 
-    std::string temp_file(std::string id)
+    std::string temp_file(std::string id,uint64_t thread = 0)
     {
-        return path + "/tmp/" + id + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
+        return path + "/tmp/" + id + "-" + std::to_string(thread) + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
     }
 };
 }
