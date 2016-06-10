@@ -83,8 +83,6 @@ public:
         else {
             sdsl::load_from_file(m_cst, cst_file);
         }
-        // asynchronously build discounts and precomputed counts
-        // auto discounts_sync = std::async(std::launch::async, [this, &col] {
         auto discounts_file = col.path + "/tmp/DISCOUNTS-MAXN=" + std::to_string(t_max_ngram_count) + "-BYTE="
             + std::to_string(byte_alphabet) + "-"
             + sdsl::util::class_to_hash(m_discounts) + ".sdsl";
@@ -97,8 +95,6 @@ public:
         else {
             sdsl::load_from_file(m_discounts, discounts_file);
         }
-        // });
-        // auto precomputed_sync = std::async(std::launch::async, [this, &col, is_mkn] {
         auto precomputed_file = col.path + "/tmp/PRECOMPUTED_COUNTS-MAXN="
             + std::to_string(t_max_ngram_count) + "-BYTE="
             + std::to_string(byte_alphabet) + "-"
@@ -111,10 +107,6 @@ public:
         else {
             sdsl::load_from_file(m_precomputed, precomputed_file);
         }
-        // });
-
-        // discounts_sync.wait();
-        // precomputed_sync.wait();
 
         {
             lm_construct_timer timer("VOCAB");
@@ -165,20 +157,14 @@ public:
 
         uint64_t n1plus_back;
         if (m_cst.is_leaf(node)) {
-            // std::cout << "\tleaf\n";
             n1plus_back = 1;
             // FIXME: does this really follow? Yes, there's only 1 previous context as
             // this node goes to the end of the corpus
         }
         else if (m_cst.depth(node) <= t_max_ngram_count) {
             n1plus_back = m_precomputed.lookup_b(m_cst, node);
-            // std::cout << "\tnon-leaf\n";
         }
         else {
-            // std::cout << "\tdepth exceeded\n";
-            // when depth is exceeded, we don't precompute the N1+FB/N1+B scores
-            // so we need to compute these explictly
-
             static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
                 m_cst.csa.sigma);
             static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
@@ -197,11 +183,8 @@ public:
         // adjust for sentinel start of sentence
         auto symbol = *pattern_begin;
         if (symbol == PAT_START_SYM) {
-            // std::cout << "\tpat start decrement\n";
             n1plus_back -= 1;
         }
-        // std::cout << "N1PlusBack_from_forward returning: " << n1plus_back <<
-        // "\n";
 
         return n1plus_back;
     }
@@ -337,7 +320,6 @@ public:
                 }
             }
             f3pprime = all - f1prime - f2prime;
-            //LOG(INFO) << "\t\t\tN123PlusFrontPrime -- looking up stuff: degree " << m_cst.degree(node) << " and f1',f2' are " << f1prime << ", " << f2prime;
         }
         else {
             // pattern is part of the edge label
@@ -348,7 +330,7 @@ public:
                 f2prime++;
             all++; // FIXME: is this right, all is 1? can't see how this might overflow
             f3pprime = all - f1prime - f2prime;
-            //LOG(INFO) << "\t\t\tN123PlusFrontPrime -- on edge: all is " << all << " and f1',f2' are " << f1prime << ", " << f2prime;
+           
         }
     }
 
@@ -481,8 +463,6 @@ public:
                         // efficient way to compute based on earlier pass computing f1 and
                         // f2 values
                         m_precomputed.lookup_f12(cst, new_node, delta1, delta2);
-                        // LOG(INFO) << " LOOKUP        node " << new_node << " delta1 " <<
-                        // delta1 << " delta2 " << delta2;
                     }
                     else {
                         // inefficient way
@@ -493,8 +473,6 @@ public:
                             else if (size == 2)
                                 delta2++;
                         }
-                        // LOG(INFO) << " INEFF; node " << new_node << " delta1 " << delta1
-                        // << " delta2 " << delta2;
                     }
                     count1 += delta1;
                     count2 += delta2;

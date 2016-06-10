@@ -166,8 +166,6 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
 
-        //LOG(INFO) << "\t\ti = " << i << " p = " << p << " c = " << c << " gamma " << gamma << " d = " << d;
-        //LOG(INFO) << "\t\t\t" << D1 << ":" << n1 << ":" << D2 << ":" << n2 << ":" << D3p << ":" << n3p;
     }
 
     m_last_nodes_incl = node_incl_vec;
