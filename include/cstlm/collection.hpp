@@ -11,6 +11,8 @@
 #include "constants.hpp"
 #include "timings.hpp"
 
+#include "parallel_sa_construct.hpp"
+
 namespace cstlm {
 
 const std::string KEY_PREFIX = "text.";
@@ -86,18 +88,44 @@ struct collection {
             if (alphabet == alphabet_type::byte_alphabet) {
                 sdsl::int_vector<8> text;
                 sdsl::load_from_file(text, file_map[KEY_TEXT].c_str());
+                size_t n = text.size();
+                text.resize(n + 16); // SSE padding
+                for (size_t i = 0; i < 16; i++)
+                    text[n + i] = 0;
                 sdsl::int_vector<> sa;
-                sa.width(64);
-                sa.resize(text.size());
-                divsufsort64((const unsigned char*)text.data(), (int64_t*)sa.data(), text.size());
+                const uint8_t* T = (const uint8_t*)text.data();
+                if (n < std::numeric_limits<uint32_t>::max()) {
+                    sa.width(32);
+                    sa.resize(n);
+
+                    parallel_sufsort_it<decltype(T), uint32_t>(T, (uint32_t*)sa.data(), n);
+                }
+                else {
+                    sa.width(64);
+                    sa.resize(n);
+                    parallel_sufsort_it<decltype(T), uint64_t>(T, (uint64_t*)sa.data(), n);
+                }
                 sdsl::util::bit_compress(sa);
                 auto sa_path = path + "/" + prefix + KEY_SA;
                 sdsl::store_to_file(sa, sa_path);
                 file_map[KEY_SA] = sa_path;
             }
             else {
+                sdsl::int_vector<> text;
+                sdsl::load_from_file(text, file_map[KEY_TEXT].c_str());
+                size_t n = text.size();
                 sdsl::int_vector<> sa;
-                sdsl::qsufsort::construct_sa(sa, file_map[KEY_TEXT].c_str(), 0);
+                if (n < std::numeric_limits<uint32_t>::max()) {
+                    sa.width(32);
+                    sa.resize(n);
+                    parallel_sufsort_it<decltype(text), uint32_t>(text, (uint32_t*)sa.data(), n);
+                }
+                else {
+                    sa.width(64);
+                    sa.resize(n);
+                    parallel_sufsort_it<decltype(text), uint64_t>(text, (uint64_t*)sa.data(), n);
+                }
+                sdsl::util::bit_compress(sa);
                 auto sa_path = path + "/" + prefix + KEY_SA;
                 sdsl::store_to_file(sa, sa_path);
                 file_map[KEY_SA] = sa_path;
@@ -171,7 +199,7 @@ struct collection {
         return alphabet_type::word_alphabet;
     }
 
-    std::string temp_file(std::string id,uint64_t thread = 0)
+    std::string temp_file(std::string id, uint64_t thread = 0)
     {
         return path + "/tmp/" + id + "-" + std::to_string(thread) + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
     }
