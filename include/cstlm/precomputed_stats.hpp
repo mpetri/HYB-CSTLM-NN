@@ -452,12 +452,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
     {
         sdsl::int_vector_buffer<> SA(col.file_map[KEY_SA]);
         for (auto child : cst.children(cst.root())) {
-            if (counter < NUM_SPECIAL_SYMS) {
-                if (counter != EOF_SYM && counter != EOS_SYM) {
-                    process_subtree(cst, SA, sentinel_rank, sentinel_select, child, counter, counts, max_ngram_count);
-                }
-            }
-            else {
+            if(counter != EOF_SYM && counter != EOS_SYM) {
                 nodes.emplace_back(counter, child);
             }
             ++counter;
@@ -492,8 +487,9 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
                 raw_counts local_count(this->max_ngram_count);
                 sdsl::int_vector_buffer<> SA(col.file_map[KEY_SA]);
                 for (const auto& np : nodes) {
+                    auto counter = np.first;
                     const auto& node = np.second;
-                    process_subtree(cst, SA, sentinel_rank, sentinel_select, node, NUM_SPECIAL_SYMS, local_count, this->max_ngram_count);
+                    process_subtree(cst, SA, sentinel_rank, sentinel_select, node, counter, local_count, this->max_ngram_count);
                 }
                 return local_count;
             }, std::move(thread_nodes)));
