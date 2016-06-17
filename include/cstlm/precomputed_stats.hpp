@@ -473,6 +473,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 
     // (2b) split up into chunks
     int num_threads = std::thread::hardware_concurrency();
+    if(cstlm::num_cstlm_threads != 0) num_threads = cstlm::num_cstlm_threads;
     size_t nodes_per_thread = nodes.size() / num_threads;
     auto itr = nodes.begin();
     std::vector<std::future<raw_counts> > results;

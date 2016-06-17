@@ -20,6 +20,7 @@ void print_usage(const char* program)
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -m                   : use modified kneser ney.\n");
+    fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -28,13 +29,16 @@ cmdargs_t parse_args(int argc, const char* argv[])
     int op;
     args.collection_dir = "";
     args.use_mkn = false;
-    while ((op = getopt(argc, (char* const*)argv, "c:dm")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "c:dmt:")) != -1) {
         switch (op) {
         case 'c':
             args.collection_dir = optarg;
             break;
         case 'm':
             args.use_mkn = true;
+            break;
+        case 't':
+            num_cstlm_threads = std::atoi(optarg);
             break;
         }
     }

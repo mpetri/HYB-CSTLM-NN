@@ -17,7 +17,10 @@
 
 namespace cstlm {
 
+static int num_cstlm_threads = 0;
+
 namespace utils {
+
 
     bool directory_exists(std::string dir)
     {

@@ -8,9 +8,12 @@
 #include <array>
 #include <thread>
 #include <cilk/cilk.h>
+#include <cilk/cilk_api.h>
 
 #include <sys/resource.h>
 #include <nmmintrin.h>
+
+#include "utils.hpp"
 
 #define ISORT 25
 #define SPAWN_THRESHOLD 1000
@@ -146,6 +149,7 @@ template <class t_vec,
 bucket_counts<suftype_counts_array_byte> compute_bucket_counts(t_vec& T, size_t n)
 {
     auto num_threads = std::thread::hardware_concurrency();
+    if(cstlm::num_cstlm_threads != 0) num_threads = cstlm::num_cstlm_threads;
     bucket_counts<suftype_counts_array_byte> b(num_threads);
     size_t syms_per_thread = n / num_threads;
     auto start = 0;
@@ -198,6 +202,7 @@ template <class t_vec,
 bucket_counts<suftype_counts_array_int> compute_bucket_counts(t_vec& T, size_t n)
 {
     auto num_threads = std::thread::hardware_concurrency();
+    if(cstlm::num_cstlm_threads != 0) num_threads = cstlm::num_cstlm_threads;
     bucket_counts<suftype_counts_array_int> b(num_threads);
     size_t syms_per_thread = n / num_threads;
     auto start = 0;
@@ -373,6 +378,9 @@ void sort_B_types(t_vec& T, t_int_type* SA, t_cnts& b)
 template <class t_vec, class t_int_type>
 void parallel_sufsort_it(t_vec& T, t_int_type* SA, size_t n)
 {
+    if(cstlm::num_cstlm_threads != 0) {
+        __cilkrts_set_param("nworkers",std::to_string(cstlm::num_cstlm_threads).c_str());
+    }
     // REQ: T[n-1] = 0
     // (1) count suffixes  -> first pass
     auto bucket_counts = compute_bucket_counts<t_vec>(T, n);

@@ -303,6 +303,7 @@ public:
 
         // now we split things up based on the leafs of each subtree
         int num_threads = std::thread::hardware_concurrency();
+        if(cstlm::num_cstlm_threads != 0) num_threads = cstlm::num_cstlm_threads;
         size_t leafs_per_thread = cst.size() / num_threads;
         auto itr = nodes.begin();
         auto sentinal = nodes.end();
