@@ -312,7 +312,7 @@ public:
             size_t cur_num_nodes = 0;
             auto end = itr;
             size_t nodes_in_cur_thread = 0;
-            while( end != sentinal && cur_num_nodes < leafs_per_thread ) {
+            while (end != sentinal && cur_num_nodes < leafs_per_thread) {
                 const auto& cnode = *end;
                 size_t leafs_in_subtree = cst.size(cnode);
                 cur_num_nodes += leafs_in_subtree;
@@ -327,8 +327,8 @@ public:
             std::vector<typename t_cst::node_type> thread_nodes(itr, end);
 
             results.emplace_back(
-                std::async(std::launch::async, [this,i, max_node_depth, &cst,&col](std::vector<typename t_cst::node_type> nodes) -> counts_writer {
-                    counts_writer w(i,col);
+                std::async(std::launch::async, [this, i, max_node_depth, &cst, &col](std::vector<typename t_cst::node_type> nodes) -> counts_writer {
+                    counts_writer w(i, col);
                     // compute stuff
                     std::vector<std::pair<uint64_t, uint64_t> > child_hist(max_node_depth + 2);
                     for (const auto& node : nodes) {
@@ -428,7 +428,9 @@ public:
     void lookup_f12(t_cst& cst, t_node_type node, uint64_t& f1,
         uint64_t& f2) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::lookup_f12);
+#endif
         assert(m_is_mkn);
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
@@ -439,7 +441,9 @@ public:
     template <class t_cst, class t_node_type>
     uint64_t lookup_fb(t_cst& cst, t_node_type node) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::lookup_fb);
+#endif
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_fb[rank_in_vec];
@@ -449,7 +453,9 @@ public:
     void lookup_f12prime(t_cst& cst, t_node_type node, uint64_t& f1prime,
         uint64_t& f2prime) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::lookup_f12prime);
+#endif
         assert(m_is_mkn);
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
@@ -460,7 +466,9 @@ public:
     template <class t_cst, class t_node_type>
     uint64_t lookup_b(t_cst& cst, t_node_type node) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::lookup_b);
+#endif
         auto id = cst.id(node);
         auto rank_in_vec = m_bv_rank(id);
         return m_counts_b[rank_in_vec];

@@ -83,54 +83,6 @@ struct collection {
                 LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
         }
-        if (file_map.count(KEY_SA) == 0) {
-            lm_construct_timer timer(KEY_SA);
-            if (alphabet == alphabet_type::byte_alphabet) {
-                sdsl::int_vector<8> text;
-                sdsl::load_from_file(text, file_map[KEY_TEXT].c_str());
-                size_t n = text.size();
-                text.resize(n + 16); // SSE padding
-                for (size_t i = 0; i < 16; i++)
-                    text[n + i] = 0;
-                sdsl::int_vector<> sa;
-                const uint8_t* T = (const uint8_t*)text.data();
-                if (n < std::numeric_limits<uint32_t>::max()) {
-                    sa.width(32);
-                    sa.resize(n);
-
-                    parallel_sufsort_it<decltype(T), uint32_t>(T, (uint32_t*)sa.data(), n);
-                }
-                else {
-                    sa.width(64);
-                    sa.resize(n);
-                    parallel_sufsort_it<decltype(T), uint64_t>(T, (uint64_t*)sa.data(), n);
-                }
-                sdsl::util::bit_compress(sa);
-                auto sa_path = path + "/" + prefix + KEY_SA;
-                sdsl::store_to_file(sa, sa_path);
-                file_map[KEY_SA] = sa_path;
-            }
-            else {
-                sdsl::int_vector<> text;
-                sdsl::load_from_file(text, file_map[KEY_TEXT].c_str());
-                size_t n = text.size();
-                sdsl::int_vector<> sa;
-                if (n < std::numeric_limits<uint32_t>::max()) {
-                    sa.width(32);
-                    sa.resize(n);
-                    parallel_sufsort_it<decltype(text), uint32_t>(text, (uint32_t*)sa.data(), n);
-                }
-                else {
-                    sa.width(64);
-                    sa.resize(n);
-                    parallel_sufsort_it<decltype(text), uint64_t>(text, (uint64_t*)sa.data(), n);
-                }
-                sdsl::util::bit_compress(sa);
-                auto sa_path = path + "/" + prefix + KEY_SA;
-                sdsl::store_to_file(sa, sa_path);
-                file_map[KEY_SA] = sa_path;
-            }
-        }
         auto stats_file = path + "/" + prefix + KEY_STATS;
         if (utils::file_exists(stats_file)) {
             std::ifstream ifs(path + "/" + prefix + KEY_STATS);
@@ -204,4 +156,53 @@ struct collection {
         return path + "/tmp/" + id + "-" + std::to_string(thread) + "-" + std::to_string(sdsl::util::pid()) + ".sdsl";
     }
 };
+
+void construct_SA(collection& col)
+{
+    auto sa_path = col.path + "/" + col.prefix + KEY_SA;
+    lm_construct_timer timer(KEY_SA);
+    if (col.alphabet == alphabet_type::byte_alphabet) {
+        sdsl::int_vector<8> text;
+        sdsl::load_from_file(text, col.file_map[KEY_TEXT].c_str());
+        size_t n = text.size();
+        text.resize(n + 16); // SSE padding
+        for (size_t i = 0; i < 16; i++)
+            text[n + i] = 0;
+        sdsl::int_vector<> sa;
+        const uint8_t* T = (const uint8_t*)text.data();
+        if (n < std::numeric_limits<uint32_t>::max()) {
+            sa.width(32);
+            sa.resize(n);
+
+            parallel_sufsort_it<decltype(T), uint32_t>(T, (uint32_t*)sa.data(), n);
+        }
+        else {
+            sa.width(64);
+            sa.resize(n);
+            parallel_sufsort_it<decltype(T), uint64_t>(T, (uint64_t*)sa.data(), n);
+        }
+        sdsl::util::bit_compress(sa);
+        sdsl::store_to_file(sa, sa_path);
+        col.file_map[KEY_SA] = sa_path;
+    }
+    else {
+        sdsl::int_vector<> text;
+        sdsl::load_from_file(text, col.file_map[KEY_TEXT].c_str());
+        size_t n = text.size();
+        sdsl::int_vector<> sa;
+        if (n < std::numeric_limits<uint32_t>::max()) {
+            sa.width(32);
+            sa.resize(n);
+            parallel_sufsort_it<decltype(text), uint32_t>(text, (uint32_t*)sa.data(), n);
+        }
+        else {
+            sa.width(64);
+            sa.resize(n);
+            parallel_sufsort_it<decltype(text), uint64_t>(text, (uint64_t*)sa.data(), n);
+        }
+        sdsl::util::bit_compress(sa);
+        sdsl::store_to_file(sa, sa_path);
+        col.file_map[KEY_SA] = sa_path;
+    }
+}
 }

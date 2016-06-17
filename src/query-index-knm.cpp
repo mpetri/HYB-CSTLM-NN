@@ -96,8 +96,10 @@ void run_queries(const t_idx& idx,
     double perplexity = 0;
     uint64_t M = 0;
     std::chrono::nanoseconds total_time(0);
-    // uint64_t ind = 1;
+// uint64_t ind = 1;
+#ifdef ENABLE_CSTLM_TIMINGS
     lm_bench::reset();
+#endif
     for (auto pattern : patterns) {
         uint64_t pattern_size = pattern.size();
         std::string pattern_string;
@@ -119,7 +121,9 @@ void run_queries(const t_idx& idx,
         perplexity += sentenceprob;
         total_time += (stop - start);
     }
+#ifdef ENABLE_CSTLM_TIMINGS
     lm_bench::print();
+#endif
     LOG(INFO) << "Time = "
               << duration_cast<microseconds>(total_time).count() / 1000.0f
               << " ms";
@@ -142,7 +146,9 @@ void run_reranker(const t_idx& idx,
     std::chrono::nanoseconds total_time(0);
     // uint64_t candidate_idx = 1;//line number to find the unconverted sentence
     uint64_t source_idx = idx.vocab.token2id("0");
+#ifdef ENABLE_CSTLM_TIMINGS
     lm_bench::reset();
+#endif
     typename t_idx::pattern_type best;
     uint64_t index = 0;
     std::ofstream output;
@@ -185,7 +191,9 @@ void run_reranker(const t_idx& idx,
         total_time += (stop - start);
     }
     output.close();
+#ifdef ENABLE_CSTLM_TIMINGS
     lm_bench::print();
+#endif
     LOG(INFO) << "Time = "
               << duration_cast<microseconds>(total_time).count() / 1000.0f
               << " ms";
@@ -268,7 +276,6 @@ int execute(collection& col, const cmdargs_t& args)
 int main(int argc, const char* argv[])
 {
     enable_logging = true;
-    sdsl::memory_monitor::start();
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, argv);
@@ -281,7 +288,5 @@ int main(int argc, const char* argv[])
         execute<wordlm>(col, args);
     }
 
-    sdsl::memory_monitor::stop();
-    LOG(INFO) << "MemoryPeak in query Time " << sdsl::memory_monitor::peak()
-              << " bytes.";
+    LOG(INFO) << "MemoryPeak in query Time " << utils::getPeakRSS() << " bytes.";
 }

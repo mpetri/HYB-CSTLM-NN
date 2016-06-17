@@ -72,8 +72,6 @@ void create_and_store(collection& col, bool use_mkn)
 
 int main(int argc, const char* argv[])
 {
-    mem_monitor m("/dev/null", std::chrono::milliseconds(5000));
-
     enable_logging = true;
 
     /* parse command line */
@@ -89,11 +87,10 @@ int main(int argc, const char* argv[])
         create_and_store<wordlm>(col, args.use_mkn);
     }
 
-    auto mem_stats = m.get_current_stats();
-    double peak_mem = mem_stats.VmPeak;
+    double peak_mem = (double)utils::getPeakRSS();
     double text_size_raw = col.raw_size_in_bytes;
     double memory_usage = peak_mem / (text_size_raw + 1.0);
-    LOG(INFO) << "mem usage = " << mem_stats.VmPeak << " bytes";
+    LOG(INFO) << "mem usage = " << utils::getPeakRSS() << " bytes";
     LOG(INFO) << "mem usage = " << memory_usage << "n";
 
     return 0;

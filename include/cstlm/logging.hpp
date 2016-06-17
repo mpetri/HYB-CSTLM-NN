@@ -24,7 +24,6 @@ public:
             std::strftime(tstr, sizeof(tstr), "%F-%H:%M:%S", std::localtime(&now_time));
             operator<<(std::string(tstr) + " [" + getLabel(type) + "] ");
         }
-            
     }
     ~LOG()
     {

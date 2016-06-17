@@ -156,7 +156,9 @@ bool forward_search_wrapper(const t_cst& cst, typename t_cst::node_type& v,
     const typename t_cst::char_type c,
     typename t_cst::size_type& char_pos)
 {
+#ifdef ENABLE_CSTLM_TIMINGS
     auto timer = lm_bench::bench(timer_type::forward_search);
+#endif
     auto ok = forward_search(cst, v, d, c, char_pos);
     return (ok != 0);
 }
@@ -169,7 +171,9 @@ bool backward_search_wrapper(const t_idx& idx, typename t_idx::size_type l,
     typename t_idx::csa_type::size_type& l_res,
     typename t_idx::csa_type::size_type& r_res)
 {
+#ifdef ENABLE_CSTLM_TIMINGS
     auto timer = lm_bench::bench(timer_type::backward_search);
+#endif
     return backward_search(idx.cst.csa, l, r, c, l_res, r_res);
 }
 
@@ -178,7 +182,9 @@ template <class t_idx>
 bool backward_search_wrapper(const t_idx& idx, typename t_idx::cst_type::node_type& v,
     const typename t_idx::csa_type::char_type c)
 {
+#ifdef ENABLE_CSTLM_TIMINGS
     auto timer = lm_bench::bench(timer_type::backward_search);
+#endif
     typename t_idx::size_type l = idx.cst.lb(v), r = idx.cst.rb(v);
     backward_search(idx.cst.csa, l, r, c, l, r);
     if (r >= l)

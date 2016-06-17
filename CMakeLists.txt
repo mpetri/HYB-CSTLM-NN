@@ -6,6 +6,8 @@ project(cstlm CXX C)
 set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
 
+option (TIMINGS "Enable more fine grained timings." OFF) 
+
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
@@ -39,6 +41,14 @@ if( BUILTIN_POPCNT )
     message(STATUS "CPU does support fast popcnt.")
 else()
 	message(STATUS "CPU does NOT support fast popcnt")
+endif()
+
+if( TIMINGS )
+    if( CMAKE_COMPILER_IS_GNUCXX )
+        append_cxx_compiler_flags("-DENABLE_CSTLM_TIMINGS" "GCC" CMAKE_CXX_FLAGS)
+    else()
+        append_cxx_compiler_flags("-DENABLE_CSTLM_TIMINGS" "CLANG" CMAKE_CXX_FLAGS)
+    endif()
 endif()
 
 add_subdirectory(external/sdsl-lite)

@@ -64,6 +64,9 @@ public:
     }
     index_succinct(collection& col, bool is_mkn = false)
     {
+        if (col.file_map.count(KEY_SA) == 0) {
+            construct_SA(col);
+        }
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
         if (!utils::file_exists(cst_file)) {
             lm_construct_timer timer("CST");
@@ -153,8 +156,9 @@ public:
     uint64_t N1PlusBack(const node_type& node, pattern_iterator pattern_begin,
         pattern_iterator) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::N1PlusBack);
-
+#endif
         uint64_t n1plus_back;
         if (m_cst.is_leaf(node)) {
             n1plus_back = 1;
@@ -165,11 +169,11 @@ public:
             n1plus_back = m_precomputed.lookup_b(m_cst, node);
         }
         else {
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
                 m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(
                 m_cst.csa.sigma);
-            static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
+            static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
                 m_cst.csa.sigma);
 
             auto lb = m_cst.lb(node);
@@ -227,8 +231,9 @@ public:
         pattern_iterator pattern_begin,
         pattern_iterator pattern_end) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::N1PlusFrontBack);
-
+#endif
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         if (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node)) {
@@ -264,8 +269,9 @@ public:
     uint64_t N1PlusFront(const node_type& node, pattern_iterator pattern_begin,
         pattern_iterator pattern_end) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::N1PlusFront);
-
+#endif
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         uint64_t N1plus_front;
@@ -291,7 +297,9 @@ public:
         pattern_iterator pattern_end, uint64_t& f1prime,
         uint64_t& f2prime, uint64_t& f3pprime) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::N123PlusFrontPrime);
+#endif
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
         f1prime = f2prime = f3pprime = 0;
@@ -306,9 +314,9 @@ public:
                     auto lb = m_cst.lb(child);
                     auto rb = m_cst.rb(child);
 
-                    static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(m_cst.csa.sigma);
-                    static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(m_cst.csa.sigma);
-                    static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(m_cst.csa.sigma);
+                    static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(m_cst.csa.sigma);
+                    static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(m_cst.csa.sigma);
+                    static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(m_cst.csa.sigma);
                     typename t_cst::csa_type::size_type num_syms = 0;
                     sdsl::interval_symbols(m_cst.csa.wavelet_tree, lb, rb + 1, num_syms, preceding_syms, left, right);
                     if (num_syms == 1)
@@ -330,7 +338,6 @@ public:
                 f2prime++;
             all++; // FIXME: is this right, all is 1? can't see how this might overflow
             f3pprime = all - f1prime - f2prime;
-           
         }
     }
 
@@ -340,7 +347,9 @@ public:
         pattern_iterator pattern_end, uint64_t& n1, uint64_t& n2,
         uint64_t& n3p) const
     {
+#ifdef ENABLE_CSTLM_TIMINGS
         auto timer = lm_bench::bench(timer_type::N123PlusFront);
+#endif
         // ASSUMPTION: node matches the pattern in the forward tree, m_cst
         uint64_t pattern_size = std::distance(pattern_begin, pattern_end);
         bool full_match = (!m_cst.is_leaf(node) && pattern_size == m_cst.depth(node));
@@ -385,10 +394,10 @@ public:
 
     uint32_t compute_contexts(const t_cst& cst, const node_type& node) const
     {
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
             cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
             cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
@@ -421,10 +430,10 @@ public:
     uint64_t compute_contexts(const t_cst& cst, const node_type& node,
         uint64_t& count1, uint64_t& count2) const
     {
-        static std::vector<typename t_cst::csa_type::value_type> preceding_syms(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::value_type> preceding_syms(
             cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> left(cst.csa.sigma);
-        static std::vector<typename t_cst::csa_type::size_type> right(
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> left(cst.csa.sigma);
+        static thread_local std::vector<typename t_cst::csa_type::wavelet_tree_type::size_type> right(
             cst.csa.sigma);
         auto lb = cst.lb(node);
         auto rb = cst.rb(node);
