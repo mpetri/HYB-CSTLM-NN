@@ -17,6 +17,8 @@
 #include "index_succinct.hpp"
 #include "constants.hpp"
 
+#include "logging.hpp"
+
 namespace cstlm {
 
 // Returns the Kneser-Ney probability of a sentence, word at a
@@ -103,10 +105,16 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     bool ok = !unk;
     std::vector<node_type> node_incl_vec({ node_incl });
 
+    LOG(INFO) << "append_symbol -- " << symbol;
+
     // check to see if trigram or smaller is in the cache
     size_t i = 1;
-    for (size_t j = std::min(size, size_t(3)); j >= 1; --j) {
+    for (size_t j = std::min(size, size_t(3)); j >= 1 && ok; --j) {
         std::vector<value_type> pattern(pattern_end - j, pattern_end);
+        LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
+
+        if (j > 1 && pattern.front() == UNKNOWN_SYM)
+            continue;
 
         auto found = m_idx->cache.find(pattern);
         if (found != m_idx->cache.end()) {
@@ -115,11 +123,18 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
             p = found->second.prob;
             i = j+1;
 
-            for (size_t k = 2; k < i; ++k) {
+            auto old_node_excl_it = node_excl_it;
+            for (size_t k = 2; k <= j; ++k) {
                 assert(node_excl_it != m_last_nodes_incl.end());
                 node_excl_it++;
             }
-            break;
+            if (node_excl_it != m_last_nodes_incl.end()) {
+                node_excl = *node_excl_it;
+                break;
+            } else {
+                node_excl_it = old_node_excl_it;
+                continue;
+            }
         }
     }
 
@@ -189,8 +204,11 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
 
+        LOG(INFO) << "\ti=" << i << " node_incl_vec " << node_incl_vec << " node_incl " << node_incl << " prob " << p 
+                            << " node_excl " << node_excl;
+
         // update the cache
-        if (i <= 3) {
+        if (i <= 3 && ok) {
             std::vector<value_type> pattern(pattern_end - i, pattern_end);
             typename t_idx::cache_type data;
             data.node_incl_vec = node_incl_vec;

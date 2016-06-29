@@ -747,7 +747,7 @@ TYPED_TEST(LMPPxTest, PerplexityMKN)
 
 int main(int argc, char* argv[])
 {
-    // enable_logging = true;
+    enable_logging = true;
 
     ::testing::InitGoogleTest(&argc, argv);
 
