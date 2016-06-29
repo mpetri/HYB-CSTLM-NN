@@ -116,13 +116,14 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
             i = j+1;
 
             for (size_t k = 2; k < i; ++k) {
-                node_excl_it++;
                 assert(node_excl_it != m_last_nodes_incl.end());
+                node_excl_it++;
             }
+            break;
         }
     }
 
-    for (/* no-op */; i <= size; ++i) {
+    for (/* no-op */; i <= size && node_excl_it != m_last_nodes_incl.end(); ++i) {
         auto start = pattern_end - i;
         if (i > 1 && *start == UNKNOWN_SYM)
             break;
