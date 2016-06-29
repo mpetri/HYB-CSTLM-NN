@@ -59,3 +59,20 @@ namespace utils {
     }
 }
 }
+
+namespace std
+{
+    template<> struct hash<std::vector<uint64_t>>
+    {
+        typedef std::vector<uint64_t> argument_type;
+        typedef std::size_t result_type;
+        result_type operator()(argument_type const& s) const
+        {
+            std::size_t seed = 0;
+            for (auto& i : s) {
+                seed ^= i + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
+            return seed;
+        }
+    };
+}

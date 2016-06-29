@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <string>
 #include <iomanip>
+#include <unordered_map>
 
 #include "utils.hpp"
 #include "collection.hpp"
@@ -22,6 +23,7 @@ namespace cstlm {
 // time. Words are supplied using the append_symbol method which
 // returns the conditional probability of that word given all
 // previous words.
+
 
 template <class t_idx>
 class LMQueryMKN {
@@ -58,6 +60,7 @@ private:
     std::vector<node_type> m_last_nodes_incl;
     std::deque<value_type> m_pattern;
 };
+
 
 template <class t_idx>
 LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_sentence)
@@ -100,7 +103,26 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     bool ok = !unk;
     std::vector<node_type> node_incl_vec({ node_incl });
 
-    for (unsigned i = 1; i <= size; ++i) {
+    // check to see if trigram or smaller is in the cache
+    size_t i = 1;
+    for (size_t j = std::min(size, size_t(3)); j >= 1; --j) {
+        std::vector<value_type> pattern(pattern_end - j, pattern_end);
+
+        auto found = m_idx->cache.find(pattern);
+        if (found != m_idx->cache.end()) {
+            node_incl_vec = found->second.node_incl_vec;
+            node_incl = node_incl_vec.back();
+            p = found->second.prob;
+            i = j+1;
+
+            for (size_t k = 2; k < i; ++k) {
+                node_excl_it++;
+                assert(node_excl_it != m_last_nodes_incl.end());
+            }
+        }
+    }
+
+    for (/* no-op */; i <= size; ++i) {
         auto start = pattern_end - i;
         if (i > 1 && *start == UNKNOWN_SYM)
             break;
@@ -165,6 +187,15 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         // n3p is dodgy
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
+
+        // update the cache
+        if (i <= 3) {
+            std::vector<value_type> pattern(pattern_end - i, pattern_end);
+            typename t_idx::cache_type data;
+            data.node_incl_vec = node_incl_vec;
+            data.prob = p;
+            m_idx->cache[pattern] = data;
+        }
     }
 
     m_last_nodes_incl = node_incl_vec;
@@ -207,4 +238,6 @@ std::size_t LMQueryMKN<t_idx>::hash() const
     }
     return seed;
 }
+
+
 }

@@ -13,6 +13,7 @@
 
 #include <future>
 
+
 namespace cstlm {
 
 using namespace std::chrono;
@@ -33,6 +34,13 @@ public:
     static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;
     typedef vocab_uncompressed<byte_alphabet> vocab_type;
 
+public:
+    struct LMQueryMKNCacheData
+    {
+        std::vector<node_type> node_incl_vec;
+        double prob;
+    };
+    typedef LMQueryMKNCacheData cache_type;
 private: // data
     cst_type m_cst;
     precomputed_stats m_discounts;
@@ -45,6 +53,8 @@ public:
     const precomputed_stats& discounts = m_discounts;
     const ccounts_type& precomputed = m_precomputed;
 
+
+    mutable std::unordered_map< std::vector<value_type>, LMQueryMKNCacheData > cache;
 public:
     index_succinct() = default;
     index_succinct(index_succinct<t_cst, t_max_ngram_count>&& idx)
