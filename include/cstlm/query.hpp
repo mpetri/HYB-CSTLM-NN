@@ -130,6 +130,9 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
             }
             if (node_excl_it != m_last_nodes_incl.end()) {
                 node_excl = *node_excl_it;
+                LOG(INFO) << "\tcache hit";
+                LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
+                    << " ) = " << p;
                 break;
             } else {
                 node_excl_it = old_node_excl_it;
@@ -204,8 +207,11 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
 
-        LOG(INFO) << "\ti=" << i << " node_incl_vec " << node_incl_vec << " node_incl " << node_incl << " prob " << p 
-                            << " node_excl " << node_excl;
+        //LOG(INFO) << "\ti=" << i << " node_incl_vec " << node_incl_vec << " node_incl " << node_incl << " prob " << p 
+        //                   << " node_excl " << node_excl;
+        LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-i, pattern_end)
+          << " ) = " << p;
+        //LOG(INFO) << "\tprob(" << pattern << " @ " << i << ") = " << p;
 
         // update the cache
         if (i <= 3 && ok) {
@@ -220,6 +226,8 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     m_last_nodes_incl = node_incl_vec;
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
+
+    LOG(INFO) << "prob = " << p;
 
     return log10(p);
 }

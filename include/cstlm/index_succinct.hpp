@@ -500,5 +500,10 @@ public:
         }
         return total_contexts;
     }
+
+    void flush_cache() const
+    {
+        cache.clear();
+    }
 };
 }
