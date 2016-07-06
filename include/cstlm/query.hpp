@@ -105,13 +105,14 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     bool ok = !unk;
     std::vector<node_type> node_incl_vec({ node_incl });
 
-    LOG(INFO) << "append_symbol -- " << symbol;
+    //LOG(INFO) << "append_symbol -- " << symbol;
 
     // check to see if trigram or smaller is in the cache
+    const size_t cache_size = 4;
     size_t i = 1;
-    for (size_t j = std::min(size, size_t(3)); j >= 1 && ok; --j) {
+    for (size_t j = std::min(size, cache_size); j >= 1 && ok; --j) {
         std::vector<value_type> pattern(pattern_end - j, pattern_end);
-        LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
+        //LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
 
         if (j > 1 && pattern.front() == UNKNOWN_SYM)
             continue;
@@ -130,9 +131,9 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
             }
             if (node_excl_it != m_last_nodes_incl.end()) {
                 node_excl = *node_excl_it;
-                LOG(INFO) << "\tcache hit";
-                LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
-                    << " ) = " << p;
+                //LOG(INFO) << "\tcache hit";
+                //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
+                //    << " ) = " << p;
                 break;
             } else {
                 node_excl_it = old_node_excl_it;
@@ -209,12 +210,12 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
 
         //LOG(INFO) << "\ti=" << i << " node_incl_vec " << node_incl_vec << " node_incl " << node_incl << " prob " << p 
         //                   << " node_excl " << node_excl;
-        LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-i, pattern_end)
-          << " ) = " << p;
+        //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-i, pattern_end)
+        //  << " ) = " << p;
         //LOG(INFO) << "\tprob(" << pattern << " @ " << i << ") = " << p;
 
         // update the cache
-        if (i <= 3 && ok) {
+        if (i <= cache_size && ok) {
             std::vector<value_type> pattern(pattern_end - i, pattern_end);
             typename t_idx::cache_type data;
             data.node_incl_vec = node_incl_vec;
@@ -227,7 +228,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
 
-    LOG(INFO) << "prob = " << p;
+    //LOG(INFO) << "prob = " << p;
 
     return log10(p);
 }
