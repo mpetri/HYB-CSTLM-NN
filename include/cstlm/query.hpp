@@ -39,7 +39,7 @@ public:
     {
         m_idx = nullptr;
     }
-    LMQueryMKN(const index_type* idx, uint64_t ngramsize, bool start_sentence = true);
+    LMQueryMKN(const index_type* idx, uint64_t ngramsize, bool start_sentence = true,bool caching = true);
     double append_symbol(const value_type& symbol);
 
     bool operator==(const LMQueryMKN& other) const;
@@ -61,13 +61,15 @@ private:
     uint64_t m_ngramsize;
     std::vector<node_type> m_last_nodes_incl;
     std::deque<value_type> m_pattern;
+    bool m_use_caching;
 };
 
 
 template <class t_idx>
-LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_sentence)
+LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_sentence, bool caching)
     : m_idx(idx)
     , m_ngramsize(ngramsize)
+    , m_use_caching(caching)
 {
     auto root = m_idx->cst.root();
     m_last_nodes_incl.push_back(root);
@@ -108,36 +110,38 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     //LOG(INFO) << "append_symbol -- " << symbol;
 
     // check to see if trigram or smaller is in the cache
-    const size_t cache_size = 4;
+    const size_t cache_size = 3;
     size_t i = 1;
-    for (size_t j = std::min(size, cache_size); j >= 1 && ok; --j) {
-        std::vector<value_type> pattern(pattern_end - j, pattern_end);
-        //LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
+    if(m_use_caching) {
+        for (size_t j = std::min(size, cache_size); j >= 1 && ok; --j) {
+            std::vector<value_type> pattern(pattern_end - j, pattern_end);
+            //LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
 
-        if (j > 1 && pattern.front() == UNKNOWN_SYM)
-            continue;
-
-        auto found = m_idx->cache.find(pattern);
-        if (found != m_idx->cache.end()) {
-            node_incl_vec = found->second.node_incl_vec;
-            node_incl = node_incl_vec.back();
-            p = found->second.prob;
-            i = j+1;
-
-            auto old_node_excl_it = node_excl_it;
-            for (size_t k = 2; k <= j; ++k) {
-                assert(node_excl_it != m_last_nodes_incl.end());
-                node_excl_it++;
-            }
-            if (node_excl_it != m_last_nodes_incl.end()) {
-                node_excl = *node_excl_it;
-                //LOG(INFO) << "\tcache hit";
-                //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
-                //    << " ) = " << p;
-                break;
-            } else {
-                node_excl_it = old_node_excl_it;
+            if (j > 1 && pattern.front() == UNKNOWN_SYM)
                 continue;
+
+            auto found = m_idx->cache.find(pattern);
+            if (found != m_idx->cache.end()) {
+                node_incl_vec = found->second.node_incl_vec;
+                node_incl = node_incl_vec.back();
+                p = found->second.prob;
+                i = j+1;
+
+                auto old_node_excl_it = node_excl_it;
+                for (size_t k = 2; k <= j; ++k) {
+                    assert(node_excl_it != m_last_nodes_incl.end());
+                    node_excl_it++;
+                }
+                if (node_excl_it != m_last_nodes_incl.end()) {
+                    node_excl = *node_excl_it;
+                    //LOG(INFO) << "\tcache hit";
+                    //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
+                    //    << " ) = " << p;
+                    break;
+                } else {
+                    node_excl_it = old_node_excl_it;
+                    continue;
+                }
             }
         }
     }
@@ -215,7 +219,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         //LOG(INFO) << "\tprob(" << pattern << " @ " << i << ") = " << p;
 
         // update the cache
-        if (i <= cache_size && ok) {
+        if (m_use_caching && i <= cache_size && ok) {
             std::vector<value_type> pattern(pattern_end - i, pattern_end);
             typename t_idx::cache_type data;
             data.node_incl_vec = node_incl_vec;
