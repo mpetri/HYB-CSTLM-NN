@@ -40,7 +40,7 @@ public:
         m_idx = nullptr;
     }
     LMQueryMKN(const index_type* idx, uint64_t ngramsize, bool start_sentence = true,bool caching = true);
-    double append_symbol(const value_type& symbol);
+    double append_symbol(const value_type& symbol,bool log_prob = true);
 
     bool operator==(const LMQueryMKN& other) const;
 
@@ -56,7 +56,7 @@ public:
         return m_pattern.size() == 1 && m_pattern.back() == PAT_START_SYM;
     }
 
-private:
+public:
     const index_type* m_idx;
     uint64_t m_ngramsize;
     std::vector<node_type> m_last_nodes_incl;
@@ -84,7 +84,7 @@ LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_s
 }
 
 template <class t_idx>
-double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
+double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_log)
 {
     if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM)
         return log10(1);
@@ -219,13 +219,13 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         //LOG(INFO) << "\tprob(" << pattern << " @ " << i << ") = " << p;
 
         // update the cache
-        if (m_use_caching && i <= cache_size && ok) {
-            std::vector<value_type> pattern(pattern_end - i, pattern_end);
-            typename t_idx::cache_type data;
-            data.node_incl_vec = node_incl_vec;
-            data.prob = p;
-            m_idx->cache[pattern] = data;
-        }
+        // if (m_use_caching && i <= cache_size && ok) {
+        //     std::vector<value_type> pattern(pattern_end - i, pattern_end);
+        //     typename t_idx::cache_type data;
+        //     data.node_incl_vec = node_incl_vec;
+        //     data.prob = p;
+        //     m_idx->cache[pattern] = data;
+        // }
     }
 
     m_last_nodes_incl = node_incl_vec;
@@ -233,8 +233,9 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         m_pattern.pop_front();
 
     //LOG(INFO) << "prob = " << p;
-
-    return log10(p);
+    if(perform_log)
+        return log10(p);
+    return p;
 }
 
 template <class t_idx>

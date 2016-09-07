@@ -740,8 +740,6 @@ TYPED_TEST(LMPPxTest, PerplexityMKN)
     int last_order = -1;
     for (unsigned int i = 0; i < this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
-        if (kenlm.order != last_order) 
-            this->idx.flush_cache();
         last_order = kenlm.order;
         double perplexity = sentence_perplexity_kneser_ney(
             this->idx, kenlm.pattern, kenlm.order, true);

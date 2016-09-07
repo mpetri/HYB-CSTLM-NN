@@ -68,6 +68,7 @@ void create_and_store(collection& col, bool use_mkn)
         LOG(INFO) << "writing index to file : " << output_file;
         auto bytes = sdsl::serialize(idx, ofs);
         LOG(INFO) << "index size : " << bytes / (1024 * 1024) << " MB";
+        sdsl::write_structure<sdsl::HTML_FORMAT>(idx,output_file+".html");
     }
     else {
         LOG(FATAL) << "cannot write index to file : " << output_file;

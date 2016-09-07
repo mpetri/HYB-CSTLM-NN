@@ -7,7 +7,7 @@
 #include "constants.hpp"
 #include "compressed_counts.hpp"
 #include "timings.hpp"
-//#include "sentinel_flag.hpp"
+#include "prob_cache.hpp"
 
 #include <sdsl/suffix_arrays.hpp>
 
@@ -18,7 +18,7 @@ namespace cstlm {
 
 using namespace std::chrono;
 
-template <class t_cst, uint32_t t_max_ngram_count = 10>
+template <class t_cst, uint32_t t_max_ngram_count = 10, uint32_t t_mgram_cache = 3, uint32_t t_cache_entries = 2000000>
 class index_succinct {
 public:
     typedef sdsl::int_vector<>::size_type size_type;
@@ -33,28 +33,21 @@ public:
     typedef compressed_counts<> ccounts_type;
     static constexpr bool byte_alphabet = t_cst::csa_type::alphabet_category::WIDTH == 8;
     typedef vocab_uncompressed<byte_alphabet> vocab_type;
-
+    typedef prob_cache<cst_type,t_mgram_cache,t_cache_entries> prob_cache_type;
 public:
-    struct LMQueryMKNCacheData
-    {
-        std::vector<node_type> node_incl_vec;
-        double prob;
-    };
-    typedef LMQueryMKNCacheData cache_type;
+
 private: // data
     cst_type m_cst;
     precomputed_stats m_discounts;
     ccounts_type m_precomputed;
     vocab_type m_vocab;
-
+    prob_cache_type m_static_prob_cache;
 public:
     const vocab_type& vocab = m_vocab;
     const cst_type& cst = m_cst;
     const precomputed_stats& discounts = m_discounts;
     const ccounts_type& precomputed = m_precomputed;
-
-
-    mutable std::unordered_map< std::vector<value_type>, LMQueryMKNCacheData > cache;
+    const prob_cache_type& cache = m_static_prob_cache;
 public:
     index_succinct() = default;
     index_succinct(index_succinct<t_cst, t_max_ngram_count>&& idx)
@@ -63,6 +56,7 @@ public:
         m_cst = std::move(idx.m_cst);
         m_discounts = std::move(idx.m_discounts);
         m_precomputed = std::move(idx.m_precomputed);
+        m_static_prob_cache = std::move(idx.m_static_prob_cache);
     }
     index_succinct<t_cst, t_max_ngram_count>& operator=(index_succinct<t_cst, t_max_ngram_count>&& idx)
     {
@@ -70,6 +64,7 @@ public:
         m_cst = std::move(idx.m_cst);
         m_discounts = std::move(idx.m_discounts);
         m_precomputed = std::move(idx.m_precomputed);
+        m_static_prob_cache = std::move(idx.m_static_prob_cache);
         return (*this);
     }
     index_succinct(collection& col, bool is_mkn = false)
@@ -125,6 +120,22 @@ public:
             lm_construct_timer timer("VOCAB");
             m_vocab = vocab_type(col);
         }
+        
+        // at the end when the index if functional we create the probability
+        // cache for low order m-grams
+        auto probcache_file = col.path + "/tmp/PROBCACHE-MAXM="
+            + std::to_string(t_mgram_cache) + "-BYTE="
+            + std::to_string(byte_alphabet) + "-"
+            + sdsl::util::class_to_hash(m_static_prob_cache) + ".sdsl";
+        if (!utils::file_exists(probcache_file)) {
+            lm_construct_timer timer("PROB_CACHE");
+            m_static_prob_cache = prob_cache_type(col,is_mkn,*this);
+            std::ofstream ofs(probcache_file);
+            m_static_prob_cache.serialize(ofs,m_cst);
+        } else {
+            std::ifstream ifs(probcache_file);
+            m_static_prob_cache.load(ifs,m_cst);
+        }
     }
 
     size_type serialize(std::ostream& out, sdsl::structure_tree_node* v = NULL,
@@ -136,6 +147,7 @@ public:
         written_bytes += m_discounts.serialize(out, child, "Precomputed_Stats");
         written_bytes += m_precomputed.serialize(out, child, "Prestored N1plusfrontback");
         written_bytes += sdsl::serialize(m_vocab, out, child, "Vocabulary");
+        written_bytes += m_static_prob_cache.serialize(out,m_cst,child, "Prob_Cache");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -146,6 +158,7 @@ public:
         sdsl::load(m_discounts, in);
         sdsl::load(m_precomputed, in);
         sdsl::load(m_vocab, in);
+        m_static_prob_cache.load(in,m_cst);
     }
 
     void swap(index_succinct& a)
@@ -155,6 +168,7 @@ public:
             std::swap(m_discounts, a.m_discounts);
             std::swap(m_precomputed, a.m_precomputed);
             m_vocab.swap(a.m_vocab);
+            m_static_prob_cache.swap(a.m_static_prob_cache);
         }
     }
 
@@ -499,11 +513,6 @@ public:
             }
         }
         return total_contexts;
-    }
-
-    void flush_cache() const
-    {
-        cache.clear();
     }
 };
 }
