@@ -50,13 +50,13 @@ protected:
     {
         {
             if (std::is_same<t_idx, index_succinct<default_cst_byte_type> >::value == true) {
-                col = collection(col_path, alphabet_type::byte_alphabet);
+                col = collection(col_path, alphabet_type::byte_alphabet,false);
             }
             else {
-                col = collection(col_path, alphabet_type::word_alphabet);
+                col = collection(col_path, alphabet_type::word_alphabet,false);
             }
-            idx = t_idx(col, true);
-            idx.print_params(true, 10);
+            idx = t_idx(col, true,false);
+            // idx.print_params(true, 10);
         }
     }
     t_idx idx;
@@ -96,9 +96,9 @@ protected:
         // std::cout << "CONSTRUCTING LMTest: SetUp() for object " << (void*) this
         // << std::endl;
         {
-            col = collection(col_path, alphabet_type::word_alphabet);
-            idx = t_idx(col, true);
-            idx.print_params(true, 10);
+            col = collection(col_path, alphabet_type::word_alphabet,false);
+            idx = t_idx(col, true,false);
+            // idx.print_params(true, 10);
         }
 
         load_pplx_triplets(srilm_path, srilm_triplets);
@@ -737,13 +737,22 @@ TYPED_TEST(LMPPxTest, Perplexity)
 
 TYPED_TEST(LMPPxTest, PerplexityMKN)
 {
-    int last_order = -1;
-    for (unsigned int i = 0; i < this->kenlm_triplets_mkn.size(); i++) {
+    for (unsigned int i = 23; i < 24 /*this->kenlm_triplets_mkn.size()*/; i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
-        last_order = kenlm.order;
         double perplexity = sentence_perplexity_kneser_ney(
-            this->idx, kenlm.pattern, kenlm.order, true);
+            this->idx, kenlm.pattern, kenlm.order, true,false);
         EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
+    }
+}
+
+TYPED_TEST(LMPPxTest, PerplexityMKN_Cache)
+{
+    for (unsigned int i = 23; i <  24 /*this->kenlm_triplets_mkn.size()*/; i++) {
+        auto kenlm = this->kenlm_triplets_mkn[i];
+        double perplexity = sentence_perplexity_kneser_ney(
+            this->idx, kenlm.pattern, kenlm.order, true,true);
+        EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
+        LOG(INFO) << "done " << i;
     }
 }
 

@@ -109,7 +109,7 @@ void run_queries(const t_idx& idx,
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn,true);
         auto stop = clock::now();
 
         // std::ostringstream sp("", std::ios_base::ate);
@@ -178,7 +178,7 @@ void run_reranker(const t_idx& idx,
         pattern.insert(pattern.begin(), PAT_START_SYM);
         // run the query
         auto start = clock::now();
-        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
+        double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn,true);
         auto stop = clock::now();
 
         perplexity = pow(10, -sentenceprob / M);

@@ -40,7 +40,10 @@ public:
         m_idx = nullptr;
     }
     LMQueryMKN(const index_type* idx, uint64_t ngramsize, bool start_sentence = true,bool caching = true);
-    double append_symbol(const value_type& symbol,bool log_prob = true);
+    double append_symbol(const value_type& symbol);
+    
+    template<class t_cache>
+    double append_symbol_fill_cache(const value_type& symbol,t_cache& cache);
 
     bool operator==(const LMQueryMKN& other) const;
 
@@ -55,6 +58,9 @@ public:
     {
         return m_pattern.size() == 1 && m_pattern.back() == PAT_START_SYM;
     }
+    
+    std::string pattern_to_str(std::vector<value_type>& pat);
+    std::string niv_to_str(std::vector<node_type>& niv);
 
 public:
     const index_type* m_idx;
@@ -84,10 +90,35 @@ LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_s
 }
 
 template <class t_idx>
-double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_log)
+std::string LMQueryMKN<t_idx>::pattern_to_str(std::vector<value_type>& pat)
 {
-    if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM)
+    std::string pat_str = "[";
+    for(size_t i=0;i<pat.size()-1;i++) {
+        pat_str += std::to_string(pat[i]) + ",";
+    }
+    return pat_str + std::to_string(pat.back()) + "]";
+}
+
+template <class t_idx>
+std::string LMQueryMKN<t_idx>::niv_to_str(std::vector<node_type>& niv)
+{
+    std::string niv_str = "[";
+    for(size_t i=0;i<niv.size()-1;i++) {
+        size_t lb = m_idx->cst.lb(niv[i]);
+        size_t rb = m_idx->cst.rb(niv[i]);
+        niv_str += "<"+ std::to_string(lb) + "," + std::to_string(rb) + ">";
+    }
+    size_t lb = m_idx->cst.lb(niv.back());
+    size_t rb = m_idx->cst.rb(niv.back());
+    return niv_str +  "<"+ std::to_string(lb) + "," + std::to_string(rb) + ">" + "]";
+}
+
+template <class t_idx>
+double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
+{
+    if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM) {
         return log10(1);
+    }
 
     m_pattern.push_back(symbol);
     while (m_ngramsize > 0 && m_pattern.size() > m_ngramsize)
@@ -107,25 +138,35 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_lo
     bool ok = !unk;
     std::vector<node_type> node_incl_vec({ node_incl });
 
-    //LOG(INFO) << "append_symbol -- " << symbol;
-
-    // check to see if trigram or smaller is in the cache
-    const size_t cache_size = 3;
+    size_t cache_size = m_idx->cache.max_mgram_cache_len;
     size_t i = 1;
     if(m_use_caching) {
-        for (size_t j = std::min(size, cache_size); j >= 1 && ok; --j) {
+        size_t lookup_size = size;
+        LOG(INFO) << "cache size = " << cache_size;
+        LOG(INFO) << "size = " << size;
+        LOG(INFO) << "ngramsize = " << m_ngramsize;
+        
+        // we cant look up the highest order as we store the middle order only
+        if( m_ngramsize == lookup_size ) {
+            lookup_size--;
+            // LOG(INFO) << "ngram == lookup size -> decrease lookup size";
+        }
+        
+        for (size_t j = std::min(lookup_size, cache_size); j >= 1 && ok; --j) {
+            // LOG(INFO) << "j = " << j;
             std::vector<value_type> pattern(pattern_end - j, pattern_end);
-            //LOG(INFO) << "\tsearching cache for pattern -- " << pattern;
-
             if (j > 1 && pattern.front() == UNKNOWN_SYM)
                 continue;
 
             auto found = m_idx->cache.find(pattern);
             if (found != m_idx->cache.end()) {
+                // LOG(INFO) << "found prob!";
                 node_incl_vec = found->second.node_incl_vec;
                 node_incl = node_incl_vec.back();
                 p = found->second.prob;
                 i = j+1;
+                
+                LOG(INFO) << j << " CACHED_PROB("<< pattern_to_str(pattern) << "," << niv_to_str(node_incl_vec) <<") = " << p;
 
                 auto old_node_excl_it = node_excl_it;
                 for (size_t k = 2; k <= j; ++k) {
@@ -134,9 +175,6 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_lo
                 }
                 if (node_excl_it != m_last_nodes_incl.end()) {
                     node_excl = *node_excl_it;
-                    //LOG(INFO) << "\tcache hit";
-                    //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-j, pattern_end)
-                    //    << " ) = " << p;
                     break;
                 } else {
                     node_excl_it = old_node_excl_it;
@@ -148,8 +186,114 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_lo
 
     for (/* no-op */; i <= size && node_excl_it != m_last_nodes_incl.end(); ++i) {
         auto start = pattern_end - i;
-        if (i > 1 && *start == UNKNOWN_SYM)
+        if (i > 1 && *start == UNKNOWN_SYM) {
             break;
+        }
+        if (ok) {
+            ok = backward_search_wrapper(*m_idx, node_incl, *start);
+            if (ok)
+                node_incl_vec.push_back(node_incl);
+        }
+
+        // recycle the node_incl matches from the last call to append_symbol
+        // to serve as the node_excl values
+        if (i >= 2) {
+            node_excl_it++;
+            if (node_excl_it == m_last_nodes_incl.end()) {
+                break;
+            }
+            else {
+                node_excl = *node_excl_it;
+            }
+        }
+
+        double D1, D2, D3p;
+        m_idx->mkn_discount(i, D1, D2, D3p, i == 1 || i != m_ngramsize);
+
+        double c, d;
+        if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
+            c = (ok) ? m_idx->cst.size(node_incl) : 0;
+            d = m_idx->cst.size(node_excl);
+        }
+        else if (i == 1 || m_ngramsize == 1) {
+            c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
+            d = (double)m_idx->discounts.counts.N1plus_dotdot;
+        }
+        else {
+            c = (ok) ? m_idx->N1PlusBack(node_incl, start, pattern_end) : 0;
+            d = m_idx->N1PlusFrontBack(node_excl, start, pattern_end - 1);
+        }
+
+        if (c == 1) {
+            c -= D1;
+        }
+        else if (c == 2) {
+            c -= D2;
+        }
+        else if (c >= 3) {
+            c -= D3p;
+        }
+
+        uint64_t n1 = 0, n2 = 0, n3p = 0;
+        if ((i == m_ngramsize && m_ngramsize != 1) || (*start == PAT_START_SYM)) {
+            m_idx->N123PlusFront(node_excl, start, pattern_end - 1, n1, n2, n3p);
+        }
+        else if (i == 1 || m_ngramsize == 1) {
+            n1 = (double)m_idx->discounts.counts.n1_cnt[1];
+            n2 = (double)m_idx->discounts.counts.n2_cnt[1];
+            n3p = (m_idx->vocab_size() - 2) - (n1 + n2);
+        }
+        else {
+            m_idx->N123PlusFrontPrime(node_excl, start, pattern_end - 1, n1, n2, n3p);
+        }
+
+        // n3p is dodgy
+        double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
+        p = (c + gamma * p) / d;
+        
+        std::vector<value_type> tmppat(pattern_end - i, pattern_end);
+        LOG(INFO) << i << " PROB("<< pattern_to_str(tmppat) << "," << niv_to_str(node_incl_vec)  << ") = <" << p << "," << gamma << "," << c << "," << d << ">";
+    }
+
+    m_last_nodes_incl = node_incl_vec;
+    while (m_pattern.size() > m_last_nodes_incl.size())
+        m_pattern.pop_front();
+
+    return log10(p);
+}
+
+
+template<class t_idx>
+template<class t_cache>
+double LMQueryMKN<t_idx>::append_symbol_fill_cache(const value_type& symbol,t_cache& cache)
+{
+    if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM) {
+        return 1.0;
+    }
+
+    m_pattern.push_back(symbol);
+    while (m_ngramsize > 0 && m_pattern.size() > m_ngramsize)
+        m_pattern.pop_front();
+    std::vector<value_type> pattern(m_pattern.begin(), m_pattern.end());
+
+    // fast way, tracking state
+    double p = 1.0 / (m_idx->vocab.size() - 4);
+    node_type node_incl = m_idx->cst.root(); // v_F^all matching the full pattern, including last item
+    auto node_excl_it = m_last_nodes_incl.begin(); // v_F     matching only the context, excluding last item
+    node_type node_excl = *node_excl_it;
+    auto pattern_begin = pattern.begin();
+    auto pattern_end = pattern.end();
+
+    size_t size = std::distance(pattern_begin, pattern_end);
+    bool unk = (*(pattern_end - 1) == UNKNOWN_SYM);
+    bool ok = !unk;
+    std::vector<node_type> node_incl_vec({ node_incl });
+
+    for (size_t i = 1; i <= size && node_excl_it != m_last_nodes_incl.end(); ++i) {
+        auto start = pattern_end - i;
+        if (i > 1 && *start == UNKNOWN_SYM) {
+            break;
+        }
         if (ok) {
             ok = backward_search_wrapper(*m_idx, node_incl, *start);
             if (ok)
@@ -212,29 +356,17 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol,bool perform_lo
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
 
-        //LOG(INFO) << "\ti=" << i << " node_incl_vec " << node_incl_vec << " node_incl " << node_incl << " prob " << p 
-        //                   << " node_excl " << node_excl;
-        //LOG(INFO) << "\tprob( "<< std::vector<value_type>(pattern_end-i, pattern_end)
-        //  << " ) = " << p;
-        //LOG(INFO) << "\tprob(" << pattern << " @ " << i << ") = " << p;
-
         // update the cache
-        // if (m_use_caching && i <= cache_size && ok) {
-        //     std::vector<value_type> pattern(pattern_end - i, pattern_end);
-        //     typename t_idx::cache_type data;
-        //     data.node_incl_vec = node_incl_vec;
-        //     data.prob = p;
-        //     m_idx->cache[pattern] = data;
-        // }
+        if (ok) {
+            std::vector<value_type> tmppat(pattern_end - i, pattern_end);
+            LOG(INFO) << m_ngramsize << " STORE_PROB("<< pattern_to_str(tmppat) <<"," << niv_to_str(node_incl_vec) <<") = <" << p << "," << gamma << "," << c << "," << d << ">";
+            cache.add_entry(tmppat,node_incl_vec,p);
+        }
     }
-
     m_last_nodes_incl = node_incl_vec;
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
-
-    //LOG(INFO) << "prob = " << p;
-    if(perform_log)
-        return log10(p);
+        
     return p;
 }
 

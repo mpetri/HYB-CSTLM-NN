@@ -67,7 +67,7 @@ public:
         m_static_prob_cache = std::move(idx.m_static_prob_cache);
         return (*this);
     }
-    index_succinct(collection& col, bool is_mkn = false)
+    index_succinct(collection& col, bool is_mkn = false, bool debug_output = true)
     {
         if (col.file_map.count(KEY_SA) == 0) {
             construct_SA(col);
@@ -98,7 +98,7 @@ public:
             lm_construct_timer timer("DISCOUNTS");
             m_discounts = precomputed_stats(col, m_cst, t_max_ngram_count);
             sdsl::store_to_file(m_discounts, discounts_file);
-            m_discounts.print(is_mkn, t_max_ngram_count);
+            if(debug_output) m_discounts.print(is_mkn, t_max_ngram_count);
         }
         else {
             sdsl::load_from_file(m_discounts, discounts_file);
@@ -117,19 +117,19 @@ public:
         }
 
         {
-            lm_construct_timer timer("VOCAB");
             m_vocab = vocab_type(col);
         }
         
         // at the end when the index if functional we create the probability
         // cache for low order m-grams
         auto probcache_file = col.path + "/tmp/PROBCACHE-MAXM="
-            + std::to_string(t_mgram_cache) + "-BYTE="
+            + std::to_string(t_mgram_cache) + "-MAXC="
+            + std::to_string(t_max_ngram_count) + "-BYTE="
             + std::to_string(byte_alphabet) + "-"
             + sdsl::util::class_to_hash(m_static_prob_cache) + ".sdsl";
         if (!utils::file_exists(probcache_file)) {
             lm_construct_timer timer("PROB_CACHE");
-            m_static_prob_cache = prob_cache_type(col,is_mkn,*this);
+            m_static_prob_cache = prob_cache_type(*this);
             std::ofstream ofs(probcache_file);
             m_static_prob_cache.serialize(ofs,m_cst);
         } else {

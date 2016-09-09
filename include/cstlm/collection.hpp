@@ -47,7 +47,7 @@ struct collection {
 
     std::map<std::string, std::string> file_map;
     collection() = default;
-    collection(const std::string& p, alphabet_type a = alphabet_type::unknown_alphabet)
+    collection(const std::string& p, alphabet_type a = alphabet_type::unknown_alphabet,bool output = true)
         : path(p + "/")
     {
         if (!utils::directory_exists(path)) {
@@ -80,7 +80,7 @@ struct collection {
             auto file_path = path + "/" + prefix + key;
             if (utils::file_exists(file_path)) {
                 file_map[key] = file_path;
-                LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
+                if(output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
         }
         auto stats_file = path + "/" + prefix + KEY_STATS;

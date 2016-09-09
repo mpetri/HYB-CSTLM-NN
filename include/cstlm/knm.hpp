@@ -23,11 +23,11 @@ namespace cstlm {
 template <class t_idx, class t_pattern>
 double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
     uint64_t& /*M*/, uint64_t ngramsize,
-    bool ismkn)
+    bool ismkn,bool use_cache)
 {
     if (ismkn) {
         double final_score = 0;
-        LMQueryMKN<t_idx> query(&idx, ngramsize);
+        LMQueryMKN<t_idx> query(&idx, ngramsize,true,use_cache);
         for (const auto& word : word_vec) {
             final_score += query.append_symbol(word);
             //LOG(INFO) << "\tprob: " << idx.m_vocab.id2token(word) << " is: " << prob;
@@ -48,14 +48,14 @@ double sentence_logprob_kneser_ney(const t_idx& idx, const t_pattern& word_vec,
 
 template <class t_idx, class t_pattern>
 double sentence_perplexity_kneser_ney(const t_idx& idx, t_pattern& pattern,
-    uint32_t ngramsize, bool ismkn)
+    uint32_t ngramsize, bool ismkn,bool use_cache = true)
 {
     auto pattern_size = pattern.size();
     pattern.push_back(PAT_END_SYM);
     pattern.insert(pattern.begin(), PAT_START_SYM);
     // run the query
     uint64_t M = pattern_size + 1;
-    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn);
+    double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn,use_cache);
     double perplexity = pow(10, -(1 / (double)M) * sentenceprob);
     return perplexity;
 }
