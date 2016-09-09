@@ -107,6 +107,8 @@ public:
         
         LMQueryMKN<t_idx> qmkn(&idx,max_compute_ngram_len, false, false);
         std::vector<value_type> pattern;
+        std::vector<LMQueryMKN<t_idx>> stack;
+        stack.push_back(qmkn);
         while(itr != end) {
             if (itr.visit() == 1) {
                 /* get nodes involved */
@@ -117,34 +119,24 @@ public:
                                               : (max_mgram_cache_len);
                 uint32_t add_depth = std::min(depth,max_mgram_cache_len);
            
-                bool skip = false;
+                LMQueryMKN<t_idx> cur = stack.back();
                 
                 double prob = 0;
                 for(size_t i=parent_depth;i<add_depth;i++) {
                     uint32_t sym = cst.edge(node,i+1);
-                    prob = qmkn.append_symbol_fill_cache(sym,*this);
+                    prob = cur.append_symbol_fill_cache(sym,*this);
                 }
+                bool skip = false;
                 if(prob < tmp_cache_pq.top().prob ) {
                     skip = true;
                 }
                 if (skip || add_depth >= max_mgram_cache_len) {
-                    for(size_t i=parent_depth;i<add_depth;i++) {
-                        qmkn.m_pattern.pop_back();
-                        qmkn.m_last_nodes_incl.pop_back();
-                    }
                     itr.skip_subtree();
+                } else {
+                    stack.push_back(cur);
                 }
             } else {
-                auto node = *itr;
-                auto parent = cst.parent(node);
-                auto parent_depth = cst.depth(parent);
-                uint32_t depth = (!cst.is_leaf(node)) ? cst.depth(node)
-                                              : (max_mgram_cache_len);
-                uint32_t add_depth = std::min(depth,max_mgram_cache_len);
-                for(size_t i=parent_depth;i<add_depth;i++) {
-                    qmkn.m_pattern.pop_back();
-                    qmkn.m_last_nodes_incl.pop_back();
-                }
+                stack.pop_back();
             }
             ++itr;
         }
@@ -206,8 +198,6 @@ public:
         written_bytes += sdsl::serialize(pattern_data, out, child, "pattern_data");
         written_bytes += sdsl::serialize(pattern_node_data, out, child, "pattern_node_data");
         
-        LOG(INFO) << "STORE " << pattern_lens.size() << " cache entries";
-        
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -216,7 +206,6 @@ public:
     {
         sdsl::int_vector<> pattern_lens;
         pattern_lens.load(in);
-        LOG(INFO) << "LOAD " << pattern_lens.size() << " cache entries";
         std::vector<double> probabilities;
         sdsl::load(probabilities,in);
         sdsl::int_vector<> pattern_data;

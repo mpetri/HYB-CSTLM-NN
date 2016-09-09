@@ -14,9 +14,10 @@ typedef testing::Types<cstlm::index_succinct<default_cst_byte_type>,
     cstlm::index_succinct<cstlm::default_cst_int_type> > AllImplementations;
 
 struct triplet {
+    int order = 0;
+    double perplexity = 0.0;
     std::vector<uint64_t> pattern;
-    int order;
-    double perplexity;
+    triplet(int o,double p,std::vector<uint64_t>& pat) : order(o), perplexity(p), pattern(pat) {}
 };
 
 // helper function to hash tuples
@@ -76,17 +77,28 @@ protected:
         std::ifstream file(path);
         std::string line;
         while (std::getline(file, line)) {
+            
             std::istringstream iss(line);
             std::vector<std::string> x = split(line, '@');
-            triplet tri;
+            
             std::vector<std::string> x2 = split(x[0], ' ');
             std::vector<uint64_t> pattern;
             for (std::string word : x2) {
-                pattern.push_back(idx.vocab.token2id(word, UNKNOWN_SYM));
+                uint64_t tokid = idx.vocab.token2id(word, UNKNOWN_SYM);
+                pattern.push_back(tokid);
             }
-            tri.pattern = pattern;
-            tri.order = std::stoi(x[1]);
-            tri.perplexity = std::stod(x[2]);
+            std::string order_str = x[1];
+            std::string pplx_str = x[2];
+            int order = 0;
+            double pplx = 0.0f;
+            try {
+                order = std::stoi(order_str);
+                pplx = std::stod(pplx_str);
+            } catch(...) {
+                LOG(ERROR) << "error reading pplx triplets";
+            }
+            
+            triplet tri(order,pplx,pattern);            
             out.push_back(tri);
         }
     }
@@ -586,143 +598,6 @@ TYPED_TEST(LMTest, N123PlusFront)
     }
 }
 
-#if 0
-TYPED_TEST(LMTest, N123PlusBack)
-{
-    // (1) get the text
-    std::vector<uint64_t> text;
-    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
-              std::back_inserter(text));
-
-    // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5; cgram++) {
-        // (3) determine all valid ngrams and their actual N1PlusFront counts
-        typedef std::map<uint64_t, uint64_t> t_symbol_counts;
-        std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
-        /* compute N1PlusFront c-gram stats */
-        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 0; i < (text.size() - 3) - cgram; i++) { //FIXME: remove -3 and it fails this test twice, leave -3 it fails this test once
-            std::vector<uint64_t> cur_gram(cgram);
-            auto beg = text.begin() + i;
-            std::copy(beg, beg + cgram, cur_gram.begin());
-
-            if (i > 0 && text[i - 1] != EOS_SYM) {
-                auto preceeding_syms = ngram_counts[cur_gram];
-                preceeding_syms[text[i - 1]] += 1;
-                ngram_counts[cur_gram] = preceeding_syms;
-            } else {
-                ngram_counts[cur_gram] = t_symbol_counts();
-            }
-        }
-
-        // (4) for all valid ngrams, query the index
-        for (const auto& ngc : ngram_counts) {
-            const auto& cng = ngc.first;
-            uint64_t expected_n1 = 0, expected_n2 = 0, expected_n3p = 0;
-            for (auto symbol_count : ngc.second) {
-                if (symbol_count.second == 1)
-                    expected_n1 += 1;
-                else if (symbol_count.second == 2)
-                    expected_n2 += 1;
-                else if (symbol_count.second >= 3)
-                    expected_n3p += 1;
-            }
-
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOF_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_START_SYM; })
-                && std::none_of(cng.cbegin() + 1, cng.cend() - 1, [](uint64_t i) { return i == PAT_END_SYM; })) {
-                // (1) perform backward search on reverse csa to get the node [lb,rb]
-                uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.cst.csa, 0, this->idx.cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
-                EXPECT_TRUE(cnt > 0);
-                if (cnt > 0) {
-                    uint64_t n1, n2, n3p, n1p;
-                    this->idx.N123PlusBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end(), n1, n2, n3p);
-                    n1p = this->idx.N1PlusBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end());
-
-                    //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
-                    EXPECT_EQ(n1, expected_n1);
-                    EXPECT_EQ(n2, expected_n2);
-                    EXPECT_EQ(n3p, expected_n3p);
-                    EXPECT_EQ(n1p, n1 + n2 + n3p);
-                }
-            }
-        }
-    }
-}
-
-TYPED_TEST(LMTest, N123PlusFrontBack)
-{
-    // (1) get the text
-    std::vector<uint64_t> text;
-    std::copy(this->idx.cst.csa.text.begin(), this->idx.cst.csa.text.end(),
-              std::back_inserter(text));
-
-    // (2) for all n-gram sizes
-    for (size_t cgram = 1; cgram <= this->idx.discounts.max_ngram_count + 5; cgram++) {
-        // (3) determine all valid ngrams and their actual N1PlusFrontBack counts
-        typedef std::map<std::pair<uint64_t, uint64_t>, uint64_t> t_symbol_counts;
-        std::unordered_map<std::vector<uint64_t>, t_symbol_counts, uint64_vector_hasher> ngram_counts;
-        /* compute N1PlusFrontBack c-gram stats */
-        // -3 to ignore the last three symbols in the collection: UNK EOS EOF
-        for (size_t i = 1; i < (text.size() - 3) - cgram; i++) {
-            std::vector<uint64_t> cur_gram(cgram);
-            auto beg = text.begin() + i;
-            std::copy(beg, beg + cgram, cur_gram.begin());
-
-            if (!((text[i - 1] == EOS_SYM) && (text[i + cgram] == EOS_SYM))) {
-                auto ctx_counts = ngram_counts[cur_gram];
-                std::pair<uint64_t, uint64_t> ctx(text[i - 1], text[i + cgram]);
-                ctx_counts[ctx] += 1;
-                ngram_counts[cur_gram] = ctx_counts;
-            } else {
-                if (ngram_counts.find(cur_gram) == ngram_counts.end())
-                    ngram_counts[cur_gram] = t_symbol_counts();
-            }
-        }
-
-        // (4) for all valid ngrams, query the index
-        for (const auto& ngc : ngram_counts) {
-            const auto& cng = ngc.first;
-            uint64_t expected_n1 = 0, expected_n2 = 0, expected_n3p = 0;
-            for (const auto& item : ngc.second) {
-                if (item.second == 1)
-                    expected_n1 += 1;
-                else if (item.second == 2)
-                    expected_n2 += 1;
-                else
-                    expected_n3p += 1;
-            }
-
-            if (std::none_of(cng.cbegin(), cng.cend(), [](uint64_t i) { return i == EOS_SYM; })
-                && std::none_of(cng.cbegin(), cng.cend(),
-                                [](uint64_t i) { return i == EOF_SYM; })) {
-                // (1) perform backward search on reverse csa to get the node [lb,rb]
-                uint64_t lb, rb;
-                auto cnt = backward_search(this->idx.cst.csa, 0, this->idx.cst.csa.size() - 1,
-                                           cng.begin(), cng.end(), lb, rb);
-
-                EXPECT_TRUE(cnt > 0);
-                if (cnt > 0) {
-                    uint64_t actual_n1, actual_n2, actual_n3p, actual_n1p;
-                    this->idx.N123PlusFrontBack(this->idx.cst.node(lb, rb),
-                                                cng.begin(), cng.end(),
-                                                actual_n1, actual_n2, actual_n3p);
-                    actual_n1p = this->idx.N1PlusFrontBack(this->idx.cst.node(lb, rb), cng.begin(), cng.end());
-
-                    //LOG(INFO) << "pattern is " << this->idx.m_vocab.id2token(cng.begin(), cng.end());
-                    EXPECT_EQ(actual_n1, expected_n1);
-                    EXPECT_EQ(actual_n2, expected_n2);
-                    EXPECT_EQ(actual_n3p, expected_n3p);
-                    EXPECT_EQ(actual_n1 + actual_n2 + actual_n3p, actual_n1p);
-                }
-            }
-        }
-    }
-}
-#endif
 // checks whether perplexities match
 // precision of comparison is set to 1e-4
 TYPED_TEST(LMPPxTest, Perplexity)
@@ -737,7 +612,7 @@ TYPED_TEST(LMPPxTest, Perplexity)
 
 TYPED_TEST(LMPPxTest, PerplexityMKN)
 {
-    for (unsigned int i = 23; i < 24 /*this->kenlm_triplets_mkn.size()*/; i++) {
+    for (unsigned int i = 0; i <this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
         double perplexity = sentence_perplexity_kneser_ney(
             this->idx, kenlm.pattern, kenlm.order, true,false);
@@ -747,12 +622,11 @@ TYPED_TEST(LMPPxTest, PerplexityMKN)
 
 TYPED_TEST(LMPPxTest, PerplexityMKN_Cache)
 {
-    for (unsigned int i = 23; i <  24 /*this->kenlm_triplets_mkn.size()*/; i++) {
+    for (unsigned int i = 0; i <  this->kenlm_triplets_mkn.size(); i++) {
         auto kenlm = this->kenlm_triplets_mkn[i];
         double perplexity = sentence_perplexity_kneser_ney(
             this->idx, kenlm.pattern, kenlm.order, true,true);
         EXPECT_NEAR(perplexity, kenlm.perplexity, 1e-2);
-        LOG(INFO) << "done " << i;
     }
 }
 

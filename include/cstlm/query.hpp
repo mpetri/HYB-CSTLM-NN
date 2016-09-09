@@ -59,8 +59,6 @@ public:
         return m_pattern.size() == 1 && m_pattern.back() == PAT_START_SYM;
     }
     
-    std::string pattern_to_str(std::vector<value_type>& pat);
-    std::string niv_to_str(std::vector<node_type>& niv);
 
 public:
     const index_type* m_idx;
@@ -87,30 +85,6 @@ LMQueryMKN<t_idx>::LMQueryMKN(const t_idx* idx, uint64_t ngramsize, bool start_s
         m_last_nodes_incl.push_back(node);
         m_pattern.push_back(PAT_START_SYM);
     }
-}
-
-template <class t_idx>
-std::string LMQueryMKN<t_idx>::pattern_to_str(std::vector<value_type>& pat)
-{
-    std::string pat_str = "[";
-    for(size_t i=0;i<pat.size()-1;i++) {
-        pat_str += std::to_string(pat[i]) + ",";
-    }
-    return pat_str + std::to_string(pat.back()) + "]";
-}
-
-template <class t_idx>
-std::string LMQueryMKN<t_idx>::niv_to_str(std::vector<node_type>& niv)
-{
-    std::string niv_str = "[";
-    for(size_t i=0;i<niv.size()-1;i++) {
-        size_t lb = m_idx->cst.lb(niv[i]);
-        size_t rb = m_idx->cst.rb(niv[i]);
-        niv_str += "<"+ std::to_string(lb) + "," + std::to_string(rb) + ">";
-    }
-    size_t lb = m_idx->cst.lb(niv.back());
-    size_t rb = m_idx->cst.rb(niv.back());
-    return niv_str +  "<"+ std::to_string(lb) + "," + std::to_string(rb) + ">" + "]";
 }
 
 template <class t_idx>
@@ -142,32 +116,24 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     size_t i = 1;
     if(m_use_caching) {
         size_t lookup_size = size;
-        LOG(INFO) << "cache size = " << cache_size;
-        LOG(INFO) << "size = " << size;
-        LOG(INFO) << "ngramsize = " << m_ngramsize;
-        
+
         // we cant look up the highest order as we store the middle order only
         if( m_ngramsize == lookup_size ) {
             lookup_size--;
-            // LOG(INFO) << "ngram == lookup size -> decrease lookup size";
         }
         
         for (size_t j = std::min(lookup_size, cache_size); j >= 1 && ok; --j) {
-            // LOG(INFO) << "j = " << j;
             std::vector<value_type> pattern(pattern_end - j, pattern_end);
             if (j > 1 && pattern.front() == UNKNOWN_SYM)
                 continue;
 
             auto found = m_idx->cache.find(pattern);
             if (found != m_idx->cache.end()) {
-                // LOG(INFO) << "found prob!";
                 node_incl_vec = found->second.node_incl_vec;
                 node_incl = node_incl_vec.back();
                 p = found->second.prob;
                 i = j+1;
                 
-                LOG(INFO) << j << " CACHED_PROB("<< pattern_to_str(pattern) << "," << niv_to_str(node_incl_vec) <<") = " << p;
-
                 auto old_node_excl_it = node_excl_it;
                 for (size_t k = 2; k <= j; ++k) {
                     assert(node_excl_it != m_last_nodes_incl.end());
@@ -197,6 +163,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
 
         // recycle the node_incl matches from the last call to append_symbol
         // to serve as the node_excl values
+        // careful with this line!
         if (i >= 2) {
             node_excl_it++;
             if (node_excl_it == m_last_nodes_incl.end()) {
@@ -251,8 +218,6 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
         double gamma = D1 * n1 + D2 * n2 + D3p * n3p;
         p = (c + gamma * p) / d;
         
-        std::vector<value_type> tmppat(pattern_end - i, pattern_end);
-        LOG(INFO) << i << " PROB("<< pattern_to_str(tmppat) << "," << niv_to_str(node_incl_vec)  << ") = <" << p << "," << gamma << "," << c << "," << d << ">";
     }
 
     m_last_nodes_incl = node_incl_vec;
@@ -359,7 +324,6 @@ double LMQueryMKN<t_idx>::append_symbol_fill_cache(const value_type& symbol,t_ca
         // update the cache
         if (ok) {
             std::vector<value_type> tmppat(pattern_end - i, pattern_end);
-            LOG(INFO) << m_ngramsize << " STORE_PROB("<< pattern_to_str(tmppat) <<"," << niv_to_str(node_incl_vec) <<") = <" << p << "," << gamma << "," << c << "," << d << ">";
             cache.add_entry(tmppat,node_incl_vec,p);
         }
     }
