@@ -61,15 +61,15 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
                     )
 
 add_executable(build-index.x src/build-index.cpp)
-target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64)
+target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64 cilkrts)
 
 add_executable(create-collection.x src/create-collection.cpp)
-target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64)
+target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64 cilkrts)
 
 add_executable(query-index-knm.x src/query-index-knm.cpp)
-target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64)
+target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64 cilkrts)
 
 add_executable(unit-test.x src/unit-test.cpp)
-target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64)
+target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64 cilkrts)
 enable_testing()
 add_test(TestsPass unit-test.x)
