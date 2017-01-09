@@ -6,7 +6,7 @@ project(cstlm CXX C)
 set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
 
-option (TIMINGS "Enable more fine grained timings." OFF) 
+option (TIMINGS "Enable more fine grained timings." OFF)
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -53,7 +53,12 @@ endif()
 
 add_subdirectory(external/sdsl-lite)
 
+set(EIGEN3_INCLUDE_DIR ${CMAKE_HOME_DIRECTORY}/external/eigen)
+add_subdirectory(external/dynet)
+
 include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
+                    ${CMAKE_HOME_DIRECTORY}/external/dynet
+                    ${CMAKE_HOME_DIRECTORY}/external/eigen
                     ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                     ${CMAKE_HOME_DIRECTORY}/external/mem_monitor/
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
@@ -73,3 +78,9 @@ add_executable(unit-test.x src/unit-test.cpp)
 target_link_libraries(unit-test.x gtest_main sdsl pthread divsufsort divsufsort64 cilkrts)
 enable_testing()
 add_test(TestsPass unit-test.x)
+
+
+### NEW HYBRID STUFF
+add_executable(train-nn-index-knm.x src/train-nn-index-knm.cpp)
+target_link_libraries(train-nn-index-knm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+

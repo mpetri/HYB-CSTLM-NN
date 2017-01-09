@@ -8,3 +8,6 @@
 [submodule "external/mem_monitor"]
 	path = external/mem_monitor
 	url = https://github.com/mpetri/mem_monitor.git 
+[submodule "external/dynet"]
+	path = external/dynet
+	url = https://github.com/clab/dynet.git
