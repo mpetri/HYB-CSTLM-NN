@@ -24,7 +24,7 @@ namespace constants {
 const uint32_t DEFAULT_VEC_SIZE					= 100;
 const float	DEFAULT_LEARNING_RATE			= 0.025f;
 const uint32_t DEFAULT_WINDOW_SIZE				= 5;
-const float	DEFAULT_SAMPLE_THRESHOLD			= 1e-3;
+const float	DEFAULT_SAMPLE_THRESHOLD			= 1e-5;
 const uint32_t DEFAULT_NUM_NEG_SAMPLES			= 5;
 const uint32_t DEFAULT_NUM_ITERATIONS			= 5;
 const uint32_t DEFAULT_MIN_FREQ_THRES			= 5;
@@ -78,38 +78,50 @@ public:
 	bool next_sentence()
 	{
 		size_t offset = 0;
-		bool   add	= false;
+        // find start of next sentence
 		while (cur != end) {
-			auto sym = *cur;
-			if (add) {
-
-				double freq = vocab.freq[sym];
-
-				// drop words below min-freq
-				if (freq < min_freq) continue;
-
-				// The subsampling randomly discards frequent words while keeping the ranking same
-				if (sample_threshold > 0) {
-					double cprob = freq / double(vocab.total_freq);
-					auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
-					auto   gprob = subsampling_dist(gen);
-					if (prob < gprob) continue;
-				}
-
-				m_sentence_buf[offset++] = sym;
-			}
-			if (sym == cstlm::PAT_START_SYM) { // sentence start sym found
-				add = true;
-			}
+            auto sym = *cur;
+            ++cur;
+            if(sym == cstlm::PAT_START_SYM) {
+                break;
+            }
+        }
+        // process symbols until the end of the sentence
+		while (cur != end) {
+    		auto sym = *cur;
+            bool add_sym = true;
 			if (sym == cstlm::PAT_END_SYM) { // sentence start sym found
 				break;
 			}
 			if (offset == consts::MAX_SENTENCE_LEN) {
 				break;
 			}
+			double freq = vocab.freq[sym];
+			// drop words below min-freq
+			if (freq < min_freq) {
+                add_sym = false;
+            } else {
+    			// The subsampling randomly discards frequent words while keeping the ranking same
+	    		if (sample_threshold > 0) {
+		    		double cprob = freq / double(vocab.total_freq);
+			   		auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
+			    	auto   gprob = subsampling_dist(gen);
+                    //cstlm::LOG(cstlm::INFO) << "sample_threshold = " << sample_threshold << " vocab.total_freq = " << vocab.total_freq 
+                    //       << " freq = " << freq <<" prob = " << prob << " gprob = " << gprob << " cprob = " << cprob;
+				    if (prob > gprob) {
+                        add_sym = false;
+                    }
+                }
+			}
+
+		  	if(add_sym) {
+                m_sentence_buf[offset++] = sym;
+                //cstlm::LOG(cstlm::INFO) << "ADD " << sym;
+            }
 			++cur;
 		}
 		m_cur_sentence_len = offset;
+        //cstlm::LOG(cstlm::INFO) << "slen = " << m_cur_sentence_len;
 		if (cur == end && offset == 0) {
 			return false;
 		}
@@ -242,6 +254,16 @@ private:
 		size_t total_tokens				= std::distance(text.begin(), text.end());
 		auto   start					= watch::now();
 		while (sentences.next_sentence()) {
+			const auto& sentence = sentences.cur_sentence;
+            /*
+            std::string strs = "[";
+            for(size_t i=0;i<sentences.cur_size();i++) strs += std::to_string(sentence[i]) + ",";
+            strs += "]";
+
+            cstlm::LOG(cstlm::INFO) << "S["<<sentences_processed<<"] = " << strs;
+            */
+
+
 			// periodically update learning rate and output stats
 			if (sentences_processed - last_sentences_processed > 1000) {
 				float cur_pos	  = sentences.cur_offset_in_text();
@@ -260,7 +282,6 @@ private:
 				last_sentences_processed = sentences_processed;
 			}
 
-			const auto& sentence = sentences.cur_sentence;
 			if (sentences.cur_size() <= 1) continue;
 			// we process each word in the sentence separately
 			for (size_t sent_offset = 0; sent_offset < sentences.cur_size(); sent_offset++) {
@@ -280,7 +301,7 @@ private:
 						auto word_id	= sentence[wo];
 						auto row_offset = word_id * m_vector_size;
 						for (size_t i = 0; i < neu1.size(); i++)
-							neu1[i]   = 0;
+							neu1e[i]   = 0;
 
 						if (m_hierarchical_softmax) {
 							// TODO
@@ -295,12 +316,13 @@ private:
 								if (d != 0) { // incorrect word. choose a negative sample at random
 									// but keep the original word dist in mind
 									target = m_unigram_neg_table[neg_table_dist(gen)];
+                                    if(target == word_id) continue;
 									label  = 0.0f;
 								}
 								auto  l2 = target * m_vector_size;
 								float f  = 0;
 								for (size_t i = 0; i < neu1.size(); i++) {
-									f += neu1[i] * m_net_state.syn1neg[i + l2];
+									f += m_net_state.syn0[i + row_offset] * m_net_state.syn1neg[i + l2];
 								}
 								// compute exp with hacks
 								// 'g' is the gradient multiplied by the learning rate
@@ -310,16 +332,20 @@ private:
 								else if (f < -consts::MAX_EXP)
 									g = (label - 0) * alpha;
 								else {
-									g = (label - m_expTable[(int)((f + consts::MAX_EXP) *
-																  (consts::EXP_TABLE_SIZE /
-																   consts::MAX_EXP / 2))]) *
-										alpha;
+                                    int o = (f + consts::MAX_EXP) * (consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2);
+                                    /*
+                                    if(o > consts::EXP_TABLE_SIZE) {
+                                        cstlm::LOG(cstlm::ERROR) << "f="<<f<< " exp table offset o="<<o << " (max="<<consts::EXP_TABLE_SIZE<<")";
+                                    }
+                                    */
+									g = (label - m_expTable[o]) * alpha;
 								}
 								for (size_t i = 0; i < neu1.size(); i++) {
 									neu1e[i] += g * m_net_state.syn1neg[i + l2];
-									m_net_state.syn1neg[i + l2] +=
-									g * m_net_state.syn0[wo + row_offset];
 								}
+								for (size_t i = 0; i < neu1.size(); i++) {
+									m_net_state.syn1neg[i + l2] += g * m_net_state.syn0[i + row_offset];
+                                }
 							}
 						}
 						// Learn weights input -> hidden
@@ -342,13 +368,16 @@ private:
 
 	embeddings learn_embedding(cstlm::collection& col)
 	{
+        cstlm::LOG(cstlm::INFO) << "create vocab";
 		cstlm::vocab_uncompressed<false> vocab(col);
 
 		// (1) initialize net state
+        cstlm::LOG(cstlm::INFO) << "init net state";
 		init_net_state(vocab);
 
 		// (2) init unigram table for negative sampling
 		if (m_num_negative_samples > 0) {
+            cstlm::LOG(cstlm::INFO) << "init unigram table";
 			init_unigram_table(vocab);
 		}
 
@@ -358,9 +387,11 @@ private:
 		}
 
 		// (4) first train on the big file
+        cstlm::LOG(cstlm::INFO) << "learn embedding big file";
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_TEXT]);
 
 		// (5) then train on the small file
+        cstlm::LOG(cstlm::INFO) << "learn embedding small file";
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_SMALLTEXT]);
 
 		return extract_embeddings();

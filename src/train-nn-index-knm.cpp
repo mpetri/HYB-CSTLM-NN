@@ -98,7 +98,7 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 	auto embeddings = word2vec::builder{}
 					  .vector_size(200)
 					  .window_size(5)
-					  .sample_threadhold(1e-3)
+					  .sample_threadhold(1e-5)
 					  .num_negative_samples(5)
 					  .num_threads(12)
 					  .num_iterations(5)
@@ -121,12 +121,12 @@ int main(int argc, char** argv)
 
 	/* (1) parse collection directory and create CSTLM index */
 	collection col(args.collection_dir);
-	auto	   cstlm = create_and_store<wordlm>(col, args.use_mkn);
 
 	/* (2) load the word2vec embeddings */
 	auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
 	/* (3) */
+	auto	   cstlm = create_and_store<wordlm>(col, args.use_mkn);
 
 	ComputationGraph cg;
 

@@ -238,8 +238,8 @@ int main(int argc, const char* argv[])
 		LOG(INFO) << "big_num_sentences=" << big_num_sentences;
 		ofs << "big_num_tokens=" << big_num_tokens << "\n";
 		LOG(INFO) << "big_num_tokens=" << big_num_tokens;
-		ofs << "big_raw_size_in_bytes=" << sdsl::util::file_size(args.small_input_file) << "\n";
-		LOG(INFO) << "big_raw_size_in_bytes=" << sdsl::util::file_size(args.small_input_file);
+		ofs << "big_raw_size_in_bytes=" << sdsl::util::file_size(args.big_input_file) << "\n";
+		LOG(INFO) << "big_raw_size_in_bytes=" << sdsl::util::file_size(args.big_input_file);
 		ofs << "small_num_sentences=" << small_num_sentences << "\n";
 		LOG(INFO) << "small_num_sentences=" << small_num_sentences;
 		ofs << "small_num_tokens=" << small_num_tokens << "\n";

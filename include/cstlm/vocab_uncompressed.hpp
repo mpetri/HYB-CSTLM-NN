@@ -48,7 +48,7 @@ public:
 			m_t2i[word] = id;
 			m_i2t[id]   = word;
 			if (freq.size() < id + 1) {
-				freq.resize(2 * id);
+				freq.resize(1024 + 2 * id);
 			}
 			freq[id] = f;
 			total_freq += f;
