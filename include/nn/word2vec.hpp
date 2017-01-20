@@ -280,7 +280,7 @@ private:
 
 			// periodically update learning rate and output stats
 			if (sentences_processed - last_sentences_processed > 50000) {
-
+				float local_cur_pos = sentences.cur_offset_in_text();
 				float cur_pos = sentences.cur_offset_in_text() + (cur_iteration * total_tokens);
 				float text_percent = cur_pos / (float)(total_tokens * m_num_iterations);
 				auto  cur_time	 = watch::now();
@@ -292,7 +292,7 @@ private:
 				<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
 				<< "alpha(" << std::fixed << std::setprecision(6) << m_cur_learning_rate << ") "
 				<< "S(" << std::setprecision(0) << float(sentences_processed) << ") "
-				<< "W(" << std::setprecision(0) << cur_pos << ") "
+				<< "W(" << std::setprecision(0) << local_cur_pos << ") "
 				<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
 				<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
 				<< "%(" << std::setprecision(2) << floorf(text_percent * 10000.0f) / 100.0f << ") ";
