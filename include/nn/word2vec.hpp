@@ -281,14 +281,12 @@ private:
 			// periodically update learning rate and output stats
 			if (sentences_processed - last_sentences_processed > 50000) {
 
-				float cur_pos	  = sentences.cur_offset_in_text();
-				float text_percent = cur_pos / (float)(total_tokens + 1);
+				float cur_pos = sentences.cur_offset_in_text() + (cur_iteration * total_tokens);
+				float text_percent = cur_pos / (float)(total_tokens * m_num_iterations);
 				auto  cur_time	 = watch::now();
 				std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = cur_time - start;
 				double sents_per_sec = double(sentences_processed) / (secs_elapsed.count() + 1);
 				double words_per_sec = double(cur_pos) / (secs_elapsed.count() + 1);
-
-				float itr_percent = float(cur_iteration + 1) / float(m_num_iterations);
 				cstlm::LOG(cstlm::INFO)
 				<< "[" << thread_id << "] "
 				<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
@@ -297,11 +295,10 @@ private:
 				<< "W(" << std::setprecision(0) << cur_pos << ") "
 				<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
 				<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
-				<< "%(" << std::setprecision(2)
-				<< floorf(itr_percent * text_percent * 10000.0f) / 100.0f << ") ";
+				<< "%(" << std::setprecision(2) << floorf(text_percent * 10000.0f) / 100.0f << ") ";
 
 				// update learning rate based on how many words we have seen
-				float new_rate = m_start_learning_rate * ((1 - (text_percent * itr_percent)));
+				float new_rate = m_start_learning_rate * ((1 - (text_percent)));
 				if (new_rate < m_start_learning_rate * 0.0001)
 					new_rate = m_start_learning_rate * 0.0001;
 
