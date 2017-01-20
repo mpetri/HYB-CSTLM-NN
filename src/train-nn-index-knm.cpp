@@ -100,7 +100,7 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 					  .window_size(5)
 					  .sample_threadhold(1e-5)
 					  .num_negative_samples(5)
-					  .num_threads(12)
+					  .num_threads(cstlm::num_cstlm_threads)
 					  .num_iterations(5)
 					  .min_freq_threshold(5)
 					  .start_learning_rate(0.025)
@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 	auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
 	/* (3) */
-	auto	   cstlm = create_and_store<wordlm>(col, args.use_mkn);
+	auto cstlm = create_and_store<wordlm>(col, args.use_mkn);
 
 	ComputationGraph cg;
 

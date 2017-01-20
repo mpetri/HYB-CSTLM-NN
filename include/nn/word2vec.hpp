@@ -5,6 +5,9 @@
 #include "logging.hpp"
 
 #include <chrono>
+#include <atomic>
+
+#include "omp.h"
 
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
@@ -78,18 +81,18 @@ public:
 	bool next_sentence()
 	{
 		size_t offset = 0;
-        // find start of next sentence
+		// find start of next sentence
 		while (cur != end) {
-            auto sym = *cur;
-            ++cur;
-            if(sym == cstlm::PAT_START_SYM) {
-                break;
-            }
-        }
-        // process symbols until the end of the sentence
+			auto sym = *cur;
+			++cur;
+			if (sym == cstlm::PAT_START_SYM) {
+				break;
+			}
+		}
+		// process symbols until the end of the sentence
 		while (cur != end) {
-    		auto sym = *cur;
-            bool add_sym = true;
+			auto sym	 = *cur;
+			bool add_sym = true;
 			if (sym == cstlm::PAT_END_SYM) { // sentence start sym found
 				break;
 			}
@@ -99,29 +102,25 @@ public:
 			double freq = vocab.freq[sym];
 			// drop words below min-freq
 			if (freq < min_freq) {
-                add_sym = false;
-            } else {
-    			// The subsampling randomly discards frequent words while keeping the ranking same
-	    		if (sample_threshold > 0) {
-		    		double cprob = freq / double(vocab.total_freq);
-			   		auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
-			    	auto   gprob = subsampling_dist(gen);
-                    //cstlm::LOG(cstlm::INFO) << "sample_threshold = " << sample_threshold << " vocab.total_freq = " << vocab.total_freq 
-                    //       << " freq = " << freq <<" prob = " << prob << " gprob = " << gprob << " cprob = " << cprob;
-				    if (prob > gprob) {
-                        add_sym = false;
-                    }
-                }
+				add_sym = false;
+			} else {
+				// The subsampling randomly discards frequent words while keeping the ranking same
+				if (sample_threshold > 0) {
+					double cprob = freq / double(vocab.total_freq);
+					auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
+					auto   gprob = subsampling_dist(gen);
+					if (prob > gprob) {
+						add_sym = false;
+					}
+				}
 			}
 
-		  	if(add_sym) {
-                m_sentence_buf[offset++] = sym;
-                //cstlm::LOG(cstlm::INFO) << "ADD " << sym;
-            }
+			if (add_sym) {
+				m_sentence_buf[offset++] = sym;
+			}
 			++cur;
 		}
 		m_cur_sentence_len = offset;
-        //cstlm::LOG(cstlm::INFO) << "slen = " << m_cur_sentence_len;
 		if (cur == end && offset == 0) {
 			return false;
 		}
@@ -156,23 +155,26 @@ private:
 	std::vector<uint32_t> m_unigram_neg_table;
 	net_state			  m_net_state;
 	std::array<float, consts::EXP_TABLE_SIZE + 1> m_expTable;
+	float				  m_cur_learning_rate;
+	std::atomic<uint64_t> m_total_sentences_processed = ATOMIC_VAR_INIT(0);
+	uint64_t			  m_total_tokens			  = 0;
 
 private:
 	void output_params()
 	{
-		std::cout << "number of threads: " << m_num_threads << std::endl;
-		std::cout << "number of iterations: " << m_num_iterations << std::endl;
-		std::cout << "hidden size: " << m_vector_size << std::endl;
-		std::cout << "number of negative samples: " << m_num_negative_samples << std::endl;
-		std::cout << "use hierchical softmax: " << m_hierarchical_softmax << std::endl;
-		std::cout << "window size: " << m_window_size << std::endl;
-		std::cout << "batch size: " << m_num_threads << std::endl;
-		std::cout << "min freq: " << m_min_freq_threshold << std::endl;
-		std::cout << "starting learning rate: " << m_start_learning_rate << std::endl;
+		cstlm::LOG(cstlm::INFO) << "number of threads: " << m_num_threads;
+		cstlm::LOG(cstlm::INFO) << "number of iterations: " << m_num_iterations;
+		cstlm::LOG(cstlm::INFO) << "hidden size: " << m_vector_size;
+		cstlm::LOG(cstlm::INFO) << "number of negative samples: " << m_num_negative_samples;
+		cstlm::LOG(cstlm::INFO) << "use hierchical softmax: " << m_hierarchical_softmax;
+		cstlm::LOG(cstlm::INFO) << "window size: " << m_window_size;
+		cstlm::LOG(cstlm::INFO) << "batch size: " << m_num_threads;
+		cstlm::LOG(cstlm::INFO) << "min freq: " << m_min_freq_threshold;
+		cstlm::LOG(cstlm::INFO) << "starting learning rate: " << m_start_learning_rate;
 		if (m_use_cbow) {
-			std::cout << "model: continuous back of words (CBOW)" << std::endl;
+			cstlm::LOG(cstlm::INFO) << "model: continuous back of words (CBOW)";
 		} else {
-			std::cout << "model: skip-gram (SG)" << std::endl;
+			cstlm::LOG(cstlm::INFO) << "model: skip-gram (SG)";
 		}
 	}
 
@@ -193,15 +195,21 @@ private:
 
 		if (m_hierarchical_softmax == true) {
 			m_net_state.syn1.resize(vocab.size() * m_vector_size);
-			for (size_t i = 0; i < m_net_state.syn1.size(); i++) {
-				m_net_state.syn1[i] = 0;
+			float* data		 = m_net_state.syn1.data();
+			size_t data_size = m_net_state.syn1.size();
+#pragma omp		   simd
+			for (size_t i = 0; i < data_size; i++) {
+				data[i] = 0;
 			}
 		}
 
 		if (m_num_negative_samples > 0) {
 			m_net_state.syn1neg.resize(vocab.size() * m_vector_size);
-			for (size_t i = 0; i < m_net_state.syn1neg.size(); i++) {
-				m_net_state.syn1neg[i] = 0;
+			float* data		 = m_net_state.syn1neg.data();
+			size_t data_size = m_net_state.syn1neg.size();
+#pragma omp		   simd
+			for (size_t i = 0; i < data_size; i++) {
+				data[i] = 0;
 			}
 		}
 	}
@@ -235,49 +243,69 @@ private:
 		// todo
 	}
 
-	void learn_embedding_from_file(cstlm::vocab_uncompressed<false>& vocab, std::string file_name)
+	void learn_embedding_from_file_chunk(cstlm::vocab_uncompressed<false>& vocab,
+										 std::string					   file_name,
+										 size_t							   file_offset,
+										 size_t							   file_chunk_len,
+										 uint64_t						   thread_id,
+										 uint64_t						   cur_iteration)
 	{
 		sdsl::int_vector_buffer<0>			   text(file_name);
 		std::uniform_int_distribution<int64_t> window_dist(1, m_window_size);
 		std::uniform_int_distribution<int64_t> neg_table_dist(0, m_unigram_neg_table.size());
 		std::mt19937						   gen(consts::RAND_SEED);
 
-		sentence_parser<decltype(text.begin())> sentences(
-		text.begin(), text.end(), vocab, m_sample_threshold, m_min_freq_threshold);
+		auto itr = text.begin() + file_offset;
+		auto end = text.begin() + file_offset + file_chunk_len;
 
-		std::vector<float> neu1(m_vector_size);
-		std::vector<float> neu1e(m_vector_size);
+		sentence_parser<decltype(text.begin())> sentences(
+		itr, end, vocab, m_sample_threshold, m_min_freq_threshold);
+
+		std::vector<float> neu1_data(m_vector_size);
+		std::vector<float> neu1e_data(m_vector_size);
+
+		// get float ptrs for SIMD parallelism
+		auto neu1	= neu1_data.data();
+		auto neu1e   = neu1e_data.data();
+		auto syn1neg = m_net_state.syn1neg.data();
+		auto syn0	= m_net_state.syn0.data();
+		auto syn1	= m_net_state.syn1.data();
 
 		size_t last_sentences_processed = 0;
 		size_t sentences_processed		= 0;
-		double alpha					= m_start_learning_rate;
-		size_t total_tokens				= std::distance(text.begin(), text.end());
+		size_t total_tokens				= std::distance(itr, end);
 		auto   start					= watch::now();
 		while (sentences.next_sentence()) {
 			const auto& sentence = sentences.cur_sentence;
-            /*
-            std::string strs = "[";
-            for(size_t i=0;i<sentences.cur_size();i++) strs += std::to_string(sentence[i]) + ",";
-            strs += "]";
-
-            cstlm::LOG(cstlm::INFO) << "S["<<sentences_processed<<"] = " << strs;
-            */
-
 
 			// periodically update learning rate and output stats
-			if (sentences_processed - last_sentences_processed > 1000) {
+			if (sentences_processed - last_sentences_processed > 50000) {
+
 				float cur_pos	  = sentences.cur_offset_in_text();
 				float text_percent = cur_pos / (float)(total_tokens + 1);
 				auto  cur_time	 = watch::now();
 				std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = cur_time - start;
 				double sents_per_sec = double(sentences_processed) / (secs_elapsed.count() + 1);
-				cstlm::LOG(cstlm::INFO) << "SENTS    " << sentences_processed << " Sentences "
-										<< "SPEED    " << sents_per_sec << " Sentences/Sec "
-										<< "PROGRESS " << text_percent << "%";
+				double words_per_sec = double(cur_pos) / (secs_elapsed.count() + 1);
+
+				float itr_percent = float(cur_iteration + 1) / float(m_num_iterations);
+				cstlm::LOG(cstlm::INFO)
+				<< "[" << thread_id << "] "
+				<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
+				<< "alpha(" << std::fixed << std::setprecision(6) << m_cur_learning_rate << ") "
+				<< "S(" << std::setprecision(0) << float(sentences_processed) << ") "
+				<< "W(" << std::setprecision(0) << cur_pos << ") "
+				<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
+				<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
+				<< "%(" << std::setprecision(2)
+				<< floorf(itr_percent * text_percent * 10000.0f) / 100.0f << ") ";
 
 				// update learning rate based on how many words we have seen
-				alpha = m_start_learning_rate * (1 - text_percent);
-				if (alpha < m_start_learning_rate * 0.0001) alpha = m_start_learning_rate * 0.0001;
+				float new_rate = m_start_learning_rate * ((1 - (text_percent * itr_percent)));
+				if (new_rate < m_start_learning_rate * 0.0001)
+					new_rate = m_start_learning_rate * 0.0001;
+
+				m_cur_learning_rate = new_rate;
 
 				last_sentences_processed = sentences_processed;
 			}
@@ -300,8 +328,12 @@ private:
 
 						auto word_id	= sentence[wo];
 						auto row_offset = word_id * m_vector_size;
-						for (size_t i = 0; i < neu1.size(); i++)
-							neu1e[i]   = 0;
+
+						{
+#pragma omp simd
+							for (size_t i = 0; i < m_vector_size; i++)
+								neu1e[i]  = 0;
+						}
 
 						if (m_hierarchical_softmax) {
 							// TODO
@@ -316,47 +348,104 @@ private:
 								if (d != 0) { // incorrect word. choose a negative sample at random
 									// but keep the original word dist in mind
 									target = m_unigram_neg_table[neg_table_dist(gen)];
-                                    if(target == word_id) continue;
-									label  = 0.0f;
+									if (target == word_id) continue;
+									label = 0.0f;
 								}
 								auto  l2 = target * m_vector_size;
 								float f  = 0;
-								for (size_t i = 0; i < neu1.size(); i++) {
-									f += m_net_state.syn0[i + row_offset] * m_net_state.syn1neg[i + l2];
+								for (size_t i = 0; i < m_vector_size; i++) {
+									f += syn0[i + row_offset] * syn1neg[i + l2];
 								}
 								// compute exp with hacks
 								// 'g' is the gradient multiplied by the learning rate
 								float g = 0;
 								if (f > consts::MAX_EXP)
-									g = (label - 1) * alpha;
+									g = (label - 1) * m_cur_learning_rate;
 								else if (f < -consts::MAX_EXP)
-									g = (label - 0) * alpha;
+									g = (label - 0) * m_cur_learning_rate;
 								else {
-                                    int o = (f + consts::MAX_EXP) * (consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2);
-                                    /*
-                                    if(o > consts::EXP_TABLE_SIZE) {
-                                        cstlm::LOG(cstlm::ERROR) << "f="<<f<< " exp table offset o="<<o << " (max="<<consts::EXP_TABLE_SIZE<<")";
-                                    }
-                                    */
-									g = (label - m_expTable[o]) * alpha;
+									int o = (f + consts::MAX_EXP) *
+											(consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2);
+									g = (label - m_expTable[o]) * m_cur_learning_rate;
 								}
-								for (size_t i = 0; i < neu1.size(); i++) {
-									neu1e[i] += g * m_net_state.syn1neg[i + l2];
+
+								// TODO WHAT IS THIS
+								{
+#pragma omp simd
+									for (size_t i = 0; i < m_vector_size; i++) {
+										neu1e[i] += g * syn1neg[i + l2];
+									}
 								}
-								for (size_t i = 0; i < neu1.size(); i++) {
-									m_net_state.syn1neg[i + l2] += g * m_net_state.syn0[i + row_offset];
-                                }
+
+								// TODO WHAT IS THIS??
+								{
+#pragma omp simd
+									for (size_t i = 0; i < m_vector_size; i++) {
+										syn1neg[i + l2] += g * syn0[i + row_offset];
+									}
+								}
 							}
 						}
 						// Learn weights input -> hidden
-						for (size_t i = 0; i < neu1.size(); i++) {
-							m_net_state.syn0[i + row_offset] += neu1e[i];
+						{
+#pragma omp simd
+							for (size_t i = 0; i < m_vector_size; i++) {
+								syn0[i + row_offset] += neu1e[i];
+							}
 						}
 					}
 				}
 			}
 			sentences_processed++;
 		}
+
+		if (cur_iteration == 0) {
+			std::atomic_fetch_add(&m_total_sentences_processed, sentences_processed);
+		}
+	}
+
+
+	void learn_embedding_from_file(cstlm::vocab_uncompressed<false>& vocab, std::string file_name)
+	{
+		auto text_size = 0;
+		{
+			sdsl::int_vector_buffer<0> text(file_name);
+			text_size = text.size();
+		}
+
+
+		m_cur_learning_rate = m_start_learning_rate;
+		auto start			= watch::now();
+		for (size_t j = 0; j < m_num_iterations; j++) {
+			auto						   coffset	= 0;
+			auto						   chunk_size = text_size / m_num_threads;
+			std::vector<std::future<void>> fchunks;
+			for (size_t i = 0; i < m_num_threads; i++) {
+				if (i + 1 == m_num_threads) { // last thread processes everything
+					chunk_size = text_size - coffset;
+				}
+				fchunks.push_back(
+				std::async(std::launch::async, [&, i, j, chunk_size, coffset, file_name, &vocab] {
+					learn_embedding_from_file_chunk(vocab, file_name, coffset, chunk_size, i, j);
+				}));
+				coffset += chunk_size;
+			}
+			for (size_t i = 0; i < m_num_threads; i++) {
+				fchunks[i].wait();
+			}
+		}
+		auto stop = watch::now();
+
+		std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = stop - start;
+		double sents_per_sec = double(m_total_sentences_processed) / (secs_elapsed.count() + 1);
+		double words_per_sec = double(text_size) / (secs_elapsed.count() + 1);
+		cstlm::LOG(cstlm::INFO) << "Sentences Processed: " << m_total_sentences_processed << " "
+								<< "Words Processed: " << text_size << " "
+								<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
+								<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
+								<< "Total Time: " << std::setprecision(2) << secs_elapsed.count()
+								<< " secs";
+		m_total_tokens += text_size;
 	}
 
 	embeddings extract_embeddings()
@@ -368,16 +457,16 @@ private:
 
 	embeddings learn_embedding(cstlm::collection& col)
 	{
-        cstlm::LOG(cstlm::INFO) << "create vocab";
+		cstlm::LOG(cstlm::INFO) << "create vocab";
 		cstlm::vocab_uncompressed<false> vocab(col);
 
 		// (1) initialize net state
-        cstlm::LOG(cstlm::INFO) << "init net state";
+		cstlm::LOG(cstlm::INFO) << "init net state";
 		init_net_state(vocab);
 
 		// (2) init unigram table for negative sampling
 		if (m_num_negative_samples > 0) {
-            cstlm::LOG(cstlm::INFO) << "init unigram table";
+			cstlm::LOG(cstlm::INFO) << "init unigram table";
 			init_unigram_table(vocab);
 		}
 
@@ -387,12 +476,25 @@ private:
 		}
 
 		// (4) first train on the big file
-        cstlm::LOG(cstlm::INFO) << "learn embedding big file";
+		cstlm::LOG(cstlm::INFO) << "learn embedding big file";
+		auto start = watch::now();
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_TEXT]);
 
 		// (5) then train on the small file
-        cstlm::LOG(cstlm::INFO) << "learn embedding small file";
+		cstlm::LOG(cstlm::INFO) << "learn embedding small file";
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_SMALLTEXT]);
+
+		auto stop = watch::now();
+
+		std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = stop - start;
+		double sents_per_sec = double(m_total_sentences_processed) / (secs_elapsed.count() + 1);
+		double words_per_sec = double(m_total_tokens) / (secs_elapsed.count() + 1);
+		cstlm::LOG(cstlm::INFO) << "Sentences Processed: " << m_total_sentences_processed << " "
+								<< "Words Processed: " << m_total_tokens << " "
+								<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
+								<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
+								<< "Total Time: " << std::setprecision(2) << secs_elapsed.count()
+								<< " secs";
 
 		return extract_embeddings();
 	}
@@ -473,6 +575,8 @@ public:
 
 	embeddings train_or_load(cstlm::collection& col)
 	{
+		omp_set_num_threads(m_num_threads);
+
 		// (0) output params
 		output_params();
 
