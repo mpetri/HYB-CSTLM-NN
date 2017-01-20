@@ -286,7 +286,7 @@ private:
 				auto  cur_time	 = watch::now();
 				std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = cur_time - start;
 				double sents_per_sec = double(sentences_processed) / (secs_elapsed.count() + 1);
-				double words_per_sec = double(cur_pos) / (secs_elapsed.count() + 1);
+				double words_per_sec = double(local_cur_pos) / (secs_elapsed.count() + 1);
 				cstlm::LOG(cstlm::INFO)
 				<< "[" << thread_id << "] "
 				<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
