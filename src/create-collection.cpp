@@ -222,6 +222,7 @@ int main(int argc, const char* argv[])
 		ofs << "<UNK> 2 1\n";
 		ofs << "<S> 3 1\n";
 		ofs << "</S> 4 1\n";
+		ofs << "<NONFREQ> 5 1\n";
 		// write the real vocab
 		uint64_t cur_id = NUM_SPECIAL_SYMS;
 		for (const auto& did : dict_ids) {

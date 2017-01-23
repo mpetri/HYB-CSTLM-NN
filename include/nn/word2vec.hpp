@@ -690,7 +690,7 @@ public:
 		// (3) train
 		auto w2v_embeddings = learn_embedding(vocab, col);
 
-		w2v_embeddings.store_plain(w2v_file, vocab);
+		w2v_embeddings.store_binary(w2v_file, vocab);
 
 		return w2v_embeddings;
 	}

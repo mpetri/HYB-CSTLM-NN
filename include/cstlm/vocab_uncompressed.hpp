@@ -86,7 +86,8 @@ public:
 	{
 		auto itr = m_i2t.find(id);
 		if (itr == m_i2t.end()) {
-			throw std::runtime_error("Id lookup failed.");
+			std::string msg = "Id '" + std::to_string(id) + "' lookup failed.";
+			throw std::runtime_error(msg);
 		}
 		return itr->second;
 	}

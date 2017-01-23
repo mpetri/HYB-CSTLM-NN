@@ -31,9 +31,6 @@ typedef struct cmdargs {
 	bool		use_mkn;
 } cmdargs_t;
 
-struct word2vec_embeddings {
-};
-
 void print_usage(const char* program)
 {
 	fprintf(stdout, "%s -c <collection dir>\n", program);
