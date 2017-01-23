@@ -9,6 +9,8 @@
 
 #include "omp.h"
 
+#include <Eigen/Dense>
+
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
 
@@ -37,10 +39,105 @@ const bool	 DEFAULT_USE_CBOW					= false;
 }
 
 struct embeddings {
+	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data;
 	embeddings() {}
-	embeddings(std::string file_name) {}
+	embeddings(std::string file_name) { load_binary(file_name); }
 
-	void store(std::string file_name) {}
+	void load_binary(std::string file_name)
+	{
+		FILE* f = fopen(file_name.c_str(), "r");
+		if (f) {
+			int64_t vocab_size;
+			int64_t vector_size;
+			if (2 != fscanf(f, "%ld %ld\n", &vocab_size, &vector_size)) {
+				throw std::runtime_error("Error reading w2v embeddings.");
+			}
+			data.resize(vocab_size, vector_size);
+			for (int64_t i = 0; i < data.rows(); i++) {
+				/* read the word and discard */
+				while (fgetc(f) != ' ') {
+				}
+
+				for (int64_t j = 0; j < data.cols(); j++) {
+					float num = 0;
+					if (1 != fread(&num, sizeof(num), 1, f)) {
+						throw std::runtime_error("Error reading w2v embeddings.");
+					}
+					data(i, j) = num;
+				}
+			}
+		} else {
+			throw std::runtime_error("Cannot open file to read embeddings.");
+		}
+	}
+
+	void load_plain(std::string file_name)
+	{
+		FILE* f = fopen(file_name.c_str(), "r");
+		if (f) {
+			int64_t vocab_size;
+			int64_t vector_size;
+			if (2 != fscanf(f, "%ld %ld\n", &vocab_size, &vector_size)) {
+				throw std::runtime_error("Error reading w2v embeddings.");
+			}
+			data.resize(vocab_size, vector_size);
+			for (int64_t i = 0; i < data.rows(); i++) {
+				/* read the word and discard */
+				while (fgetc(f) != ' ') {
+				}
+
+				for (int64_t j = 0; j < data.cols(); j++) {
+					float num = 0;
+					if (1 != fscanf(f, "%f ", &num)) {
+						throw std::runtime_error("Error reading w2v embeddings.");
+					}
+					data(i, j) = num;
+				}
+			}
+		} else {
+			throw std::runtime_error("Cannot open file to read embeddings.");
+		}
+	}
+
+	void store_binary(std::string file_name, cstlm::vocab_uncompressed<false>& vocab)
+	{
+		FILE* f = fopen(file_name.c_str(), "w");
+		if (f) {
+			fprintf(f, "%ld %ld\n", data.rows(), data.cols());
+			for (int64_t i = 0; i < data.rows(); i++) {
+				auto word = vocab.id2token(i);
+				fprintf(f, "%s ", word.c_str());
+				for (int64_t j = 0; j < data.cols(); j++) {
+					float num = data(i, j);
+					fwrite(&num, sizeof(float), 1, f);
+				}
+				fprintf(f, "\n");
+			}
+			fclose(f);
+		} else {
+			throw std::runtime_error("Cannot open file to write embeddings.");
+		}
+	}
+
+	void store_plain(std::string file_name, cstlm::vocab_uncompressed<false>& vocab)
+	{
+		FILE* f = fopen(file_name.c_str(), "w");
+		if (f) {
+			fprintf(f, "%ld %ld\n", data.rows(), data.cols());
+			for (int64_t i = 0; i < data.rows(); i++) {
+				auto word = vocab.id2token(i);
+				fprintf(f, "%s ", word.c_str());
+				for (int64_t j = 0; j < data.cols(); j++) {
+					float num = data(i, j);
+					fprintf(f, "%f ", num);
+				}
+				fprintf(f, "\n");
+			}
+			fclose(f);
+		} else {
+			throw std::runtime_error("Cannot open file to write embeddings.");
+		}
+	}
 };
 
 struct net_state {
@@ -238,7 +335,7 @@ private:
 		}
 	}
 
-	void create_huffman_tree(cstlm::vocab_uncompressed<false>& vocab)
+	void create_huffman_tree(cstlm::vocab_uncompressed<false>& /*vocab*/)
 	{
 		// todo
 	}
@@ -445,17 +542,20 @@ private:
 		m_total_tokens += text_size;
 	}
 
-	embeddings extract_embeddings()
+	embeddings extract_embeddings(cstlm::vocab_uncompressed<false>& vocab)
 	{
 		embeddings e;
-
+		e.data.resize(vocab.size(), m_vector_size);
+		for (size_t i = 0; i < vocab.size(); i++) {
+			for (size_t j = 0; j < m_vector_size; j++) {
+				e.data(i, j) = m_net_state.syn0[i * m_vector_size + j];
+			}
+		}
 		return e;
 	}
 
-	embeddings learn_embedding(cstlm::collection& col)
+	embeddings learn_embedding(cstlm::vocab_uncompressed<false>& vocab, cstlm::collection& col)
 	{
-		cstlm::LOG(cstlm::INFO) << "create vocab";
-		cstlm::vocab_uncompressed<false> vocab(col);
 
 		// (1) initialize net state
 		cstlm::LOG(cstlm::INFO) << "init net state";
@@ -493,7 +593,7 @@ private:
 								<< "Total Time: " << std::setprecision(2) << secs_elapsed.count()
 								<< " secs";
 
-		return extract_embeddings();
+		return extract_embeddings(vocab);
 	}
 
 
@@ -583,10 +683,14 @@ public:
 			return embeddings(w2v_file);
 		}
 
-		// (2) train
-		auto w2v_embeddings = learn_embedding(col);
+		// (2) load vocab
+		cstlm::LOG(cstlm::INFO) << "create vocab";
+		cstlm::vocab_uncompressed<false> vocab(col);
 
-		w2v_embeddings.store(w2v_file);
+		// (3) train
+		auto w2v_embeddings = learn_embedding(vocab, col);
+
+		w2v_embeddings.store_plain(w2v_file, vocab);
 
 		return w2v_embeddings;
 	}
