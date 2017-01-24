@@ -85,3 +85,6 @@ add_test(TestsPass unit-test.x)
 add_executable(train-nn-index-knm.x src/train-nn-index-knm.cpp)
 target_link_libraries(train-nn-index-knm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 
+add_executable(train-and-measure-w2v.x src/train-and-measure-w2v.cpp)
+target_link_libraries(train-and-measure-w2v.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+

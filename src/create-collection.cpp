@@ -62,8 +62,20 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
 		}
 	} else {
 		std::istringstream input(line);
-		std::string		   word;
-		while (std::getline(input, word, ' ')) {
+		char			   tmp_buf[10000] = {0};
+		size_t			   cur			  = 0;
+		for (size_t i = 0; i < line.size(); i++) {
+			int sym = line[i];
+			if (isspace(sym)) {
+				std::string word(tmp_buf, cur);
+				line_tokens.push_back(word);
+				cur = 0;
+			} else {
+				tmp_buf[cur++] = sym;
+			}
+		}
+		if (cur) {
+			std::string word(tmp_buf, cur);
 			line_tokens.push_back(word);
 		}
 	}

@@ -19,7 +19,7 @@ namespace word2vec {
 namespace consts {
 const uint64_t RAND_SEED		  = 0XBEEF;
 const uint64_t EXP_TABLE_SIZE	 = 1000;
-const uint64_t MAX_EXP			  = 6;
+const int64_t  MAX_EXP			  = 6;
 const uint64_t MAX_SENTENCE_LEN   = 1000;
 const uint64_t UNIGRAM_TABLE_SIZE = 1e8;
 }
@@ -175,6 +175,16 @@ public:
 
 	uint64_t cur_offset_in_text() { return std::distance(beg, cur); }
 
+	void print_cur(size_t i)
+	{
+		fprintf(stdout, "S[%u] n=%d [", i, m_cur_sentence_len);
+		for (size_t i = 0; i < m_cur_sentence_len; i++) {
+			auto word = vocab.id2token(m_sentence_buf[i]);
+			fprintf(stdout, "'%s',", word.c_str());
+		}
+		fprintf(stdout, "]\n");
+	}
+
 	bool next_sentence()
 	{
 		size_t offset = 0;
@@ -206,8 +216,21 @@ public:
 					double cprob = freq / double(vocab.total_freq);
 					auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
 					auto   gprob = subsampling_dist(gen);
+					auto   word  = vocab.id2token(sym);
+					// fprintf(stdout,
+					// 		"[%s] freq(%f) tfreq(%f) cprob(%f) st(%f) prob(%f) gprob(%f)",
+					// 		word.c_str(),
+					// 		freq,
+					// 		float(vocab.total_freq),
+					// 		cprob,
+					// 		sample_threshold,
+					// 		prob,
+					// 		gprob);
 					if (prob > gprob) {
 						add_sym = false;
+						// fprintf(stdout, " -> DROP\n");
+					} else {
+						// fprintf(stdout, " -> KEEP\n");
 					}
 				}
 			}
@@ -374,9 +397,10 @@ private:
 		auto   start					= watch::now();
 		while (sentences.next_sentence()) {
 			const auto& sentence = sentences.cur_sentence;
+			// sentences.print_cur(sentences_processed);
 
 			// periodically update learning rate and output stats
-			if (sentences_processed - last_sentences_processed > 50000) {
+			if (sentences_processed - last_sentences_processed > 10000) {
 				float local_cur_pos = sentences.cur_offset_in_text();
 				float cur_pos = sentences.cur_offset_in_text() + (cur_iteration * total_tokens);
 				float text_percent = cur_pos / (float)(total_tokens * m_num_iterations);
@@ -413,11 +437,13 @@ private:
 					// examine a window around the current word
 					// there is random window shrinkage in the original code
 					// [xxxxxWxxxxx] -> [xxxWxxx]
-					int64_t reduced_window_size				   = window_dist(gen);
-					int64_t start							   = sent_offset - reduced_window_size;
-					int64_t stop							   = sent_offset + reduced_window_size;
-					if (stop >= (int64_t)sentence.size()) stop = sentence.size() - 1;
-					for (int64_t wo = std::max(0L, start); wo < stop; wo++) {
+					int64_t reduced_window_size = window_dist(gen);
+					int64_t start				= sent_offset - reduced_window_size;
+					int64_t stop				= sent_offset + reduced_window_size;
+					auto	target_word			= sentence[sent_offset];
+					if (start < 0) start		= 0;
+					if (stop >= (int64_t)sentences.cur_size()) stop = sentences.cur_size() - 1;
+					for (int64_t wo = start; wo < stop; wo++) {
 						if (wo == (int64_t)sent_offset) continue; // don't examine the word itself
 
 						auto word_id	= sentence[wo];
@@ -438,11 +464,11 @@ private:
 							// real target at pos 0 and the negative samples after
 							for (size_t d = 0; d < m_num_negative_samples + 1; d++) {
 								float label  = 1.0f;
-								auto  target = word_id;
+								auto  target = target_word;
 								if (d != 0) { // incorrect word. choose a negative sample at random
 									// but keep the original word dist in mind
 									target = m_unigram_neg_table[neg_table_dist(gen)];
-									if (target == word_id) continue;
+									if (target == target_word) continue;
 									label = 0.0f;
 								}
 								auto  l2 = target * m_vector_size;
@@ -453,12 +479,12 @@ private:
 								// compute exp with hacks
 								// 'g' is the gradient multiplied by the learning rate
 								float g = 0;
-								if (f > consts::MAX_EXP)
+								if (f > float(consts::MAX_EXP)) {
 									g = (label - 1) * m_cur_learning_rate;
-								else if (f < -consts::MAX_EXP)
+								} else if (f < float(-consts::MAX_EXP)) {
 									g = (label - 0) * m_cur_learning_rate;
-								else {
-									int o = (f + consts::MAX_EXP) *
+								} else {
+									int o = (f + float(consts::MAX_EXP)) *
 											(consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2);
 									g = (label - m_expTable[o]) * m_cur_learning_rate;
 								}
@@ -578,8 +604,10 @@ private:
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_TEXT]);
 
 		// (5) then train on the small file
+		/*
 		cstlm::LOG(cstlm::INFO) << "learn embedding small file";
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_SMALLTEXT]);
+        */
 
 		auto stop = watch::now();
 
@@ -691,6 +719,7 @@ public:
 		auto w2v_embeddings = learn_embedding(vocab, col);
 
 		w2v_embeddings.store_binary(w2v_file, vocab);
+		w2v_embeddings.store_plain(w2v_file + ".plain", vocab);
 
 		return w2v_embeddings;
 	}
