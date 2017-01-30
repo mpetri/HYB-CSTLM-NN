@@ -17,8 +17,7 @@ typedef struct cmdargs {
 
 void print_usage(const char* program)
 {
-	fprintf(
-	stdout, "%s -b <big input file> -s <small input file> -c <coldir> -t <thres> \n", program);
+	fprintf(stdout, "%s -b <big input file> -s <small input file> -c <coldir>\n", program);
 	fprintf(stdout, "where\n");
 	fprintf(stdout, "  -b <big input file>    : the big input file.\n");
 	fprintf(stdout, "  -s <small input file>  : the small input file.\n");
@@ -67,16 +66,20 @@ std::vector<std::string> parse_line(const std::string& line, bool byte)
 		for (size_t i = 0; i < line.size(); i++) {
 			int sym = line[i];
 			if (isspace(sym)) {
-				std::string word(tmp_buf, cur);
-				line_tokens.push_back(word);
+				auto word = utils::clean_word(tmp_buf, cur);
+				if (word.size() > 0) {
+					line_tokens.push_back(word);
+				}
 				cur = 0;
 			} else {
 				tmp_buf[cur++] = sym;
 			}
 		}
 		if (cur) {
-			std::string word(tmp_buf, cur);
-			line_tokens.push_back(word);
+			auto word = utils::clean_word(tmp_buf, cur);
+			if (word.size() > 0) {
+				line_tokens.push_back(word);
+			}
 		}
 	}
 	return line_tokens;
@@ -137,8 +140,6 @@ int main(int argc, const char* argv[])
 		std::sort(
 		dict_ids.begin(), dict_ids.end(), std::greater<std::pair<uint64_t, std::string>>());
 
-		sigma = dict_ids.size();
-
 		LOG(INFO) << "create id mapping";
 		uint64_t cur_id = NUM_SPECIAL_SYMS;
 		for (const auto& did : dict_ids) {
@@ -146,6 +147,7 @@ int main(int argc, const char* argv[])
 			max_id			 = cur_id;
 			cur_id++;
 		}
+		sigma = dict.size();
 	}
 
 
@@ -167,7 +169,7 @@ int main(int argc, const char* argv[])
 			for (const auto& tok : line_tokens) {
 				auto itr = dict.find(tok);
 				if (itr == dict.end()) {
-					LOG(ERROR) << "can't find symbol '" << tok << "' in dict.";
+					// LOG(ERROR) << "can't find symbol '" << tok << "' in dict.";
 				} else {
 					auto num = itr->second;
 					buf.push_back(num);
@@ -205,7 +207,7 @@ int main(int argc, const char* argv[])
 			for (const auto& tok : line_tokens) {
 				auto itr = dict.find(tok);
 				if (itr == dict.end()) {
-					LOG(ERROR) << "can't find symbol '" << tok << "' in dict.";
+					// LOG(ERROR) << "can't find symbol '" << tok << "' in dict.";
 				} else {
 					auto num = itr->second;
 					buf.push_back(num);

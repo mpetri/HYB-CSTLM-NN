@@ -101,8 +101,6 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 					  .num_iterations(5)
 					  .min_freq_threshold(5)
 					  .start_learning_rate(0.025)
-					  .batch_size(11)
-					  .use_cbow(false)
 					  .train_or_load(col);
 	return embeddings;
 }

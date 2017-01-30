@@ -10,6 +10,7 @@
 #include "omp.h"
 
 #include <Eigen/Dense>
+#include <sdsl/bit_vectors.hpp>
 
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
@@ -26,16 +27,13 @@ const uint64_t UNIGRAM_TABLE_SIZE = 1e8;
 
 namespace constants {
 
-const uint32_t DEFAULT_VEC_SIZE					= 100;
-const float	DEFAULT_LEARNING_RATE			= 0.025f;
-const uint32_t DEFAULT_WINDOW_SIZE				= 5;
-const float	DEFAULT_SAMPLE_THRESHOLD			= 1e-5;
-const uint32_t DEFAULT_NUM_NEG_SAMPLES			= 5;
-const uint32_t DEFAULT_NUM_ITERATIONS			= 5;
-const uint32_t DEFAULT_MIN_FREQ_THRES			= 5;
-const uint32_t DEFAULT_BATCH_SIZE				= 2 * DEFAULT_WINDOW_SIZE + 1;
-const bool	 DEFAULT_USE_HIERARCHICAL_SOFTMAX = false;
-const bool	 DEFAULT_USE_CBOW					= false;
+const uint32_t DEFAULT_VEC_SIZE			= 100;
+const float	DEFAULT_LEARNING_RATE	= 0.025f;
+const uint32_t DEFAULT_WINDOW_SIZE		= 5;
+const float	DEFAULT_SAMPLE_THRESHOLD = 1e-5;
+const uint32_t DEFAULT_NUM_NEG_SAMPLES  = 5;
+const uint32_t DEFAULT_NUM_ITERATIONS   = 5;
+const uint32_t DEFAULT_MIN_FREQ_THRES   = 5;
 }
 
 struct embeddings {
@@ -142,7 +140,6 @@ struct embeddings {
 
 struct net_state {
 	std::vector<float> syn0;
-	std::vector<float> syn1;
 	std::vector<float> syn1neg;
 };
 
@@ -217,15 +214,6 @@ public:
 					auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
 					auto   gprob = subsampling_dist(gen);
 					auto   word  = vocab.id2token(sym);
-					// fprintf(stdout,
-					// 		"[%s] freq(%f) tfreq(%f) cprob(%f) st(%f) prob(%f) gprob(%f)",
-					// 		word.c_str(),
-					// 		freq,
-					// 		float(vocab.total_freq),
-					// 		cprob,
-					// 		sample_threshold,
-					// 		prob,
-					// 		gprob);
 					if (prob > gprob) {
 						add_sym = false;
 						// fprintf(stdout, " -> DROP\n");
@@ -266,36 +254,28 @@ private:
 	uint32_t m_num_negative_samples = constants::DEFAULT_NUM_NEG_SAMPLES;
 	uint32_t m_num_iterations		= constants::DEFAULT_NUM_ITERATIONS;
 	uint32_t m_min_freq_threshold   = constants::DEFAULT_MIN_FREQ_THRES;
-	uint32_t m_batch_size			= constants::DEFAULT_BATCH_SIZE;
 	uint32_t m_num_threads			= std::thread::hardware_concurrency();
-	bool	 m_use_cbow				= constants::DEFAULT_USE_CBOW;
-	bool	 m_hierarchical_softmax = constants::DEFAULT_USE_HIERARCHICAL_SOFTMAX;
 
 private:
-	std::vector<uint32_t> m_unigram_neg_table;
-	net_state			  m_net_state;
+	net_state m_net_state;
 	std::array<float, consts::EXP_TABLE_SIZE + 1> m_expTable;
-	float				  m_cur_learning_rate;
-	std::atomic<uint64_t> m_total_sentences_processed = ATOMIC_VAR_INIT(0);
-	uint64_t			  m_total_tokens			  = 0;
+	float								  m_cur_learning_rate;
+	std::atomic<uint64_t>				  m_total_sentences_processed = ATOMIC_VAR_INIT(0);
+	uint64_t							  m_total_tokens			  = 0;
+	sdsl::bit_vector_il<256>			  m_unigram_bv;
+	sdsl::bit_vector_il<256>::rank_1_type m_unigram_bv_rank;
 
 private:
 	void output_params()
 	{
-		cstlm::LOG(cstlm::INFO) << "number of threads: " << m_num_threads;
-		cstlm::LOG(cstlm::INFO) << "number of iterations: " << m_num_iterations;
-		cstlm::LOG(cstlm::INFO) << "hidden size: " << m_vector_size;
-		cstlm::LOG(cstlm::INFO) << "number of negative samples: " << m_num_negative_samples;
-		cstlm::LOG(cstlm::INFO) << "use hierchical softmax: " << m_hierarchical_softmax;
-		cstlm::LOG(cstlm::INFO) << "window size: " << m_window_size;
-		cstlm::LOG(cstlm::INFO) << "batch size: " << m_num_threads;
-		cstlm::LOG(cstlm::INFO) << "min freq: " << m_min_freq_threshold;
-		cstlm::LOG(cstlm::INFO) << "starting learning rate: " << m_start_learning_rate;
-		if (m_use_cbow) {
-			cstlm::LOG(cstlm::INFO) << "model: continuous back of words (CBOW)";
-		} else {
-			cstlm::LOG(cstlm::INFO) << "model: skip-gram (SG)";
-		}
+		cstlm::LOG(cstlm::INFO) << "W2V number of threads: " << m_num_threads;
+		cstlm::LOG(cstlm::INFO) << "W2V number of iterations: " << m_num_iterations;
+		cstlm::LOG(cstlm::INFO) << "W2V hidden size: " << m_vector_size;
+		cstlm::LOG(cstlm::INFO) << "W2V number of negative samples: " << m_num_negative_samples;
+		cstlm::LOG(cstlm::INFO) << "W2V window size: " << m_window_size;
+		cstlm::LOG(cstlm::INFO) << "W2V min freq: " << m_min_freq_threshold;
+		cstlm::LOG(cstlm::INFO) << "W2V starting learning rate: " << m_start_learning_rate;
+		cstlm::LOG(cstlm::INFO) << "W2V model: skip-gram (SG)";
 	}
 
 
@@ -313,16 +293,6 @@ private:
 			m_net_state.syn0[i] = dist(gen);
 		}
 
-		if (m_hierarchical_softmax == true) {
-			m_net_state.syn1.resize(vocab.size() * m_vector_size);
-			float* data		 = m_net_state.syn1.data();
-			size_t data_size = m_net_state.syn1.size();
-#pragma omp		   simd
-			for (size_t i = 0; i < data_size; i++) {
-				data[i] = 0;
-			}
-		}
-
 		if (m_num_negative_samples > 0) {
 			m_net_state.syn1neg.resize(vocab.size() * m_vector_size);
 			float* data		 = m_net_state.syn1neg.data();
@@ -336,31 +306,25 @@ private:
 
 	void init_unigram_table(cstlm::vocab_uncompressed<false>& vocab)
 	{
-		m_unigram_neg_table.resize(consts::UNIGRAM_TABLE_SIZE);
-
 		// from the paper -> power 3/4
 		const float power			= 0.75f;
 		double		train_words_pow = 0.0;
 		for (size_t i = 0; i < vocab.size(); i++) {
 			train_words_pow += pow(vocab.freq[i], power);
 		}
-
-		uint32_t i			= 0;
-		float	d1			= pow(vocab.freq[i], power) / train_words_pow;
-		size_t   table_size = m_unigram_neg_table.size();
-		for (size_t a = 0; a < m_unigram_neg_table.size(); a++) {
-			m_unigram_neg_table[a] = i;
-			if (float(a) / float(table_size) > d1) {
-				i++;
-				d1 += pow(vocab.freq[i], power) / train_words_pow;
-			}
-			if (i >= vocab.size()) i = vocab.size() - 1;
+		sdsl::bit_vector unigram_bv;
+		unigram_bv.resize(train_words_pow + 1);
+		for (size_t i = 0; i < unigram_bv.size(); i++) {
+			unigram_bv[i] = 0;
 		}
-	}
 
-	void create_huffman_tree(cstlm::vocab_uncompressed<false>& /*vocab*/)
-	{
-		// todo
+		size_t cur = 0;
+		for (size_t i = 0; i < vocab.size() - 1; i++) {
+			cur += pow(vocab.freq[i], power);
+			unigram_bv[cur] = 1;
+		}
+		m_unigram_bv	  = sdsl::bit_vector_il<256>(unigram_bv);
+		m_unigram_bv_rank = sdsl::bit_vector_il<256>::rank_1_type(&m_unigram_bv);
 	}
 
 	void learn_embedding_from_file_chunk(cstlm::vocab_uncompressed<false>& vocab,
@@ -372,7 +336,7 @@ private:
 	{
 		sdsl::int_vector_buffer<0>			   text(file_name);
 		std::uniform_int_distribution<int64_t> window_dist(1, m_window_size);
-		std::uniform_int_distribution<int64_t> neg_table_dist(0, m_unigram_neg_table.size());
+		std::uniform_int_distribution<int64_t> neg_sample_dist(1, m_unigram_bv.size() - 1);
 		std::mt19937						   gen(consts::RAND_SEED);
 
 		auto itr = text.begin() + file_offset;
@@ -381,26 +345,24 @@ private:
 		sentence_parser<decltype(text.begin())> sentences(
 		itr, end, vocab, m_sample_threshold, m_min_freq_threshold);
 
-		std::vector<float> neu1_data(m_vector_size);
 		std::vector<float> neu1e_data(m_vector_size);
 
 		// get float ptrs for SIMD parallelism
-		auto neu1	= neu1_data.data();
 		auto neu1e   = neu1e_data.data();
 		auto syn1neg = m_net_state.syn1neg.data();
 		auto syn0	= m_net_state.syn0.data();
-		auto syn1	= m_net_state.syn1.data();
 
 		size_t last_sentences_processed = 0;
 		size_t sentences_processed		= 0;
 		size_t total_tokens				= std::distance(itr, end);
 		auto   start					= watch::now();
+		auto   last_msg					= watch::now();
 		while (sentences.next_sentence()) {
 			const auto& sentence = sentences.cur_sentence;
 			// sentences.print_cur(sentences_processed);
 
 			// periodically update learning rate and output stats
-			if (sentences_processed - last_sentences_processed > 10000) {
+			if (sentences_processed - last_sentences_processed > 2000) {
 				float local_cur_pos = sentences.cur_offset_in_text();
 				float cur_pos = sentences.cur_offset_in_text() + (cur_iteration * total_tokens);
 				float text_percent = cur_pos / (float)(total_tokens * m_num_iterations);
@@ -408,15 +370,21 @@ private:
 				std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = cur_time - start;
 				double sents_per_sec = double(sentences_processed) / (secs_elapsed.count() + 1);
 				double words_per_sec = double(local_cur_pos) / (secs_elapsed.count() + 1);
-				cstlm::LOG(cstlm::INFO)
-				<< "[" << thread_id << "] "
-				<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
-				<< "alpha(" << std::fixed << std::setprecision(6) << m_cur_learning_rate << ") "
-				<< "S(" << std::setprecision(0) << float(sentences_processed) << ") "
-				<< "W(" << std::setprecision(0) << local_cur_pos << ") "
-				<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
-				<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
-				<< "%(" << std::setprecision(2) << floorf(text_percent * 10000.0f) / 100.0f << ") ";
+
+				std::chrono::duration<double, std::ratio<1, 1>> pelapsed = cur_time - last_msg;
+				if (pelapsed.count() > 3) {
+					cstlm::LOG(cstlm::INFO)
+					<< "W2V [" << thread_id << "] "
+					<< "iter(" << cur_iteration + 1 << "/" << m_num_iterations << ") "
+					<< "alpha(" << std::fixed << std::setprecision(6) << m_cur_learning_rate << ") "
+					<< "S(" << std::setprecision(0) << float(sentences_processed) << ") "
+					<< "W(" << std::setprecision(0) << local_cur_pos << ") "
+					<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
+					<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
+					<< "%(" << std::setprecision(2) << floorf(text_percent * 10000.0f) / 100.0f
+					<< ") ";
+					last_msg = cur_time;
+				}
 
 				// update learning rate based on how many words we have seen
 				float new_rate = m_start_learning_rate * ((1 - (text_percent)));
@@ -431,87 +399,87 @@ private:
 			if (sentences.cur_size() <= 1) continue;
 			// we process each word in the sentence separately
 			for (size_t sent_offset = 0; sent_offset < sentences.cur_size(); sent_offset++) {
-				if (m_use_cbow) { // cbow
+				// examine a window around the current word
+				// there is random window shrinkage in the original code
+				// [xxxxxWxxxxx] -> [xxxWxxx]
+				int64_t reduced_window_size						= window_dist(gen);
+				int64_t start									= sent_offset - reduced_window_size;
+				int64_t stop									= sent_offset + reduced_window_size;
+				auto	target_word								= sentence[sent_offset];
+				if (start < 0) start							= 0;
+				if (stop >= (int64_t)sentences.cur_size()) stop = sentences.cur_size() - 1;
+				for (int64_t wo = start; wo < stop; wo++) {
+					if (wo == (int64_t)sent_offset) continue; // don't examine the word itself
 
-				} else { // skip-gram
-					// examine a window around the current word
-					// there is random window shrinkage in the original code
-					// [xxxxxWxxxxx] -> [xxxWxxx]
-					int64_t reduced_window_size = window_dist(gen);
-					int64_t start				= sent_offset - reduced_window_size;
-					int64_t stop				= sent_offset + reduced_window_size;
-					auto	target_word			= sentence[sent_offset];
-					if (start < 0) start		= 0;
-					if (stop >= (int64_t)sentences.cur_size()) stop = sentences.cur_size() - 1;
-					for (int64_t wo = start; wo < stop; wo++) {
-						if (wo == (int64_t)sent_offset) continue; // don't examine the word itself
+					auto word_id	= sentence[wo];
+					auto row_offset = word_id * m_vector_size;
 
-						auto word_id	= sentence[wo];
-						auto row_offset = word_id * m_vector_size;
-
-						{
+					{
 #pragma omp simd
-							for (size_t i = 0; i < m_vector_size; i++)
-								neu1e[i]  = 0;
-						}
+						for (size_t i = 0; i < m_vector_size; i++)
+							neu1e[i]  = 0;
+					}
 
-						if (m_hierarchical_softmax) {
-							// TODO
-						} else {
-							// negative sampling
-
-							// (1) fill up the target vector with the
-							// real target at pos 0 and the negative samples after
-							for (size_t d = 0; d < m_num_negative_samples + 1; d++) {
-								float label  = 1.0f;
-								auto  target = target_word;
-								if (d != 0) { // incorrect word. choose a negative sample at random
-									// but keep the original word dist in mind
-									target = m_unigram_neg_table[neg_table_dist(gen)];
-									if (target == target_word) continue;
-									label = 0.0f;
-								}
-								auto  l2 = target * m_vector_size;
-								float f  = 0;
-								for (size_t i = 0; i < m_vector_size; i++) {
-									f += syn0[i + row_offset] * syn1neg[i + l2];
-								}
-								// compute exp with hacks
-								// 'g' is the gradient multiplied by the learning rate
-								float g = 0;
-								if (f > float(consts::MAX_EXP)) {
-									g = (label - 1) * m_cur_learning_rate;
-								} else if (f < float(-consts::MAX_EXP)) {
-									g = (label - 0) * m_cur_learning_rate;
-								} else {
-									int o = (f + float(consts::MAX_EXP)) *
-											(consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2);
-									g = (label - m_expTable[o]) * m_cur_learning_rate;
-								}
-
-								// TODO WHAT IS THIS
-								{
-#pragma omp simd
-									for (size_t i = 0; i < m_vector_size; i++) {
-										neu1e[i] += g * syn1neg[i + l2];
-									}
-								}
-
-								// TODO WHAT IS THIS??
-								{
-#pragma omp simd
-									for (size_t i = 0; i < m_vector_size; i++) {
-										syn1neg[i + l2] += g * syn0[i + row_offset];
-									}
-								}
+					// negative sampling only!
+					// (1) fill up the target vector with the
+					// real target at pos 0 and the negative samples after
+					for (size_t d = 0; d < m_num_negative_samples + 1; d++) {
+						float label  = 1.0f;
+						auto  target = target_word;
+						if (d != 0) { // incorrect word. choose a negative sample at random
+							// but keep the original word dist in mind
+							target = m_unigram_bv_rank(neg_sample_dist(gen));
+							// static std::mutex			m;
+							// std::lock_guard<std::mutex> ml(m);
+							// std::cout << "target = " << target
+							// 		  << " vocab size = " << vocab.size() << std::endl;
+							if (target >= vocab.size()) {
+								std::cerr << "error neg generation -> " << target
+										  << " vocab=" << vocab.size() << std::endl;
 							}
+							//target = m_unigram_neg_table[neg_table_dist(gen)];
+							if (target == target_word) continue;
+							label = 0.0f;
 						}
-						// Learn weights input -> hidden
+						auto  l2 = target * m_vector_size;
+						float f  = 0;
+						for (size_t i = 0; i < m_vector_size; i++) {
+							f += syn0[i + row_offset] * syn1neg[i + l2];
+						}
+						// compute exp with hacks
+						// 'g' is the gradient multiplied by the learning rate
+						float g = 0;
+						if (f > float(consts::MAX_EXP)) {
+							g = (label - 1) * m_cur_learning_rate;
+						} else if (f < float(-consts::MAX_EXP)) {
+							g = (label - 0) * m_cur_learning_rate;
+						} else {
+							const int co = consts::EXP_TABLE_SIZE / consts::MAX_EXP / 2;
+							int		  o  = (f + consts::MAX_EXP) * co;
+							g			 = (label - m_expTable[o]) * m_cur_learning_rate;
+						}
+
+						// TODO WHAT IS THIS
 						{
 #pragma omp simd
 							for (size_t i = 0; i < m_vector_size; i++) {
-								syn0[i + row_offset] += neu1e[i];
+								neu1e[i] += g * syn1neg[i + l2];
 							}
+						}
+
+						// TODO WHAT IS THIS??
+						{
+#pragma omp simd
+							for (size_t i = 0; i < m_vector_size; i++) {
+								syn1neg[i + l2] += g * syn0[i + row_offset];
+							}
+						}
+					}
+					// Learn weights input -> hidden
+					{
+#pragma omp simd
+						for (size_t i = 0; i < m_vector_size; i++) {
+							syn0[i + row_offset] += neu1e[i];
 						}
 					}
 				}
@@ -559,7 +527,7 @@ private:
 		std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = stop - start;
 		double sents_per_sec = double(m_total_sentences_processed) / (secs_elapsed.count() + 1);
 		double words_per_sec = double(text_size) / (secs_elapsed.count() + 1);
-		cstlm::LOG(cstlm::INFO) << "Sentences Processed: " << m_total_sentences_processed << " "
+		cstlm::LOG(cstlm::INFO) << "W2V Sentences Processed: " << m_total_sentences_processed << " "
 								<< "Words Processed: " << text_size << " "
 								<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
 								<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
@@ -584,26 +552,21 @@ private:
 	{
 
 		// (1) initialize net state
-		cstlm::LOG(cstlm::INFO) << "init net state";
+		cstlm::LOG(cstlm::INFO) << "W2V init net state";
 		init_net_state(vocab);
 
 		// (2) init unigram table for negative sampling
 		if (m_num_negative_samples > 0) {
-			cstlm::LOG(cstlm::INFO) << "init unigram table";
+			cstlm::LOG(cstlm::INFO) << "W2V init unigram table";
 			init_unigram_table(vocab);
 		}
 
-		// (3) create huffman tree for hierarchical softmax
-		if (m_hierarchical_softmax == true) {
-			create_huffman_tree(vocab);
-		}
-
-		// (4) first train on the big file
-		cstlm::LOG(cstlm::INFO) << "learn embedding big file";
+		// (3) first train on the big file
+		cstlm::LOG(cstlm::INFO) << "W2V learn embedding big file";
 		auto start = watch::now();
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_TEXT]);
 
-		// (5) then train on the small file
+		// (4) then train on the small file
 		/*
 		cstlm::LOG(cstlm::INFO) << "learn embedding small file";
 		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_SMALLTEXT]);
@@ -614,7 +577,7 @@ private:
 		std::chrono::duration<double, std::ratio<1, 1>> secs_elapsed = stop - start;
 		double sents_per_sec = double(m_total_sentences_processed) / (secs_elapsed.count() + 1);
 		double words_per_sec = double(m_total_tokens) / (secs_elapsed.count() + 1);
-		cstlm::LOG(cstlm::INFO) << "Sentences Processed: " << m_total_sentences_processed << " "
+		cstlm::LOG(cstlm::INFO) << "W2V Sentences Processed: " << m_total_sentences_processed << " "
 								<< "Words Processed: " << m_total_tokens << " "
 								<< "S/s(" << std::setprecision(0) << sents_per_sec << ") "
 								<< "W/s(" << std::setprecision(0) << words_per_sec << ") "
@@ -647,9 +610,6 @@ public:
 	builder& num_negative_samples(uint32_t ns)
 	{
 		m_num_negative_samples = ns;
-		if (ns == 0) {
-			m_hierarchical_softmax = true;
-		}
 		return *this;
 	};
 
@@ -677,26 +637,20 @@ public:
 		return *this;
 	};
 
-	builder& batch_size(uint32_t bs)
+	std::string file_name(cstlm::collection& col)
 	{
-		m_batch_size = bs;
-		return *this;
-	};
-
-	builder& use_cbow(bool cbow)
-	{
-		m_use_cbow = cbow;
-		return *this;
-	};
-
-	builder& use_hierarchical_softmax(bool hs)
-	{
-		m_hierarchical_softmax = hs;
-		if (m_hierarchical_softmax) {
-			m_num_negative_samples = 0;
-		}
-		return *this;
-	};
+		std::stringstream fn;
+		fn << col.path;
+		fn << "/index/W2V-";
+		fn << "mf=" << m_min_freq_threshold << "-";
+		fn << "ni=" << m_num_iterations << "-";
+		fn << "ns=" << m_num_negative_samples << "-";
+		fn << "ss=" << m_sample_threshold << "-";
+		fn << "ws=" << m_window_size << "-";
+		fn << "vs=" << m_vector_size;
+		fn << ".embeddings";
+		return fn.str();
+	}
 
 	embeddings train_or_load(cstlm::collection& col)
 	{
@@ -706,7 +660,7 @@ public:
 		output_params();
 
 		// (1) if exists. just load
-		auto w2v_file = col.path + "/index/W2V.embeddings";
+		auto w2v_file = file_name(col);
 		if (cstlm::utils::file_exists(w2v_file)) {
 			return embeddings(w2v_file);
 		}
