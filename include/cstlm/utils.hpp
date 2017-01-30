@@ -54,6 +54,12 @@ std::string clean_word(const char* buf, size_t n)
 
 	if (word_start >= last) return "";
 	size_t word_len = last - word_start + 1;
+
+	// don't want single symbol words that are not alphanumerical
+	if (word_len == 1) {
+		int sym = buf[word_start];
+		if (!isalnum(sym)) return "";
+	}
 	return std::string(buf + word_start, word_len);
 }
 
