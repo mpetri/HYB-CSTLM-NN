@@ -18,28 +18,30 @@ using watch = std::chrono::high_resolution_clock;
 namespace word2vec {
 
 namespace consts {
-const uint64_t RAND_SEED		  = 0XBEEF;
-const uint64_t EXP_TABLE_SIZE	 = 1000;
-const int64_t  MAX_EXP			  = 6;
-const uint64_t MAX_SENTENCE_LEN   = 1000;
-const uint64_t UNIGRAM_TABLE_SIZE = 1e8;
+const uint64_t RAND_SEED		= 0XBEEF;
+const uint64_t EXP_TABLE_SIZE   = 1000;
+const int64_t  MAX_EXP			= 6;
+const uint64_t MAX_SENTENCE_LEN = 1000;
 }
 
-namespace constants {
-
-const uint32_t DEFAULT_VEC_SIZE			= 100;
-const float	DEFAULT_LEARNING_RATE	= 0.025f;
-const uint32_t DEFAULT_WINDOW_SIZE		= 5;
-const float	DEFAULT_SAMPLE_THRESHOLD = 1e-5;
-const uint32_t DEFAULT_NUM_NEG_SAMPLES  = 5;
-const uint32_t DEFAULT_NUM_ITERATIONS   = 5;
-const uint32_t DEFAULT_MIN_FREQ_THRES   = 5;
+namespace defaults {
+const uint32_t VEC_SIZE			= 100;
+const float	LEARNING_RATE	= 0.025f;
+const uint32_t WINDOW_SIZE		= 5;
+const uint32_t SAMPLE_THRESHOLD = 100;
+const uint32_t NUM_NEG_SAMPLES  = 5;
+const uint32_t NUM_ITERATIONS   = 5;
+const uint32_t MIN_FREQ_THRES   = 5;
 }
 
 struct embeddings {
 	Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> data;
 	embeddings() {}
 	embeddings(std::string file_name) { load_binary(file_name); }
+
+	uint32_t rows() const { return data.rows(); }
+
+	uint32_t cols() const { return data.cols(); }
 
 	void load_binary(std::string file_name)
 	{
@@ -247,13 +249,13 @@ struct builder {
 	}
 
 private:
-	float	m_start_learning_rate  = constants::DEFAULT_LEARNING_RATE;
-	uint32_t m_vector_size			= constants::DEFAULT_VEC_SIZE;
-	uint32_t m_window_size			= constants::DEFAULT_WINDOW_SIZE;
-	float	m_sample_threshold		= constants::DEFAULT_SAMPLE_THRESHOLD;
-	uint32_t m_num_negative_samples = constants::DEFAULT_NUM_NEG_SAMPLES;
-	uint32_t m_num_iterations		= constants::DEFAULT_NUM_ITERATIONS;
-	uint32_t m_min_freq_threshold   = constants::DEFAULT_MIN_FREQ_THRES;
+	float	m_start_learning_rate  = defaults::LEARNING_RATE;
+	uint32_t m_vector_size			= defaults::VEC_SIZE;
+	uint32_t m_window_size			= defaults::WINDOW_SIZE;
+	uint32_t m_sample_threshold		= defaults::SAMPLE_THRESHOLD;
+	uint32_t m_num_negative_samples = defaults::NUM_NEG_SAMPLES;
+	uint32_t m_num_iterations		= defaults::NUM_ITERATIONS;
+	uint32_t m_min_freq_threshold   = defaults::MIN_FREQ_THRES;
 	uint32_t m_num_threads			= std::thread::hardware_concurrency();
 
 private:
@@ -336,15 +338,20 @@ private:
 										 uint64_t						   cur_iteration)
 	{
 		sdsl::int_vector_buffer<0>			   text(file_name);
-		std::uniform_int_distribution<int64_t> window_dist(1, m_window_size);
+		std::uniform_int_distribution<int64_t> window_dist(2, m_window_size - 1);
 		std::uniform_int_distribution<int64_t> neg_sample_dist(1, m_unigram_bv.size() - 1);
 		std::mt19937						   gen(consts::RAND_SEED);
 
 		auto itr = text.begin() + file_offset;
 		auto end = text.begin() + file_offset + file_chunk_len;
 
+		float sample_freq_thres = 0; // drop nothing
+		if (m_sample_threshold != 0 && m_sample_threshold < vocab.size()) {
+			sample_freq_thres = vocab.freq[m_sample_threshold];
+		}
+
 		sentence_parser<decltype(text.begin())> sentences(
-		itr, end, vocab, m_sample_threshold, m_min_freq_threshold);
+		itr, end, vocab, sample_freq_thres, m_min_freq_threshold);
 
 		std::vector<float> neu1e_data(m_vector_size);
 
@@ -602,7 +609,7 @@ public:
 		return *this;
 	};
 
-	builder& sample_threadhold(float st)
+	builder& sample_threadhold(uint32_t st)
 	{
 		m_sample_threshold = st;
 		return *this;
