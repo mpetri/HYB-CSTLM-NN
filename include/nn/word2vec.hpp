@@ -273,6 +273,7 @@ private:
 		cstlm::LOG(cstlm::INFO) << "W2V hidden size: " << m_vector_size;
 		cstlm::LOG(cstlm::INFO) << "W2V number of negative samples: " << m_num_negative_samples;
 		cstlm::LOG(cstlm::INFO) << "W2V window size: " << m_window_size;
+		cstlm::LOG(cstlm::INFO) << "W2V sample threshold: " << m_sample_threshold;
 		cstlm::LOG(cstlm::INFO) << "W2V min freq: " << m_min_freq_threshold;
 		cstlm::LOG(cstlm::INFO) << "W2V starting learning rate: " << m_start_learning_rate;
 		cstlm::LOG(cstlm::INFO) << "W2V model: skip-gram (SG)";
@@ -513,7 +514,7 @@ private:
 					chunk_size = text_size - coffset;
 				}
 				fchunks.push_back(
-				std::async(std::launch::async, [&, i, j, chunk_size, coffset, file_name, &vocab] {
+				std::async(std::launch::async, [&, i, j, chunk_size, coffset, file_name] {
 					learn_embedding_from_file_chunk(vocab, file_name, coffset, chunk_size, i, j);
 				}));
 				coffset += chunk_size;
