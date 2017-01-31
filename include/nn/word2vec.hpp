@@ -184,6 +184,7 @@ public:
 
 	bool next_sentence()
 	{
+        fprintf(stdout,"find next sentence\n");
 		size_t offset = 0;
 		// find start of next sentence
 		while (cur != end) {
@@ -214,11 +215,18 @@ public:
 					auto   prob  = 1.0 - sqrt(sample_threshold / cprob);
 					auto   gprob = subsampling_dist(gen);
 					auto   word  = vocab.id2token(sym);
+                    fprintf(stdout,"%s freq(%lf) tf(%ld) cprob(%f) prob(%f) gprob(%f)",
+                            word.c_str(),
+                            freq,
+                            vocab.total_freq,
+                            cprob,
+                            prob,
+                            gprob);
 					if (prob > gprob) {
 						add_sym = false;
-						// fprintf(stdout, " -> DROP\n");
+						fprintf(stdout, " -> DROP\n");
 					} else {
-						// fprintf(stdout, " -> KEEP\n");
+						fprintf(stdout, " -> KEEP\n");
 					}
 				}
 			}
@@ -229,6 +237,7 @@ public:
 			++cur;
 		}
 		m_cur_sentence_len = offset;
+        fprintf(stdout,"next sentence len %d\n",offset);
 		if (cur == end && offset == 0) {
 			return false;
 		}
@@ -336,7 +345,7 @@ private:
 										 uint64_t						   cur_iteration)
 	{
 		sdsl::int_vector_buffer<0>			   text(file_name);
-		std::uniform_int_distribution<int64_t> window_dist(1, m_window_size);
+		std::uniform_int_distribution<int64_t> window_dist(3, m_window_size);
 		std::uniform_int_distribution<int64_t> neg_sample_dist(1, m_unigram_bv.size() - 1);
 		std::mt19937						   gen(consts::RAND_SEED);
 
