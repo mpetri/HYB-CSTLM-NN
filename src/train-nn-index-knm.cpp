@@ -16,6 +16,7 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "word2vec.hpp"
+#include "hyblm.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -36,7 +37,6 @@ void print_usage(const char* program)
 	fprintf(stdout, "%s -c <collection dir>\n", program);
 	fprintf(stdout, "where\n");
 	fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
-	fprintf(stdout, "  -m                   : use modified kneser ney.\n");
 	fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
 };
 
@@ -45,14 +45,11 @@ cmdargs_t parse_args(int argc, const char* argv[])
 	cmdargs_t args;
 	int		  op;
 	args.collection_dir = "";
-	args.use_mkn		= false;
-	while ((op = getopt(argc, (char* const*)argv, "c:dmt:")) != -1) {
+	args.use_mkn		= true;
+	while ((op = getopt(argc, (char* const*)argv, "c:dt:")) != -1) {
 		switch (op) {
 			case 'c':
 				args.collection_dir = optarg;
-				break;
-			case 'm':
-				args.use_mkn = true;
 				break;
 			case 't':
 				num_cstlm_threads = std::atoi(optarg);
@@ -105,6 +102,19 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 	return embeddings;
 }
 
+template <class t_cstlm>
+hyblm::LM load_or_create_hyblm(collection& col, t_cstlm& cstlm, word2vec::embeddings& WE)
+{
+	auto hyblm = hyblm::builder{}
+				 .dropout(true)
+				 .hidden_dimensions(128)
+				 .sampling(true)
+				 .start_learning_rate(0.1)
+				 .decay_rate(0.5)
+				 .train_or_load(col, cstlm, WE);
+	return hyblm;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -117,13 +127,14 @@ int main(int argc, char** argv)
 	/* (1) parse collection directory and create CSTLM index */
 	collection col(args.collection_dir);
 
-	/* (2) load the word2vec embeddings */
-	auto word_embeddings = load_or_create_word2vec_embeddings(col);
-
-	/* (3) */
+	/* (3) create the cstlm model */
 	auto cstlm = create_and_store<wordlm>(col, args.use_mkn);
 
-	ComputationGraph cg;
+	/* (4) load the word2vec embeddings */
+	auto word_embeddings = load_or_create_word2vec_embeddings(col);
+
+	/* (5) finally create the hyblm */
+	auto hyb_lm = load_or_create_hyblm(col, cstlm, word_embeddings);
 
 	return 0;
 }

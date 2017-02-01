@@ -48,7 +48,7 @@ public:
 	}
 
 	template <class t_idx>
-	prob_cache(const t_idx& idx)
+	prob_cache(const t_idx& /*idx*/)
 	{
 		// const auto& cst = idx.cst;
 		// uint64_t counter = 0; // counter = first symbol on child edge
