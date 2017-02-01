@@ -93,7 +93,7 @@ t_idx create_and_store(collection& col, bool use_mkn)
 word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 {
 	auto embeddings = word2vec::builder{}
-					  .vector_size(200)
+					  .vector_size(300)
 					  .window_size(5)
 					  .sample_threadhold(1e-5)
 					  .num_negative_samples(5)
