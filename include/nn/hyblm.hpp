@@ -250,16 +250,33 @@ public:
 		// data will be stored here
 		LM hyblm(model, m_num_layers, m_hidden_dim, filtered_w2vemb);
 
-		// TODO do we shuffle the sentences first?
+		std::mt19937 gen(word2vec::consts::RAND_SEED);
+		shuffle(sentences.begin(), sentences.end(), gen);
+		size_t cur_sentence_id = 0;
+
+		size_t tokens = 0;
+		float  loss   = 0;
 		for (const auto& sentence : sentences) {
+			tokens += sentence.size();
 			dynet::ComputationGraph cg;
 
 			auto loss_expr = build_lm_cgraph(sentence, hyblm, cg);
-			auto loss	  = dynet::as_scalar(cg.forward(loss_expr));
-			std::cout << "loss = " << loss << std::endl;
+			loss += dynet::as_scalar(cg.forward(loss_expr));
+
 			cg.backward(loss_expr);
 			sgd.update();
-			// todo decay rate??
+
+			if ((cur_sentence_id + 1) % (sentence.size() / 100000) == 0) {
+				// Print informations
+				sgd.status();
+				cstlm::LOG(cstlm::INFO) << "HYBLM S = " << cur_sentence_id
+										<< " E = " << (loss / tokens)
+										<< " ppl=" << exp(loss / tokens) << ' ';
+				// Reinitialize loss
+				loss   = 0;
+				tokens = 0;
+			}
+			cur_sentence_id++;
 		}
 
 
