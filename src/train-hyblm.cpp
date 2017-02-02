@@ -114,7 +114,7 @@ template <class t_cstlm>
 hyblm::LM load_or_create_hyblm(collection& col, t_cstlm& cstlm, word2vec::embeddings& WE)
 {
 	auto hyblm = hyblm::builder{}
-				 .dropout(true)
+				 .dropout(0.3)
 				 .layers(2)
 				 .vocab_threshold(30000)
 				 .hidden_dimensions(128)
