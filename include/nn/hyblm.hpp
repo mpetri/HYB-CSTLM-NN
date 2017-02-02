@@ -231,11 +231,15 @@ public:
 	{
 		auto input_file = col.file_map[cstlm::KEY_SMALLTEXT];
 
+		cstlm::LOG(cstlm::INFO) << "HYBLM filter vocab";
 		auto filtered_vocab = vocab.filter(input_file, m_vocab_threshold);
 
+		cstlm::LOG(cstlm::INFO) << "HYBLM filter w2v embeddings";
 		auto filtered_w2vemb = w2v_emb.filter(filtered_vocab);
 
+		cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences";
 		auto sentences = sentence_parser::parse(input_file, filtered_vocab);
+		cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
 
 		dynet::Model			model;
 		dynet::SimpleSGDTrainer sgd(model);
@@ -253,6 +257,7 @@ public:
 			std::cout << "loss = " << loss << std::endl;
 			cg.backward(loss_expr);
 			sgd.update();
+			// todo decay rate??
 		}
 
 
@@ -272,7 +277,7 @@ public:
 		}
 
 		// (2) load vocab
-		cstlm::LOG(cstlm::INFO) << "create vocab";
+		cstlm::LOG(cstlm::INFO) << "HYBLM create/load vocab";
 		cstlm::vocab_uncompressed<false> vocab(col);
 
 		// (3) train

@@ -63,6 +63,7 @@ struct embeddings {
 
 	void load_binary(std::string file_name)
 	{
+		cstlm::LOG(cstlm::INFO) << "W2V load from file " << file_name;
 		FILE* f = fopen(file_name.c_str(), "r");
 		if (f) {
 			int64_t vocab_size;
@@ -70,6 +71,7 @@ struct embeddings {
 			if (2 != fscanf(f, "%ld %ld\n", &vocab_size, &vector_size)) {
 				throw std::runtime_error("Error reading w2v embeddings.");
 			}
+			cstlm::LOG(cstlm::INFO) << "W2V dimensions " << vocab_size << "x" << vector_size;
 			data.resize(vocab_size, vector_size);
 			for (int64_t i = 0; i < data.rows(); i++) {
 				/* read the word and discard */
@@ -91,6 +93,7 @@ struct embeddings {
 
 	void load_plain(std::string file_name)
 	{
+		cstlm::LOG(cstlm::INFO) << "W2V load from file " << file_name;
 		FILE* f = fopen(file_name.c_str(), "r");
 		if (f) {
 			int64_t vocab_size;
@@ -98,6 +101,7 @@ struct embeddings {
 			if (2 != fscanf(f, "%ld %ld\n", &vocab_size, &vector_size)) {
 				throw std::runtime_error("Error reading w2v embeddings.");
 			}
+			cstlm::LOG(cstlm::INFO) << "W2V dimensions " << vocab_size << "x" << vector_size;
 			data.resize(vocab_size, vector_size);
 			for (int64_t i = 0; i < data.rows(); i++) {
 				/* read the word and discard */
@@ -119,6 +123,7 @@ struct embeddings {
 
 	void store_binary(std::string file_name, cstlm::vocab_uncompressed<false>& vocab)
 	{
+		cstlm::LOG(cstlm::INFO) << "W2V store to file " << file_name;
 		FILE* f = fopen(file_name.c_str(), "w");
 		if (f) {
 			fprintf(f, "%ld %ld\n", data.rows(), data.cols());
@@ -139,6 +144,7 @@ struct embeddings {
 
 	void store_plain(std::string file_name, cstlm::vocab_uncompressed<false>& vocab)
 	{
+		cstlm::LOG(cstlm::INFO) << "W2V store to file " << file_name;
 		FILE* f = fopen(file_name.c_str(), "w");
 		if (f) {
 			fprintf(f, "%ld %ld\n", data.rows(), data.cols());
