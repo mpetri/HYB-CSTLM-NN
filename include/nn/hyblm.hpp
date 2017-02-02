@@ -253,12 +253,15 @@ public:
 		std::mt19937 gen(word2vec::consts::RAND_SEED);
 		shuffle(sentences.begin(), sentences.end(), gen);
 		size_t cur_sentence_id = 0;
+		size_t last_eta_update = 0;
 
-		size_t tokens = 0;
-		float  loss   = 0;
+		size_t tokens		= 0;
+		size_t total_tokens = 0;
+		float  loss			= 0;
 		cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 		for (const auto& sentence : sentences) {
-			tokens += sentence.size();
+			tokens += sentence.size(); // includes <S> and </S>
+			total_tokens += sentence.size();
 			dynet::ComputationGraph cg;
 
 			auto loss_expr = build_lm_cgraph(sentence, hyblm, cg);
@@ -269,14 +272,22 @@ public:
 
 			if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
 				// Print informations
-				sgd.status();
-				cstlm::LOG(cstlm::INFO) << "HYBLM S = " << cur_sentence_id
-										<< " E = " << (loss / (tokens + 1))
-										<< " ppl=" << exp(loss / (tokens + 1)) << ' ';
+				cstlm::LOG(cstlm::INFO)
+				<< "HYBLM (" << 100 * float(cur_sentence_id) / float(sentences.size() + 1)
+				<< "%) S = " << cur_sentence_id << " T = " << total_tokens << " eta = " << sgd.eta
+				<< " E = " << (loss / (tokens + 1)) << " ppl=" << exp(loss / (tokens + 1)) << ' ';
 				// Reinitialize loss
 				loss   = 0;
 				tokens = 0;
 			}
+
+			// update learning rate every 10%?
+			if ((cur_sentence_id - last_eta_update) > (sentences.size() / 10)) {
+				cstlm::LOG(cstlm::INFO) << "HYBLN update learning rate.";
+				sgd.eta *= m_decay_rate;
+				last_eta_update = cur_sentence_id;
+			}
+
 			cur_sentence_id++;
 		}
 
