@@ -87,7 +87,7 @@ struct LM {
 	void store(std::string file_name) { std::cout << "TODO: store hyblm to file " << file_name; }
 
 	LM(dynet::Model& model, uint32_t layers, uint32_t hidden_dim, word2vec::embeddings& emb)
-		: builder(layers, emb.rows(), hidden_dim, model)
+		: builder(layers, emb.cols(), hidden_dim, model)
 	{
 		auto vocab_size		 = emb.rows();
 		auto w2v_vector_size = emb.cols();
