@@ -270,8 +270,8 @@ public:
 				// Print informations
 				sgd.status();
 				cstlm::LOG(cstlm::INFO) << "HYBLM S = " << cur_sentence_id
-										<< " E = " << (loss / tokens)
-										<< " ppl=" << exp(loss / tokens) << ' ';
+										<< " E = " << (loss / (tokens + 1))
+										<< " ppl=" << exp(loss / (tokens + 1)) << ' ';
 				// Reinitialize loss
 				loss   = 0;
 				tokens = 0;
