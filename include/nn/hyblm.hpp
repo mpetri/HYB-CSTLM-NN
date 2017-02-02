@@ -99,16 +99,6 @@ struct LM {
 	}
 };
 
-explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
-{
-	kSOS   = d.convert("<s>");
-	kEOS   = d.convert("</s>");
-	p_c	= model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
-	p_R	= model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
-	p_bias = model.add_parameters({VOCAB_SIZE});
-}
-
-
 namespace constants {
 }
 
