@@ -29,7 +29,7 @@ struct sentence_parser {
 		std::vector<uint32_t> cur;
 		bool				  in_sentence = false;
 		for (size_t i = 0; i < text.size(); i++) {
-			auto sym = text.size();
+			auto sym = text[i];
 			if (in_sentence == false && sym != cstlm::PAT_START_SYM) continue;
 
 			if (sym == cstlm::PAT_START_SYM) {

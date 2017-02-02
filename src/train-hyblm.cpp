@@ -70,7 +70,7 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 	t_idx idx;
 	auto  output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
 	if (cstlm::utils::file_exists(output_file)) {
-		LOG(INFO) << "loading cstlm index from file : " << output_file;
+		LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
 		std::ifstream ifs(output_file);
 		idx.load(ifs);
 		return idx;
@@ -79,18 +79,18 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 	auto start  = clock::now();
 	idx			= t_idx(col, use_mkn);
 	auto stop   = clock::now();
-	LOG(INFO) << "index construction in (s): "
+	LOG(INFO) << "CSTLM index construction in (s): "
 			  << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() /
 				 1000.0f;
 
 	std::ofstream ofs(output_file);
 	if (ofs.is_open()) {
-		LOG(INFO) << "writing index to file : " << output_file;
+		LOG(INFO) << "CSTLM writing index to file : " << output_file;
 		auto bytes = sdsl::serialize(idx, ofs);
-		LOG(INFO) << "index size : " << bytes / (1024 * 1024) << " MB";
+		LOG(INFO) << "CSTLM index size : " << bytes / (1024 * 1024) << " MB";
 		sdsl::write_structure<sdsl::HTML_FORMAT>(idx, output_file + ".html");
 	} else {
-		LOG(FATAL) << "cannot write index to file : " << output_file;
+		LOG(FATAL) << "CSTLM cannot write index to file : " << output_file;
 	}
 	return idx;
 }
