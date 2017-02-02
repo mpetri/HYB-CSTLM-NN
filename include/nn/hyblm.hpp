@@ -87,15 +87,27 @@ struct LM {
 	void store(std::string file_name) { std::cout << "TODO: store hyblm to file " << file_name; }
 
 	LM(dynet::Model& model, uint32_t layers, uint32_t hidden_dim, word2vec::embeddings& emb)
-		: builder(layers, emb.rows(), emb.cols(), model)
+		: builder(layers, emb.rows(), hidden_dim, model)
 	{
-		cstlm::LOG(cstlm::INFO) << "HYBLM W2V dimensions: " << emb.rows() << "x" << emb.cols();
-		p_word_embeddings =
-		model.add_lookup_parameters(emb.rows(), {emb.cols()}, ParameterInitEigenMatrix(emb.data));
-		p_R	= model.add_parameters({emb.rows(), hidden_dim});
-		p_bias = model.add_parameters({emb.rows()});
+		auto vocab_size		 = emb.rows();
+		auto w2v_vector_size = emb.cols();
+		cstlm::LOG(cstlm::INFO) << "HYBLM W2V dimensions: " << vocab_size << "x" << w2v_vector_size;
+		p_word_embeddings = model.add_lookup_parameters(
+		vocab_size, {w2v_vector_size}, ParameterInitEigenMatrix(emb.data));
+		p_R	= model.add_parameters({vocab_size, hidden_dim});
+		p_bias = model.add_parameters({vocab_size});
 	}
 };
+
+explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, model)
+{
+	kSOS   = d.convert("<s>");
+	kEOS   = d.convert("</s>");
+	p_c	= model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
+	p_R	= model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
+	p_bias = model.add_parameters({VOCAB_SIZE});
+}
+
 
 namespace constants {
 }
