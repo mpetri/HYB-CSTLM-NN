@@ -65,16 +65,25 @@ cmdargs_t parse_args(int argc, const char* argv[])
 }
 
 template <class t_idx>
-t_idx create_and_store(collection& col, bool use_mkn)
+t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 {
+	t_idx idx;
+	auto  output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+	if (cstlm::utils::file_exists(output_file)) {
+		LOG(INFO) << "loading cstlm index from file : " << output_file;
+
+		std::ifstream ifs(output_file);
+		idx.load(ifs);
+		return idx;
+	}
 	using clock = std::chrono::high_resolution_clock;
-	auto  start = clock::now();
-	t_idx idx(col, use_mkn);
-	auto  stop = clock::now();
+	auto start  = clock::now();
+	idx			= t_idx(col, use_mkn);
+	auto stop   = clock::now();
 	LOG(INFO) << "index construction in (s): "
 			  << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() /
 				 1000.0f;
-	auto output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+
 	std::ofstream ofs(output_file);
 	if (ofs.is_open()) {
 		LOG(INFO) << "writing index to file : " << output_file;
@@ -130,7 +139,7 @@ int main(int argc, char** argv)
 	collection col(args.collection_dir);
 
 	/* (3) create the cstlm model */
-	auto cstlm = create_and_store<wordlm>(col, args.use_mkn);
+	auto cstlm = load_or_create_cstlm<wordlm>(col, args.use_mkn);
 
 	/* (4) load the word2vec embeddings */
 	auto word_embeddings = load_or_create_word2vec_embeddings(col);
