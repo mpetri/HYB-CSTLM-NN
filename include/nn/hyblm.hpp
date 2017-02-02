@@ -20,7 +20,8 @@ namespace hyblm {
 
 struct sentence_parser {
 
-	static std::vector<std::vector<uint32_t>> parse(std::string file_name)
+	static std::vector<std::vector<uint32_t>> parse(std::string						  file_name,
+													cstlm::vocab_uncompressed<false>& vocab)
 	{
 		std::vector<std::vector<uint32_t>> sentences;
 		sdsl::int_vector_buffer<0>		   text(file_name);
@@ -48,7 +49,9 @@ struct sentence_parser {
 			}
 
 			// not start AND not END AND in sentence == true here
-			cur.push_back(sym);
+			// translate non-special ids to their small vocab id OR UNK
+			auto small_vocab_id = vocab.big2small(sym);
+			cur.push_back(small_vocab_id);
 		}
 		return sentences;
 	}
@@ -86,6 +89,7 @@ struct LM {
 	LM(dynet::Model& model, uint32_t layers, uint32_t hidden_dim, word2vec::embeddings& emb)
 		: builder(layers, emb.rows(), emb.cols(), model)
 	{
+		cstlm::LOG(cstlm::INFO) << "HYBLM W2V dimensions: " << emb.rows() << "x" << emb.cols();
 		p_word_embeddings =
 		model.add_lookup_parameters(emb.rows(), {emb.cols()}, ParameterInitEigenMatrix(emb.data));
 		p_R	= model.add_parameters({emb.rows(), hidden_dim});
@@ -103,6 +107,7 @@ const uint32_t HIDDEN_DIM		  = 128;
 const bool	 SAMPLE			  = true;
 const float	INIT_LEARNING_RATE = 0.1f;
 const float	DECAY_RATE		  = 0.5f;
+const uint32_t VOCAB_THRESHOLD	= 30000;
 }
 
 struct builder {
@@ -115,6 +120,7 @@ private:
 	bool	 m_sampling			   = defaults::SAMPLE;
 	float	m_decay_rate		   = defaults::DECAY_RATE;
 	float	m_dropout			   = defaults::DROPOUT;
+	uint32_t m_vocab_threshold	 = defaults::VOCAB_THRESHOLD;
 
 private:
 	void output_params()
@@ -125,6 +131,7 @@ private:
 		cstlm::LOG(cstlm::INFO) << "HYBLM sampling: " << m_sampling;
 		cstlm::LOG(cstlm::INFO) << "HYBLM start learning rate: " << m_start_learning_rate;
 		cstlm::LOG(cstlm::INFO) << "HYBLM decay rate: " << m_decay_rate;
+		cstlm::LOG(cstlm::INFO) << "HYBLM vocab threshold: " << m_vocab_threshold;
 	}
 
 
@@ -165,6 +172,12 @@ public:
 		return *this;
 	};
 
+	builder& vocab_threshold(uint32_t v)
+	{
+		m_vocab_threshold = v;
+		return *this;
+	};
+
 	std::string file_name(cstlm::collection& col)
 	{
 		std::stringstream fn;
@@ -175,6 +188,7 @@ public:
 		fn << "hd=" << m_hidden_dim << "-";
 		fn << "s=" << m_sampling << "-";
 		fn << "lr=" << m_start_learning_rate << "-";
+		fn << "vt=" << m_vocab_threshold << "-";
 		fn << "decay=" << m_decay_rate;
 		fn << ".dynet";
 		return fn.str();
@@ -215,14 +229,20 @@ public:
 				t_cstlmidx&						  cstlm,
 				cstlm::collection&				  col)
 	{
-		auto sentences = sentence_parser::parse(col.file_map[cstlm::KEY_SMALLTEXT]);
+		auto input_file = col.file_map[cstlm::KEY_SMALLTEXT];
+
+		auto filtered_vocab = vocab.filter(input_file, m_vocab_threshold);
+
+		auto filtered_w2vemb = w2v_emb.filter(filtered_vocab);
+
+		auto sentences = sentence_parser::parse(input_file, filtered_vocab);
 
 		dynet::Model			model;
 		dynet::SimpleSGDTrainer sgd(model);
 		sgd.eta0 = m_start_learning_rate;
 
 		// data will be stored here
-		LM hyblm(model, m_num_layers, m_hidden_dim, w2v_emb);
+		LM hyblm(model, m_num_layers, m_hidden_dim, filtered_w2vemb);
 
 		// TODO do we shuffle the sentences first?
 		for (const auto& sentence : sentences) {

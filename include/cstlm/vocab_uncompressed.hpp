@@ -13,6 +13,8 @@ public:
 private:
 	std::unordered_map<std::string, uint64_t> m_t2i;
 	std::unordered_map<uint64_t, std::string> m_i2t;
+	std::unordered_map<uint64_t, uint64_t>	m_b2s;
+	std::unordered_map<uint64_t, uint64_t>	m_s2b;
 
 public:
 	std::vector<uint64_t> freq;
@@ -146,5 +148,70 @@ public:
 	}
 
 	size_type size() const { return m_i2t.size(); }
+
+
+	vocab_uncompressed filter(std::string input_file, uint32_t threshold)
+	{
+		// (1) count frequencies
+		sdsl::int_vector_buffer<0> text(input_file);
+		using p_t = std::pair<uint32_t, uint32_t>;
+		std::vector<p_t> counts(size());
+		for (size_t i		= 0; i < counts.size(); i++)
+			counts[i].first = i;
+		for (size_t i = 0; i < text.size(); i++) {
+			counts[text[i]].second++;
+		}
+		// (2) sort frequencies
+		std::sort(counts.begin(), counts.end(), [](const p_t& a, const p_t& b) {
+			return a.second > b.second;
+		});
+
+		// (3) create the filtered vocab
+		vocab_uncompressed filtered_vocab;
+
+		// (3a) add special symbols
+		for (size_t i = 0; i < NUM_SPECIAL_SYMS; i++) {
+			auto tok				  = m_i2t[i];
+			filtered_vocab.m_t2i[tok] = i;
+			filtered_vocab.m_i2t[i]   = tok;
+			filtered_vocab.m_b2s[i]   = i;
+			filtered_vocab.m_s2b[i]   = i;
+		}
+
+		// (3b) add threshold most frequent symbols in text
+		size_t idx = 0;
+		while (filtered_vocab.size() < threshold && counts.size() > idx) {
+			auto cur		   = counts[idx++];
+			auto cur_big_id	= cur.first;
+			auto next_small_id = filtered_vocab.size();
+			if (cur_big_id >= NUM_SPECIAL_SYMS) {
+				auto tok							= m_i2t[cur_big_id];
+				filtered_vocab.m_t2i[tok]			= next_small_id;
+				filtered_vocab.m_i2t[next_small_id] = tok;
+				filtered_vocab.m_b2s[cur_big_id]	= next_small_id;
+				filtered_vocab.m_s2b[next_small_id] = cur_big_id;
+			}
+		}
+
+		return filtered_vocab;
+	}
+
+	uint64_t big2small(uint64_t id, uint64_t defaul = UNKNOWN_SYM) const
+	{
+		auto itr = m_b2s.find(id);
+		if (itr == m_b2s.end()) {
+			return defaul;
+		}
+		return itr->second;
+	}
+
+	uint64_t small2big(uint64_t id, uint64_t defaul = UNKNOWN_SYM) const
+	{
+		auto itr = m_s2b.find(id);
+		if (itr == m_s2b.end()) {
+			return defaul;
+		}
+		return itr->second;
+	}
 };
 }

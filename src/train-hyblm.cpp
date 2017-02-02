@@ -107,6 +107,8 @@ hyblm::LM load_or_create_hyblm(collection& col, t_cstlm& cstlm, word2vec::embedd
 {
 	auto hyblm = hyblm::builder{}
 				 .dropout(true)
+				 .layers(2)
+				 .vocab_threshold(30000)
 				 .hidden_dimensions(128)
 				 .sampling(true)
 				 .start_learning_rate(0.1)
