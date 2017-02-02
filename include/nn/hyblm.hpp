@@ -256,6 +256,7 @@ public:
 
 		size_t tokens = 0;
 		float  loss   = 0;
+		cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 		for (const auto& sentence : sentences) {
 			tokens += sentence.size();
 			dynet::ComputationGraph cg;
@@ -266,7 +267,7 @@ public:
 			cg.backward(loss_expr);
 			sgd.update();
 
-			if ((cur_sentence_id + 1) % (sentence.size() / 100000) == 0) {
+			if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
 				// Print informations
 				sgd.status();
 				cstlm::LOG(cstlm::INFO) << "HYBLM S = " << cur_sentence_id
