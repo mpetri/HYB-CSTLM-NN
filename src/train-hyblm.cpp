@@ -71,7 +71,6 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 	auto  output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
 	if (cstlm::utils::file_exists(output_file)) {
 		LOG(INFO) << "loading cstlm index from file : " << output_file;
-
 		std::ifstream ifs(output_file);
 		idx.load(ifs);
 		return idx;

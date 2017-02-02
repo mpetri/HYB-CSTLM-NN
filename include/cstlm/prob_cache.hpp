@@ -148,7 +148,7 @@ public:
 		sdsl::structure_tree_node* child =
 		sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
 		size_type written_bytes = 0;
-
+		/*
 		auto itr = m_cache.begin();
 		auto end = m_cache.end();
 
@@ -201,11 +201,13 @@ public:
 		written_bytes += sdsl::serialize(pattern_node_data, out, child, "pattern_node_data");
 
 		sdsl::structure_tree::add_size(child, written_bytes);
+		*/
 		return written_bytes;
 	}
 
 	void load(std::istream& in, const cst_type& cst)
 	{
+		/*
 		sdsl::int_vector<> pattern_lens;
 		pattern_lens.load(in);
 		std::vector<double> probabilities;
@@ -233,6 +235,7 @@ public:
 			m_cache[pattern] = d;
 			offset += cur_plen;
 		}
+		*/
 	}
 
 	auto find(const std::vector<value_type>& v) const -> decltype(m_cache.find(v))
