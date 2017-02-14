@@ -84,3 +84,9 @@ add_test(TestsPass unit-test.x)
 ### NEW HYBRID STUFF
 add_executable(train-hyblm.x src/train-hyblm.cpp)
 target_link_libraries(train-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+
+add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
+target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+
+add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
+target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)

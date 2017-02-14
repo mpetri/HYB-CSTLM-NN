@@ -63,6 +63,39 @@ std::string clean_word(const char* buf, size_t n)
 	return std::string(buf + word_start, word_len);
 }
 
+
+std::vector<std::string> parse_line(const std::string& line, bool byte)
+{
+	std::vector<std::string> line_tokens;
+	if (byte) {
+		for (const auto& chr : line) {
+			line_tokens.push_back(std::string(1, chr));
+		}
+	} else {
+		char   tmp_buf[10000] = {0};
+		size_t cur			  = 0;
+		for (size_t i = 0; i < line.size(); i++) {
+			int sym = line[i];
+			if (isspace(sym) && cur != 0) {
+				auto word = clean_word(tmp_buf, cur);
+				if (word.size() > 0) {
+					line_tokens.push_back(word);
+				}
+				cur = 0;
+			} else {
+				tmp_buf[cur++] = sym;
+			}
+		}
+		if (cur) {
+			auto word = clean_word(tmp_buf, cur);
+			if (word.size() > 0) {
+				line_tokens.push_back(word);
+			}
+		}
+	}
+	return line_tokens;
+}
+
 bool directory_exists(std::string dir)
 {
 	struct stat sb;

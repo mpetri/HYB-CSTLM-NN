@@ -13,10 +13,13 @@
 #include "dynet/lstm.h"
 #include "word2vec.hpp"
 
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
 
-namespace hyblm {
+namespace rnnlm {
 
 struct sentence_parser {
 
@@ -75,27 +78,107 @@ private:
 };
 
 struct LM {
-	dynet::LSTMBuilder	 builder;
-	dynet::LookupParameter p_word_embeddings;
-	dynet::Parameter	   p_R;
-	dynet::Parameter	   p_bias;
+	dynet::LSTMBuilder				 builder;
+	dynet::LookupParameter			 p_word_embeddings;
+	dynet::Parameter				 p_R;
+	dynet::Parameter				 p_bias;
+	cstlm::vocab_uncompressed<false> vocab;
+	dynet::Model					 model;
+	uint32_t						 layers;
+	uint32_t						 w2v_vec_size;
+	uint32_t						 hidden_dim;
+	LM();
 
 	LM(std::string file_name) { load(file_name); }
 
-	void load(std::string file_name) { std::cout << "TODO: load hyblm from file " << file_name; }
-
-	void store(std::string file_name) { std::cout << "TODO: store hyblm to file " << file_name; }
-
-	LM(dynet::Model& model, uint32_t layers, uint32_t hidden_dim, word2vec::embeddings& emb)
-		: builder(layers, emb.cols(), hidden_dim, model)
+	void load(std::string file_name)
 	{
-		auto vocab_size		 = emb.rows();
-		auto w2v_vector_size = emb.cols();
-		cstlm::LOG(cstlm::INFO) << "HYBLM W2V dimensions: " << vocab_size << "x" << w2v_vector_size;
-		p_word_embeddings = model.add_lookup_parameters(
-		vocab_size, {w2v_vector_size}, ParameterInitEigenMatrix(emb.data));
+		std::ifstream ifs(file_name);
+		vocab.load(ifs);
+		boost::archive::text_iarchive ia(ifs);
+		ia >> model;
+		ia >> layers;
+		ia >> w2v_vec_size;
+		ia >> hidden_dim;
+		ia >> p_word_embeddings;
+		ia >> p_R;
+		ia >> p_bias;
+		ia >> builder;
+	}
+
+	void store(std::string file_name)
+	{
+		std::ofstream ofs(file_name);
+		vocab.serialize(ofs);
+		boost::archive::text_oarchive oa(ofs);
+		oa << model;
+		oa << layers;
+		oa << w2v_vec_size;
+		oa << hidden_dim;
+		oa << p_word_embeddings;
+		oa << p_R;
+		oa << p_bias;
+		oa << builder;
+	}
+
+	LM(uint32_t							 _layers,
+	   uint32_t							 _hidden_dim,
+	   word2vec::embeddings&			 emb,
+	   cstlm::vocab_uncompressed<false>& filtered_vocab)
+		: builder(_layers, emb.cols(), _hidden_dim, model)
+		, layers(_layers)
+		, w2v_vec_size(emb.cols())
+		, hidden_dim(_hidden_dim)
+	{
+
+		uint32_t vocab_size = filtered_vocab.size();
+		vocab				= filtered_vocab;
+		cstlm::LOG(cstlm::INFO) << "RNNLM W2V dimensions: " << vocab_size << "x" << w2v_vec_size;
+		p_word_embeddings =
+		model.add_lookup_parameters(vocab_size, {w2v_vec_size}, ParameterInitEigenMatrix(emb.data));
 		p_R	= model.add_parameters({vocab_size, hidden_dim});
 		p_bias = model.add_parameters({vocab_size});
+	}
+
+
+	dynet::expr::Expression build_lm_cgraph(const std::vector<uint32_t> sentence,
+											dynet::ComputationGraph&	cg,
+											double						m_dropout)
+	{
+		builder.new_graph(cg); // reset RNN builder for new graph
+		if (m_dropout > 0) {
+			builder.set_dropout(m_dropout);
+		} else {
+			builder.disable_dropout();
+		}
+
+		builder.start_new_sequence();
+		auto i_R	= dynet::expr::parameter(cg, p_R);	// hidden -> word rep parameter
+		auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
+		std::vector<dynet::expr::Expression> errs;
+		for (size_t i = 0; i < sentence.size() - 1; i++) {
+			auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i]);
+			// y_t = RNN(x_t)
+			auto i_y_t = builder.add_input(i_x_t);
+			auto i_r_t = i_bias + i_R * i_y_t;
+
+			// LogSoftmax followed by PickElement can be written in one step
+			// using PickNegLogSoftmax
+			auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
+			errs.push_back(i_err);
+		}
+		auto i_nerr = dynet::expr::sum(errs);
+		return i_nerr;
+	}
+
+	double evaluate_sentence_logprob(std::vector<uint32_t>& sentence)
+	{
+		double					prob = 0.0;
+		dynet::ComputationGraph cg;
+		dynet::expr::Expression loss_expr = build_lm_cgraph(sentence, cg, 0.0);
+
+		prob = as_scalar(cg.forward(loss_expr));
+		return prob;
 	}
 };
 
@@ -127,13 +210,13 @@ private:
 private:
 	void output_params()
 	{
-		cstlm::LOG(cstlm::INFO) << "HYBLM layers: " << m_num_layers;
-		cstlm::LOG(cstlm::INFO) << "HYBLM dropout: " << m_dropout;
-		cstlm::LOG(cstlm::INFO) << "HYBLM hidden dimensions: " << m_hidden_dim;
-		cstlm::LOG(cstlm::INFO) << "HYBLM sampling: " << m_sampling;
-		cstlm::LOG(cstlm::INFO) << "HYBLM start learning rate: " << m_start_learning_rate;
-		cstlm::LOG(cstlm::INFO) << "HYBLM decay rate: " << m_decay_rate;
-		cstlm::LOG(cstlm::INFO) << "HYBLM vocab threshold: " << m_vocab_threshold;
+		cstlm::LOG(cstlm::INFO) << "RNNLM layers: " << m_num_layers;
+		cstlm::LOG(cstlm::INFO) << "RNNLM dropout: " << m_dropout;
+		cstlm::LOG(cstlm::INFO) << "RNNLM hidden dimensions: " << m_hidden_dim;
+		cstlm::LOG(cstlm::INFO) << "RNNLM sampling: " << m_sampling;
+		cstlm::LOG(cstlm::INFO) << "RNNLM start learning rate: " << m_start_learning_rate;
+		cstlm::LOG(cstlm::INFO) << "RNNLM decay rate: " << m_decay_rate;
+		cstlm::LOG(cstlm::INFO) << "RNNLM vocab threshold: " << m_vocab_threshold;
 	}
 
 
@@ -196,59 +279,29 @@ public:
 		return fn.str();
 	}
 
-	dynet::expr::Expression
-	build_lm_cgraph(const std::vector<uint32_t> sentence, LM& hyblm, dynet::ComputationGraph& cg)
-	{
-		hyblm.builder.new_graph(cg); // reset RNN builder for new graph
-		if (m_dropout > 0) {
-			hyblm.builder.set_dropout(m_dropout);
-		} else {
-			hyblm.builder.disable_dropout();
-		}
-
-		hyblm.builder.start_new_sequence();
-		auto i_R	= dynet::expr::parameter(cg, hyblm.p_R);	// hidden -> word rep parameter
-		auto i_bias = dynet::expr::parameter(cg, hyblm.p_bias); // word bias
-		std::vector<dynet::expr::Expression> errs;
-		for (size_t i = 0; i < sentence.size() - 1; i++) {
-			auto i_x_t = dynet::expr::lookup(cg, hyblm.p_word_embeddings, sentence[i]);
-			// y_t = RNN(x_t)
-			auto i_y_t = hyblm.builder.add_input(i_x_t);
-			auto i_r_t = i_bias + i_R * i_y_t;
-
-			// LogSoftmax followed by PickElement can be written in one step
-			// using PickNegLogSoftmax
-			auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
-			errs.push_back(i_err);
-		}
-		auto i_nerr = dynet::expr::sum(errs);
-		return i_nerr;
-	}
-
-	template <class t_cstlmidx>
-	LM train_lm(cstlm::vocab_uncompressed<false>& vocab,
-				word2vec::embeddings&			  w2v_emb,
-				t_cstlmidx&						  cstlm,
-				cstlm::collection&				  col)
+	LM train_lm(cstlm::collection& col, word2vec::embeddings& w2v_embeddings)
 	{
 		auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
 
-		cstlm::LOG(cstlm::INFO) << "HYBLM filter vocab";
+		cstlm::LOG(cstlm::INFO) << "RNNLM create/load full vocab";
+		cstlm::vocab_uncompressed<false> vocab(col);
+
+		cstlm::LOG(cstlm::INFO) << "RNNLM filter vocab";
 		auto filtered_vocab = vocab.filter(input_file, m_vocab_threshold);
 
-		cstlm::LOG(cstlm::INFO) << "HYBLM filter w2v embeddings";
-		auto filtered_w2vemb = w2v_emb.filter(filtered_vocab);
+		cstlm::LOG(cstlm::INFO) << "RNNLM filter w2v embeddings";
+		auto filtered_w2vemb = w2v_embeddings.filter(filtered_vocab);
 
-		cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences";
+		cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences";
 		auto sentences = sentence_parser::parse(input_file, filtered_vocab);
-		cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
-
-		dynet::Model			model;
-		dynet::SimpleSGDTrainer sgd(model);
-		sgd.eta0 = m_start_learning_rate;
+		cstlm::LOG(cstlm::INFO) << "RNNLM sentences to process: " << sentences.size();
 
 		// data will be stored here
-		LM hyblm(model, m_num_layers, m_hidden_dim, filtered_w2vemb);
+		LM rnnlm(m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
+
+		dynet::SimpleSGDTrainer sgd(rnnlm.model);
+		sgd.eta0 = m_start_learning_rate;
+
 
 		std::mt19937 gen(word2vec::consts::RAND_SEED);
 		shuffle(sentences.begin(), sentences.end(), gen);
@@ -258,13 +311,13 @@ public:
 		size_t tokens		= 0;
 		size_t total_tokens = 0;
 		float  loss			= 0;
-		cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
+		cstlm::LOG(cstlm::INFO) << "RNNLM start learning";
 		for (const auto& sentence : sentences) {
 			tokens += sentence.size(); // includes <S> and </S>
 			total_tokens += sentence.size();
 			dynet::ComputationGraph cg;
 
-			auto loss_expr = build_lm_cgraph(sentence, hyblm, cg);
+			auto loss_expr = rnnlm.build_lm_cgraph(sentence, cg, m_dropout);
 			loss += dynet::as_scalar(cg.forward(loss_expr));
 
 			cg.backward(loss_expr);
@@ -273,7 +326,7 @@ public:
 			if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
 				// Print informations
 				cstlm::LOG(cstlm::INFO)
-				<< "HYBLM (" << 100 * float(cur_sentence_id) / float(sentences.size() + 1)
+				<< "RNNLM (" << 100 * float(cur_sentence_id) / float(sentences.size() + 1)
 				<< "%) S = " << cur_sentence_id << " T = " << total_tokens << " eta = " << sgd.eta
 				<< " E = " << (loss / (tokens + 1)) << " ppl=" << exp(loss / (tokens + 1)) << ' ';
 				// Reinitialize loss
@@ -281,9 +334,9 @@ public:
 				tokens = 0;
 			}
 
-			// update learning rate every 10%?
-			if ((cur_sentence_id - last_eta_update) > (sentences.size() / 10)) {
-				cstlm::LOG(cstlm::INFO) << "HYBLN update learning rate.";
+			// update learning rate every 5%?
+			if ((cur_sentence_id - last_eta_update) > (sentences.size() / 20)) {
+				cstlm::LOG(cstlm::INFO) << "RNNLM update learning rate.";
 				sgd.eta *= m_decay_rate;
 				last_eta_update = cur_sentence_id;
 			}
@@ -292,31 +345,26 @@ public:
 		}
 
 
-		return hyblm;
+		return rnnlm;
 	}
 
-	template <class t_cstlmidx>
-	LM train_or_load(cstlm::collection& col, t_cstlmidx& cstlm, word2vec::embeddings& emb)
+	LM train_or_load(cstlm::collection& col, word2vec::embeddings& w2v_embeddings)
 	{
 		// (0) output params
 		output_params();
 
 		// (1) if exists. just load
-		auto hyblm_file = file_name(col);
-		if (cstlm::utils::file_exists(hyblm_file)) {
-			return LM(hyblm_file);
+		auto rnnlm_file = file_name(col);
+		if (cstlm::utils::file_exists(rnnlm_file)) {
+			return LM(rnnlm_file);
 		}
 
-		// (2) load vocab
-		cstlm::LOG(cstlm::INFO) << "HYBLM create/load vocab";
-		cstlm::vocab_uncompressed<false> vocab(col);
-
 		// (3) train
-		auto hyb_lm = train_lm(vocab, emb, cstlm, col);
+		auto rnn_lm = train_lm(col, w2v_embeddings);
 
-		hyb_lm.store(hyblm_file);
+		rnn_lm.store(rnnlm_file);
 
-		return hyb_lm;
+		return rnn_lm;
 	}
 };
 }

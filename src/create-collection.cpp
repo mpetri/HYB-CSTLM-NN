@@ -52,39 +52,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
 	return args;
 }
 
-std::vector<std::string> parse_line(const std::string& line, bool byte)
-{
-	std::vector<std::string> line_tokens;
-	if (byte) {
-		for (const auto& chr : line) {
-			line_tokens.push_back(std::string(1, chr));
-		}
-	} else {
-		std::istringstream input(line);
-		char			   tmp_buf[10000] = {0};
-		size_t			   cur			  = 0;
-		for (size_t i = 0; i < line.size(); i++) {
-			int sym = line[i];
-			if (isspace(sym)) {
-				auto word = utils::clean_word(tmp_buf, cur);
-				if (word.size() > 0) {
-					line_tokens.push_back(word);
-				}
-				cur = 0;
-			} else {
-				tmp_buf[cur++] = sym;
-			}
-		}
-		if (cur) {
-			auto word = utils::clean_word(tmp_buf, cur);
-			if (word.size() > 0) {
-				line_tokens.push_back(word);
-			}
-		}
-	}
-	return line_tokens;
-}
-
 int main(int argc, const char* argv[])
 {
 	enable_logging  = true;
@@ -115,7 +82,7 @@ int main(int argc, const char* argv[])
 			std::ifstream ifs_big(args.big_input_file);
 			std::string   line;
 			while (std::getline(ifs_big, line)) {
-				auto line_tokens = parse_line(line, false);
+				auto line_tokens = utils::parse_line(line, false);
 				for (const auto& tok : line_tokens)
 					tdict[tok]++;
 			}
@@ -126,7 +93,7 @@ int main(int argc, const char* argv[])
 			std::ifstream ifs_small(args.small_input_file);
 			std::string   line;
 			while (std::getline(ifs_small, line)) {
-				auto line_tokens = parse_line(line, false);
+				auto line_tokens = utils::parse_line(line, false);
 				for (const auto& tok : line_tokens)
 					tdict[tok]++;
 			}
@@ -150,22 +117,33 @@ int main(int argc, const char* argv[])
 		sigma = dict.size();
 	}
 
+	uint64_t combined_num_sentences = 0;
+	uint64_t combined_num_tokens	= 0;
+
+	auto int_width = sdsl::bits::hi(max_id) + 1;
+	auto combined_buf =
+	sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_COMBINED_TEXT,
+							   std::ios::out,
+							   1024 * 1024 * 128,
+							   int_width);
+
 
 	uint64_t big_num_sentences = 0;
 	uint64_t big_num_tokens	= 0;
 	LOG(INFO) << "2nd pass to transform the integers for big file";
 	{
-		auto int_width = sdsl::bits::hi(max_id) + 1;
-		auto buf = sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_TEXT,
+		auto buf = sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_BIG_TEXT,
 											  std::ios::out,
 											  1024 * 1024 * 128,
 											  int_width);
+
 		std::ifstream ifs(args.big_input_file);
 		std::string   line;
 		buf.push_back(EOS_SYM); // file starts with EOS_SYM
 		while (std::getline(ifs, line)) {
-			buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
-			auto line_tokens = parse_line(line, false);
+			buf.push_back(PAT_START_SYM);		   // line starts with PAT_START_SYM
+			combined_buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
+			auto line_tokens = utils::parse_line(line, false);
 			for (const auto& tok : line_tokens) {
 				auto itr = dict.find(tok);
 				if (itr == dict.end()) {
@@ -173,18 +151,23 @@ int main(int argc, const char* argv[])
 				} else {
 					auto num = itr->second;
 					buf.push_back(num);
+					combined_buf.push_back(num);
 				}
 			}
 			buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
 			buf.push_back(EOS_SYM);
+			combined_buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
+			combined_buf.push_back(EOS_SYM);
 			big_num_sentences++;
+			combined_num_sentences++;
 		}
 		{ // include special 'UNK' sentence to ensure symbol included in CST
 			buf.push_back(UNKNOWN_SYM);
 			buf.push_back(EOS_SYM);
 		}
 		buf.push_back(EOF_SYM);
-		big_num_tokens = buf.size();
+		big_num_tokens		= buf.size();
+		combined_num_tokens = big_num_tokens - 3; // substract the 3 last special syms
 		LOG(INFO) << "big text size = " << buf.size();
 	}
 
@@ -202,8 +185,9 @@ int main(int argc, const char* argv[])
 		std::string   line;
 		buf.push_back(EOS_SYM); // file starts with EOS_SYM
 		while (std::getline(ifs, line)) {
-			buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
-			auto line_tokens = parse_line(line, false);
+			buf.push_back(PAT_START_SYM);		   // line starts with PAT_START_SYM
+			combined_buf.push_back(PAT_START_SYM); // line starts with PAT_START_SYM
+			auto line_tokens = utils::parse_line(line, false);
 			for (const auto& tok : line_tokens) {
 				auto itr = dict.find(tok);
 				if (itr == dict.end()) {
@@ -211,19 +195,26 @@ int main(int argc, const char* argv[])
 				} else {
 					auto num = itr->second;
 					buf.push_back(num);
+					combined_buf.push_back(num);
 				}
 			}
 			buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
 			buf.push_back(EOS_SYM);
+			combined_buf.push_back(PAT_END_SYM); // line ends with PAT_END_SYM
+			combined_buf.push_back(EOS_SYM);
 			small_num_sentences++;
+			combined_num_sentences++;
 		}
 		{ // include special 'UNK' sentence to ensure symbol included in CST
 			buf.push_back(UNKNOWN_SYM);
-			if (isreplaced) buf.push_back(NOT_FREQ_SYM);
 			buf.push_back(EOS_SYM);
+			combined_buf.push_back(UNKNOWN_SYM);
+			combined_buf.push_back(EOS_SYM);
 		}
 		buf.push_back(EOF_SYM);
+		combined_buf.push_back(EOF_SYM);
 		small_num_tokens = buf.size();
+		combined_num_tokens += small_num_tokens;
 		LOG(INFO) << "small text size = " << buf.size();
 	}
 
@@ -249,6 +240,15 @@ int main(int argc, const char* argv[])
 		std::ofstream ofs(args.collection_dir + "/" + KEY_PREFIX + KEY_STATS);
 		ofs << "vocab_size=" << sigma << "\n";
 		LOG(INFO) << "vocab_size=" << sigma;
+		ofs << "combined_num_sentences=" << combined_num_sentences << "\n";
+		LOG(INFO) << "combined_num_sentences=" << combined_num_sentences;
+		ofs << "combined_num_tokens=" << combined_num_tokens << "\n";
+		LOG(INFO) << "combined_num_tokens=" << combined_num_tokens;
+		auto combined_size =
+		sdsl::util::file_size(args.big_input_file) + sdsl::util::file_size(args.small_input_file);
+		ofs << "combined_raw_size_in_bytes=" << combined_size << "\n";
+		LOG(INFO) << "combined_raw_size_in_bytes=" << combined_size;
+
 		ofs << "big_num_sentences=" << big_num_sentences << "\n";
 		LOG(INFO) << "big_num_sentences=" << big_num_sentences;
 		ofs << "big_num_tokens=" << big_num_tokens << "\n";

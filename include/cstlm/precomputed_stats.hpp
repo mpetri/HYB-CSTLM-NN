@@ -445,7 +445,7 @@ void precomputed_stats::ncomputer(collection& col, const t_cst& cst)
 	sdsl::bit_vector sentinel_bv;
 	{
 		sdsl::int_vector_buffer<t_cst::csa_type::alphabet_category::WIDTH> TEXT(
-		col.file_map[KEY_TEXT]);
+		col.file_map[KEY_CSTLM_TEXT]);
 		sentinel_bv.resize(TEXT.size());
 		sdsl::util::set_to_value(sentinel_bv, 0);
 		for (uint64_t i = 0; i < TEXT.size(); ++i) {

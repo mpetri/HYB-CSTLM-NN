@@ -610,13 +610,7 @@ private:
 		// (3) first train on the big file
 		cstlm::LOG(cstlm::INFO) << "W2V learn embedding big file";
 		auto start = watch::now();
-		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_TEXT]);
-
-		// (4) then train on the small file
-		/*
-    cstlm::LOG(cstlm::INFO) << "learn embedding small file";
-    learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_SMALLTEXT]);
-*/
+		learn_embedding_from_file(vocab, col.file_map[cstlm::KEY_COMBINED_TEXT]);
 
 		auto stop = watch::now();
 
