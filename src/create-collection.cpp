@@ -177,7 +177,7 @@ int main(int argc, const char* argv[])
 	{
 		auto int_width = sdsl::bits::hi(max_id) + 1;
 		auto buf =
-		sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_SMALLTEXT,
+		sdsl::int_vector_buffer<0>(args.collection_dir + "/" + KEY_PREFIX + KEY_SMALL_TEXT,
 								   std::ios::out,
 								   1024 * 1024 * 128,
 								   int_width);
