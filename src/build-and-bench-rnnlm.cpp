@@ -76,10 +76,10 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
     std::string str = "[";
     for (size_t i = 0; i < sentence.size() - 1; i++) {
         auto id_tok  = sentence[i];
-        auto str_tok = index.vocab.id2token(id_tok);
+        auto str_tok = index.filtered_vocab.id2token(id_tok);
         str += str_tok + ",";
     }
-    auto str_tok = index.vocab.id2token(sentence.back());
+    auto str_tok = index.filtered_vocab.id2token(sentence.back());
     str += str_tok + "]";
     return str;
 }
@@ -96,7 +96,7 @@ std::vector<std::vector<uint32_t>> load_and_parse_file(std::string file_name, co
         std::vector<uint32_t> tokens;
         tokens.push_back(PAT_START_SYM);
         for (const auto& token : line_tokens) {
-            auto num = index.vocab.token2id(token, UNKNOWN_SYM);
+            auto num = index.filtered_vocab.token2id(token, UNKNOWN_SYM);
             tokens.push_back(num);
         }
         tokens.push_back(PAT_END_SYM);
@@ -112,12 +112,12 @@ void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences, rnnlm::LM
     double perplexity          = 0;
     double num_words_predicted = 0;
     for (auto sentence : sentences) {
-        double sentenceprob = rnn_lm.evaluate_sentence_logprob(sentence);
+        double sentence_logprob = rnn_lm.evaluate_sentence_logprob(sentence);
         num_words_predicted += (sentence.size() - 1);
-        perplexity += sentenceprob;
+        perplexity += sentence_logprob;
     }
     perplexity = perplexity / num_words_predicted;
-    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << pow(10, -perplexity);
+    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity);
 }
 
 
@@ -145,9 +145,9 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
                   .vocab_threshold(30000)
                   .hidden_dimensions(128)
                   .sampling(true)
-                  .start_learning_rate(0.1)
-                  .decay_rate(0.5)
-                  .num_iterations(5)
+                  .start_learning_rate(0.5)
+                  .decay_rate(0.85)
+                  .num_iterations(20)
                   .train_or_load(col, w2v_embeddings);
 
     return rnn_lm;
