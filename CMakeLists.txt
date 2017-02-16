@@ -7,6 +7,13 @@ set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
 
 option (TIMINGS "Enable more fine grained timings." OFF)
+option (CUDA_DYNET "Enable cuda support for dynet." OFF)
+
+if(CUDA_DYNET)
+    set(BACKEND "cuda")
+else()
+    set(BACKEND "eigen")
+endif()
 
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
@@ -66,6 +73,11 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort/include/
                     )
 
+if(CUDA_DYNET)
+	link_directories("/usr/local/cuda/lib64/")
+endif()
+
+
 add_executable(build-index.x src/build-index.cpp)
 target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64 cilkrts)
 
@@ -89,4 +101,8 @@ add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
 target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 
 add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
+if(CUDA_DYNET)
+target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
+else()
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+endif()
