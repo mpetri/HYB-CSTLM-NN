@@ -86,7 +86,7 @@ struct LM {
     dynet::LookupParameter           p_word_embeddings;
     dynet::Parameter                 p_R;
     dynet::Parameter                 p_bias;
-    cstlm::vocab_uncompressed<false> vocab;
+    cstlm::vocab_uncompressed<false> filtered_vocab;
     uint32_t                         layers;
     uint32_t                         w2v_vec_size;
     uint32_t                         hidden_dim;
@@ -97,7 +97,7 @@ struct LM {
     void load(std::string file_name)
     {
         std::ifstream ifs(file_name);
-        vocab.load(ifs);
+        filtered_vocab.load(ifs);
         boost::archive::text_iarchive ia(ifs);
         ia >> model;
         ia >> layers;
@@ -112,7 +112,7 @@ struct LM {
     void store(std::string file_name)
     {
         std::ofstream ofs(file_name);
-        vocab.serialize(ofs);
+        filtered_vocab.serialize(ofs);
         boost::archive::text_oarchive oa(ofs);
         oa << model;
         oa << layers;
@@ -127,15 +127,15 @@ struct LM {
     LM(uint32_t                          _layers,
        uint32_t                          _hidden_dim,
        word2vec::embeddings&             emb,
-       cstlm::vocab_uncompressed<false>& filtered_vocab)
+       cstlm::vocab_uncompressed<false>& _filtered_vocab)
         : builder(_layers, emb.cols(), _hidden_dim, model)
         , layers(_layers)
         , w2v_vec_size(emb.cols())
         , hidden_dim(_hidden_dim)
     {
 
-        uint32_t vocab_size = filtered_vocab.size();
-        vocab               = filtered_vocab;
+        uint32_t vocab_size = _filtered_vocab.size();
+        filtered_vocab      = _filtered_vocab;
         cstlm::LOG(cstlm::INFO) << "RNNLM W2V dimensions: " << vocab_size << "x" << w2v_vec_size;
         p_word_embeddings =
         model.add_lookup_parameters(vocab_size, {w2v_vec_size}, ParameterInitEigenMatrix(emb.data));
@@ -176,12 +176,11 @@ struct LM {
 
     double evaluate_sentence_logprob(std::vector<uint32_t>& sentence)
     {
-        double                  prob = 0.0;
+        double                  logprob = 0.0;
         dynet::ComputationGraph cg;
         dynet::expr::Expression loss_expr = build_lm_cgraph(sentence, cg, 0.0);
-
-        prob = as_scalar(cg.forward(loss_expr));
-        return prob;
+        logprob                           = as_scalar(cg.forward(loss_expr));
+        return logprob;
     }
 };
 

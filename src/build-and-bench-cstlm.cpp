@@ -72,11 +72,13 @@ cmdargs_t parse_args(int argc, const char* argv[])
     return args;
 }
 
+
 template <class t_idx>
-t_idx load_or_create_cstlm(collection& col, bool use_mkn)
+t_idx load_or_create_cstlm(collection& col)
 {
     t_idx idx;
-    auto  output_file = col.path + "/index/index-" + sdsl::util::class_to_hash(idx) + ".sdsl";
+    auto  output_file = col.path + "/index/index-" + col.file_map[KEY_CSTLM_TEXT] + "-" +
+                       sdsl::util::class_to_hash(idx) + ".sdsl";
     if (cstlm::utils::file_exists(output_file)) {
         LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
         std::ifstream ifs(output_file);
@@ -86,7 +88,7 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
     }
     using clock = std::chrono::high_resolution_clock;
     auto start  = clock::now();
-    idx         = t_idx(col, use_mkn);
+    idx         = t_idx(col, true);
     auto stop   = clock::now();
     LOG(INFO) << "CSTLM index construction in (s): "
               << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() /
@@ -104,6 +106,7 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
     idx.print_params(true, 10);
     return idx;
 }
+
 
 template <class t_idx>
 std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)

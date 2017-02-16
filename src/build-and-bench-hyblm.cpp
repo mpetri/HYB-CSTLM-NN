@@ -118,6 +118,7 @@ void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences, rnnlm::LM
     }
     perplexity = perplexity / num_words_predicted;
     LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << pow(10, -perplexity);
+    ;
 }
 
 
@@ -137,7 +138,43 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 }
 
 
-rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embeddings)
+template <class t_idx>
+t_idx load_or_create_cstlm(collection& col)
+{
+    t_idx idx;
+    auto  output_file = col.path + "/index/index-" + col.file_map[KEY_CSTLM_TEXT] + "-" +
+                       sdsl::util::class_to_hash(idx) + ".sdsl";
+    if (cstlm::utils::file_exists(output_file)) {
+        LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
+        std::ifstream ifs(output_file);
+        idx.load(ifs);
+        idx.print_params(true, 10);
+        return idx;
+    }
+    using clock = std::chrono::high_resolution_clock;
+    auto start  = clock::now();
+    idx         = t_idx(col, true);
+    auto stop   = clock::now();
+    LOG(INFO) << "CSTLM index construction in (s): "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() /
+                 1000.0f;
+
+    std::ofstream ofs(output_file);
+    if (ofs.is_open()) {
+        LOG(INFO) << "CSTLM writing index to file : " << output_file;
+        auto bytes = sdsl::serialize(idx, ofs);
+        LOG(INFO) << "CSTLM index size : " << bytes / (1024 * 1024) << " MB";
+        sdsl::write_structure<sdsl::HTML_FORMAT>(idx, output_file + ".html");
+    } else {
+        LOG(FATAL) << "CSTLM cannot write index to file : " << output_file;
+    }
+    idx.print_params(true, 10);
+    return idx;
+}
+
+template <class t_cstlm>
+rnnlm::LM
+load_or_create_rnnlm(collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings)
 {
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
@@ -148,7 +185,7 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
                   .start_learning_rate(0.1)
                   .decay_rate(0.5)
                   .num_iterations(5)
-                  .train_or_load(col, w2v_embeddings);
+                  .train_or_load(col, cstlm, w2v_embeddings);
 
     return rnn_lm;
 }
@@ -163,18 +200,22 @@ int main(int argc, char** argv)
 
     /* (1) parse collection directory and create CSTLM index */
     collection col(args.collection_dir);
+    col.file_map[KEY_CSTLM_TEXT] = col.file_map[KEY_BIG_TEXT];
+
+    /* (2) create the cstlm model */
+    auto cstlm = load_or_create_cstlm<wordlm>(col, true);
 
     /* (2) load the word2vec embeddings */
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto rnnlm = load_or_create_rnnlm(col, word_embeddings);
+    auto hyblm = load_or_create_hyblm(col, cstlm, word_embeddings);
 
     /* (4) parse test file */
-    auto test_sentences = load_and_parse_file(args.test_file, rnnlm);
+    auto test_sentences = load_and_parse_file(args.test_file, hyblm);
 
     /* (5) evaluate sentences */
-    evaluate_sentences(test_sentences, rnnlm);
+    evaluate_sentences(test_sentences, hyblm);
 
     return 0;
 }
