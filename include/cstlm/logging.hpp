@@ -4,13 +4,8 @@ namespace cstlm {
 
 static bool enable_logging = false;
 
-enum typelog {
-    DEBUG,
-    INFO,
-    WARN,
-    FATAL,
-    ERROR
-};
+enum typelog { DEBUG, INFO, WARN, FATAL, ERROR };
+
 
 struct LOG {
 public:
@@ -18,7 +13,7 @@ public:
     LOG(typelog type)
     {
         if (enable_logging) {
-            auto now = std::chrono::system_clock::now();
+            auto        now      = std::chrono::system_clock::now();
             std::time_t now_time = std::chrono::system_clock::to_time_t(now);
             static char tstr[256];
             std::strftime(tstr, sizeof(tstr), "%F-%H:%M:%S", std::localtime(&now_time));
@@ -58,26 +53,26 @@ public:
     }
 
 private:
-    bool opened = false;
+    bool               opened = false;
     inline std::string getLabel(typelog type)
     {
         std::string label;
         switch (type) {
-        case DEBUG:
-            label = "DEBUG";
-            break;
-        case INFO:
-            label = "INFO";
-            break;
-        case WARN:
-            label = "WARN";
-            break;
-        case FATAL:
-            label = "FATAL";
-            break;
-        case ERROR:
-            label = "ERROR";
-            break;
+            case DEBUG:
+                label = "DEBUG";
+                break;
+            case INFO:
+                label = "INFO";
+                break;
+            case WARN:
+                label = "WARN";
+                break;
+            case FATAL:
+                label = "FATAL";
+                break;
+            case ERROR:
+                label = "ERROR";
+                break;
         }
         return label;
     }

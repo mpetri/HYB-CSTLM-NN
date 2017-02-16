@@ -15,14 +15,14 @@ struct computed_context_result {
     uint32_t f2prime;
 };
 
+
 struct counts_writer {
-    counts_writer(size_t id, collection& col)
-        : m_id(id)
+    counts_writer(size_t id, collection& col) : m_id(id)
     {
-        f1 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1", id), std::ios::out);
-        f2 = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2", id), std::ios::out);
-        fb = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb", id), std::ios::out);
-        b = sdsl::int_vector_buffer<32>(col.temp_file("counts_b", id), std::ios::out);
+        f1  = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1", id), std::ios::out);
+        f2  = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2", id), std::ios::out);
+        fb  = sdsl::int_vector_buffer<32>(col.temp_file("counts_fb", id), std::ios::out);
+        b   = sdsl::int_vector_buffer<32>(col.temp_file("counts_b", id), std::ios::out);
         f1p = sdsl::int_vector_buffer<32>(col.temp_file("counts_f1p", id), std::ios::out);
         f2p = sdsl::int_vector_buffer<32>(col.temp_file("counts_f2p", id), std::ios::out);
         ids = sdsl::int_vector_buffer<64>(col.temp_file("node_ids", id), std::ios::out);
@@ -49,7 +49,7 @@ struct counts_writer {
         f2p.close(true);
         ids.close(true);
     }
-    size_t m_id;
+    size_t                      m_id;
     sdsl::int_vector_buffer<32> f1;
     sdsl::int_vector_buffer<32> f2;
     sdsl::int_vector_buffer<32> fb;
@@ -60,23 +60,19 @@ struct counts_writer {
 };
 
 struct dummy_container {
-    using size_type = uint64_t;
+    using size_type  = uint64_t;
     using value_type = uint32_t;
     std::vector<sdsl::int_vector_buffer<32>*> bufs;
-    size_type m_size = 0;
-    dummy_container() = default;
-    dummy_container(std::vector<sdsl::int_vector_buffer<32>*> b)
-        : bufs(b)
+    size_type                                 m_size = 0;
+    dummy_container()                                = default;
+    dummy_container(std::vector<sdsl::int_vector_buffer<32>*> b) : bufs(b)
     {
         m_size = 0;
         for (auto& buffer : bufs) {
             m_size += buffer->size();
         }
     }
-    size_type size() const
-    {
-        return m_size;
-    }
+    size_type size() const { return m_size; }
 
     value_type operator[](size_type idx) const
     {
@@ -93,10 +89,7 @@ struct dummy_container {
 };
 
 struct counts_merge_helper {
-    counts_merge_helper(std::vector<counts_writer>& cws)
-        : writers(cws)
-    {
-    }
+    counts_merge_helper(std::vector<counts_writer>& cws) : writers(cws) {}
     ~counts_merge_helper()
     {
         for (auto& w : writers) {

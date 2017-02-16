@@ -46,7 +46,7 @@ SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard: Cpp11
 TabWidth: 4
-UseTab: Always 
+UseTab: Never 
 ReflowComments:  false
 SortIncludes: false
 BinPackArguments: false

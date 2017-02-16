@@ -10,145 +10,146 @@ namespace cstlm {
 template <class t_cst, uint32_t t_m, uint32_t t_max_entries>
 class prob_cache {
 public: // data types
-	typedef sdsl::int_vector<>::size_type size_type;
-	typedef t_cst						  cst_type;
-	typedef typename t_cst::csa_type	  csa_type;
-	typedef typename t_cst::node_type	 node_type;
-	typedef typename t_cst::string_type   string_type;
-	typedef typename csa_type::value_type value_type;
-	struct LMQueryMKNCacheData {
-		std::vector<node_type> node_incl_vec;
-		double				   prob;
-	};
-	struct LMQueryMKNCacheDataTmp {
-		std::vector<value_type> pattern;
-		std::vector<node_type>  node_incl_vec;
-		double					prob;
-		bool operator<(const LMQueryMKNCacheDataTmp& a) const { return prob > a.prob; }
-	};
-	typedef LMQueryMKNCacheData cache_type;
+    typedef sdsl::int_vector<>::size_type size_type;
+    typedef t_cst                         cst_type;
+    typedef typename t_cst::csa_type      csa_type;
+    typedef typename t_cst::node_type     node_type;
+    typedef typename t_cst::string_type   string_type;
+    typedef typename csa_type::value_type value_type;
+    struct LMQueryMKNCacheData {
+        std::vector<node_type> node_incl_vec;
+        double                 prob;
+    };
+    struct LMQueryMKNCacheDataTmp {
+        std::vector<value_type> pattern;
+        std::vector<node_type>  node_incl_vec;
+        double                  prob;
+        bool operator<(const LMQueryMKNCacheDataTmp& a) const { return prob > a.prob; }
+    };
+    typedef LMQueryMKNCacheData cache_type;
 
 private:
-	std::unordered_map<std::vector<value_type>, LMQueryMKNCacheData> m_cache;
-	std::unordered_set<std::vector<value_type>> considered;
-	std::priority_queue<LMQueryMKNCacheDataTmp> tmp_cache_pq;
+    std::unordered_map<std::vector<value_type>, LMQueryMKNCacheData> m_cache;
+    std::unordered_set<std::vector<value_type>> considered;
+    std::priority_queue<LMQueryMKNCacheDataTmp> tmp_cache_pq;
 
 public:
-	const uint32_t max_mgram_cache_len	 = t_m;
-	const uint32_t max_compute_ngram_len   = 1000;
-	const uint32_t max_mgram_cache_entries = t_max_entries;
+    const uint32_t max_mgram_cache_len     = t_m;
+    const uint32_t max_compute_ngram_len   = 1000;
+    const uint32_t max_mgram_cache_entries = t_max_entries;
 
 public:
-	prob_cache() = default;
-	prob_cache(prob_cache<t_cst, t_m, t_max_entries>&& pc) { m_cache = std::move(pc.m_cache); }
-	prob_cache<t_cst, t_m, t_max_entries>& operator=(prob_cache<t_cst, t_m, t_max_entries>&& pc)
-	{
-		m_cache = std::move(pc.m_cache);
-		return (*this);
-	}
+    prob_cache() = default;
+    prob_cache(prob_cache<t_cst, t_m, t_max_entries>&& pc) { m_cache = std::move(pc.m_cache); }
+    prob_cache<t_cst, t_m, t_max_entries>& operator=(prob_cache<t_cst, t_m, t_max_entries>&& pc)
+    {
+        m_cache = std::move(pc.m_cache);
+        return (*this);
+    }
 
-	template <class t_idx>
-	prob_cache(const t_idx& /*idx*/)
-	{
-		// const auto& cst = idx.cst;
-		// uint64_t counter = 0; // counter = first symbol on child edge
-		// {
-		//     for (auto child : cst.children(cst.root())) {
-		//         if(counter != EOF_SYM && counter != EOS_SYM && counter != UNKNOWN_SYM && counter != PAT_END_SYM) {
-		//             process_subtree(cst,child,idx);
-		//         }
-		//         ++counter;
-		//     }
-		// }
-		// considered.clear();
-		// while(tmp_cache_pq.size()) {
-		//     auto top_entry = tmp_cache_pq.top(); tmp_cache_pq.pop();
-		//     LMQueryMKNCacheData d;
-		//     d.node_incl_vec = top_entry.node_incl_vec;
-		//     d.prob = top_entry.prob;
-		//     m_cache[top_entry.pattern] = d;
-		// }
-	}
+    template <class t_idx>
+    prob_cache(const t_idx& /*idx*/)
+    {
+        // const auto& cst = idx.cst;
+        // uint64_t counter = 0; // counter = first symbol on child edge
+        // {
+        //     for (auto child : cst.children(cst.root())) {
+        //         if(counter != EOF_SYM && counter != EOS_SYM && counter != UNKNOWN_SYM && counter != PAT_END_SYM) {
+        //             process_subtree(cst,child,idx);
+        //         }
+        //         ++counter;
+        //     }
+        // }
+        // considered.clear();
+        // while(tmp_cache_pq.size()) {
+        //     auto top_entry = tmp_cache_pq.top(); tmp_cache_pq.pop();
+        //     LMQueryMKNCacheData d;
+        //     d.node_incl_vec = top_entry.node_incl_vec;
+        //     d.prob = top_entry.prob;
+        //     m_cache[top_entry.pattern] = d;
+        // }
+    }
 
-	bool add_entry(std::vector<value_type>& pat, std::vector<node_type> niv, double prob)
-	{
-		if (considered.find(pat) != considered.end()) return true;
-		considered.insert(pat);
-		bool skip = false;
-		if (tmp_cache_pq.size() < max_mgram_cache_entries) {
-			LMQueryMKNCacheDataTmp data;
-			data.pattern	   = pat;
-			data.node_incl_vec = niv;
-			data.prob		   = prob;
-			tmp_cache_pq.push(data);
-		} else {
-			double top_prob = tmp_cache_pq.top().prob;
-			if (top_prob < prob) {
-				tmp_cache_pq.pop();
-				LMQueryMKNCacheDataTmp data;
-				data.pattern	   = pat;
-				data.node_incl_vec = niv;
-				data.prob		   = prob;
-				tmp_cache_pq.push(data);
-			} else {
-				skip = true;
-			}
-		}
-		return skip;
-	}
-
-	template <class t_idx>
-	void process_subtree(const cst_type& cst, const node_type& node, const t_idx& idx)
-	{
-		auto itr = cst.begin(node);
-		auto end = cst.end(node);
-
-		LMQueryMKN<t_idx>			   qmkn(&idx, max_compute_ngram_len, false, false);
-		std::vector<value_type>		   pattern;
-		std::vector<LMQueryMKN<t_idx>> stack;
-		stack.push_back(qmkn);
-		while (itr != end) {
-			if (itr.visit() == 1) {
-				/* get nodes involved */
-				auto	 node		  = *itr;
-				auto	 parent		  = cst.parent(node);
-				auto	 parent_depth = cst.depth(parent);
-				uint32_t depth	 = (!cst.is_leaf(node)) ? cst.depth(node) : (max_mgram_cache_len);
-				uint32_t add_depth = std::min(depth, max_mgram_cache_len);
-
-				LMQueryMKN<t_idx> cur = stack.back();
-
-				double prob = 0;
-				for (size_t i = parent_depth; i < add_depth; i++) {
-					uint32_t sym = cst.edge(node, i + 1);
-					prob		 = cur.append_symbol_fill_cache(sym, *this);
-				}
-				bool skip = false;
-				if (prob < tmp_cache_pq.top().prob) {
-					skip = true;
-				}
-				if (skip || add_depth >= max_mgram_cache_len) {
-					itr.skip_subtree();
-				} else {
-					stack.push_back(cur);
-				}
-			} else {
-				stack.pop_back();
-			}
-			++itr;
-		}
-	}
+    bool add_entry(std::vector<value_type>& pat, std::vector<node_type> niv, double prob)
+    {
+        if (considered.find(pat) != considered.end()) return true;
+        considered.insert(pat);
+        bool skip = false;
+        if (tmp_cache_pq.size() < max_mgram_cache_entries) {
+            LMQueryMKNCacheDataTmp data;
+            data.pattern       = pat;
+            data.node_incl_vec = niv;
+            data.prob          = prob;
+            tmp_cache_pq.push(data);
+        } else {
+            double top_prob = tmp_cache_pq.top().prob;
+            if (top_prob < prob) {
+                tmp_cache_pq.pop();
+                LMQueryMKNCacheDataTmp data;
+                data.pattern       = pat;
+                data.node_incl_vec = niv;
+                data.prob          = prob;
+                tmp_cache_pq.push(data);
+            } else {
+                skip = true;
+            }
+        }
+        return skip;
+    }
 
 
-	size_type serialize(std::ostream&			   out,
-						const cst_type&			   cst,
-						sdsl::structure_tree_node* v	= NULL,
-						std::string				   name = "") const
-	{
-		sdsl::structure_tree_node* child =
-		sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
-		size_type written_bytes = 0;
-		/*
+    template <class t_idx>
+    void process_subtree(const cst_type& cst, const node_type& node, const t_idx& idx)
+    {
+        auto itr = cst.begin(node);
+        auto end = cst.end(node);
+
+        LMQueryMKN<t_idx>              qmkn(&idx, max_compute_ngram_len, false, false);
+        std::vector<value_type>        pattern;
+        std::vector<LMQueryMKN<t_idx>> stack;
+        stack.push_back(qmkn);
+        while (itr != end) {
+            if (itr.visit() == 1) {
+                /* get nodes involved */
+                auto     node         = *itr;
+                auto     parent       = cst.parent(node);
+                auto     parent_depth = cst.depth(parent);
+                uint32_t depth     = (!cst.is_leaf(node)) ? cst.depth(node) : (max_mgram_cache_len);
+                uint32_t add_depth = std::min(depth, max_mgram_cache_len);
+
+                LMQueryMKN<t_idx> cur = stack.back();
+
+                double prob = 0;
+                for (size_t i = parent_depth; i < add_depth; i++) {
+                    uint32_t sym = cst.edge(node, i + 1);
+                    prob         = cur.append_symbol_fill_cache(sym, *this);
+                }
+                bool skip = false;
+                if (prob < tmp_cache_pq.top().prob) {
+                    skip = true;
+                }
+                if (skip || add_depth >= max_mgram_cache_len) {
+                    itr.skip_subtree();
+                } else {
+                    stack.push_back(cur);
+                }
+            } else {
+                stack.pop_back();
+            }
+            ++itr;
+        }
+    }
+
+
+    size_type serialize(std::ostream&              out,
+                        const cst_type&            cst,
+                        sdsl::structure_tree_node* v    = NULL,
+                        std::string                name = "") const
+    {
+        sdsl::structure_tree_node* child =
+        sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+        size_type written_bytes = 0;
+        /*
 		auto itr = m_cache.begin();
 		auto end = m_cache.end();
 
@@ -202,12 +203,12 @@ public:
 
 		sdsl::structure_tree::add_size(child, written_bytes);
 		*/
-		return written_bytes;
-	}
+        return written_bytes;
+    }
 
-	void load(std::istream& in, const cst_type& cst)
-	{
-		/*
+    void load(std::istream& in, const cst_type& cst)
+    {
+        /*
 		sdsl::int_vector<> pattern_lens;
 		pattern_lens.load(in);
 		std::vector<double> probabilities;
@@ -236,13 +237,13 @@ public:
 			offset += cur_plen;
 		}
 		*/
-	}
+    }
 
-	auto find(const std::vector<value_type>& v) const -> decltype(m_cache.find(v))
-	{
-		return m_cache.find(v);
-	}
+    auto find(const std::vector<value_type>& v) const -> decltype(m_cache.find(v))
+    {
+        return m_cache.find(v);
+    }
 
-	auto end() const -> decltype(m_cache.end()) { return m_cache.end(); }
+    auto end() const -> decltype(m_cache.end()) { return m_cache.end(); }
 };
 }
