@@ -193,6 +193,7 @@ const bool	 SAMPLE			  = true;
 const float	INIT_LEARNING_RATE = 0.1f;
 const float	DECAY_RATE		  = 0.5f;
 const uint32_t VOCAB_THRESHOLD	= 30000;
+const uint32_t NUM_ITERATIONS	 = 5;
 }
 
 struct builder {
@@ -206,6 +207,7 @@ private:
 	float	m_decay_rate		   = defaults::DECAY_RATE;
 	float	m_dropout			   = defaults::DROPOUT;
 	uint32_t m_vocab_threshold	 = defaults::VOCAB_THRESHOLD;
+	uint32_t m_num_iterations	  = defaults::NUM_ITERATIONS;
 
 private:
 	void output_params()
@@ -217,6 +219,7 @@ private:
 		cstlm::LOG(cstlm::INFO) << "RNNLM start learning rate: " << m_start_learning_rate;
 		cstlm::LOG(cstlm::INFO) << "RNNLM decay rate: " << m_decay_rate;
 		cstlm::LOG(cstlm::INFO) << "RNNLM vocab threshold: " << m_vocab_threshold;
+		cstlm::LOG(cstlm::INFO) << "RNNLM num iterations: " << m_num_iterations;
 	}
 
 
@@ -242,6 +245,12 @@ public:
 	builder& start_learning_rate(float alpha)
 	{
 		m_start_learning_rate = alpha;
+		return *this;
+	};
+
+	builder& num_iterations(uint32_t n)
+	{
+		m_num_iterations = n;
 		return *this;
 	};
 
@@ -306,42 +315,43 @@ public:
 		std::mt19937 gen(word2vec::consts::RAND_SEED);
 		shuffle(sentences.begin(), sentences.end(), gen);
 		size_t cur_sentence_id = 0;
-		size_t last_eta_update = 0;
 
-		size_t tokens		= 0;
-		size_t total_tokens = 0;
-		float  loss			= 0;
+
 		cstlm::LOG(cstlm::INFO) << "RNNLM start learning";
-		for (const auto& sentence : sentences) {
-			tokens += sentence.size(); // includes <S> and </S>
-			total_tokens += sentence.size();
-			dynet::ComputationGraph cg;
 
-			auto loss_expr = rnnlm.build_lm_cgraph(sentence, cg, m_dropout);
-			loss += dynet::as_scalar(cg.forward(loss_expr));
+		for (size_t i = 0; i < m_num_iterations; i++) {
+			std::shuffle(sentences.begin(), sentences.end(), gen);
+			cur_sentence_id		= 0;
+			size_t tokens		= 0;
+			size_t total_tokens = 0;
+			float  loss			= 0;
+			for (const auto& sentence : sentences) {
+				tokens += sentence.size(); // includes <S> and </S>
+				total_tokens += sentence.size();
+				dynet::ComputationGraph cg;
 
-			cg.backward(loss_expr);
-			sgd.update();
+				auto loss_expr = rnnlm.build_lm_cgraph(sentence, cg, m_dropout);
+				loss += dynet::as_scalar(cg.forward(loss_expr));
 
-			if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
-				// Print informations
-				cstlm::LOG(cstlm::INFO)
-				<< "RNNLM (" << 100 * float(cur_sentence_id) / float(sentences.size() + 1)
-				<< "%) S = " << cur_sentence_id << " T = " << total_tokens << " eta = " << sgd.eta
-				<< " E = " << (loss / (tokens + 1)) << " ppl=" << exp(loss / (tokens + 1)) << ' ';
-				// Reinitialize loss
-				loss   = 0;
-				tokens = 0;
+				cg.backward(loss_expr);
+				sgd.update();
+
+				if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
+					// Print informations
+					cstlm::LOG(cstlm::INFO)
+					<< "RNNLM [" << i + 1 << "/" << m_num_iterations << "] ("
+					<< 100 * float(cur_sentence_id) / float(sentences.size() + 1)
+					<< "%) S = " << cur_sentence_id << " T = " << total_tokens
+					<< " eta = " << sgd.eta << " E = " << (loss / (tokens + 1))
+					<< " ppl=" << exp(loss / (tokens + 1)) << ' ';
+					// Reinitialize loss
+					loss   = 0;
+					tokens = 0;
+				}
+				cur_sentence_id++;
 			}
-
-			// update learning rate every 5%?
-			if ((cur_sentence_id - last_eta_update) > (sentences.size() / 20)) {
-				cstlm::LOG(cstlm::INFO) << "RNNLM update learning rate.";
-				sgd.eta *= m_decay_rate;
-				last_eta_update = cur_sentence_id;
-			}
-
-			cur_sentence_id++;
+			cstlm::LOG(cstlm::INFO) << "RNNLM update learning rate.";
+			sgd.eta *= m_decay_rate;
 		}
 
 

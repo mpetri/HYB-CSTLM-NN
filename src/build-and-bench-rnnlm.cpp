@@ -147,6 +147,7 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
 				  .sampling(true)
 				  .start_learning_rate(0.1)
 				  .decay_rate(0.5)
+				  .num_iterations(5)
 				  .train_or_load(col, w2v_embeddings);
 
 	return rnn_lm;
