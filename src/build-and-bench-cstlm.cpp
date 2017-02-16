@@ -80,6 +80,7 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 		LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
 		std::ifstream ifs(output_file);
 		idx.load(ifs);
+        idx.print_params(true,10);
 		return idx;
 	}
 	using clock = std::chrono::high_resolution_clock;
@@ -99,6 +100,7 @@ t_idx load_or_create_cstlm(collection& col, bool use_mkn)
 	} else {
 		LOG(FATAL) << "CSTLM cannot write index to file : " << output_file;
 	}
+    idx.print_params(true,10);
 	return idx;
 }
 
@@ -132,7 +134,6 @@ std::vector<std::vector<uint32_t>> load_and_parse_file(std::string file_name, co
 			tokens.push_back(num);
 		}
 		tokens.push_back(PAT_END_SYM);
-		LOG(INFO) << "S(" << sentences.size() << ") = " << sentence_to_str(tokens, index);
 		sentences.push_back(tokens);
 	}
 	LOG(INFO) << "found " << sentences.size() << " sentences";
@@ -146,16 +147,19 @@ void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences,
 {
 	double   perplexity = 0;
 	uint64_t M			= 0;
-	for (auto sentence : sentences) {
+    uint64_t cur = 0;
+	for (auto sentence : sentences) 
+	{
 		uint64_t plen = sentence.size();
-		M += plen; // - 1; // do not count <s>
-		double sentenceprob = sentence_logprob_kneser_ney(index, sentence, M, order, true, true);
+		M += plen- 1; // do not count <s>
+		double sentenceprob = sentence_logprob_kneser_ney(index, sentence, M, order, true, false);
+        double sperplexity = pow(10, -(1.0 / (double)plen-1) * sentenceprob);
+		//LOG(INFO) << "S(" << ++cur << ") = " << sentence_to_str(sentence, index) << " PPLX = " <<  sperplexity;
 		perplexity += sentenceprob;
 	}
 	perplexity = perplexity / M;
 	LOG(INFO) << "CSTLM ORDER: " << order << " PPLX = " << std::setprecision(10)
 			  << pow(10, -perplexity);
-	;
 }
 
 
