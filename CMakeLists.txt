@@ -11,6 +11,8 @@ option (CUDA_DYNET "Enable cuda support for dynet." OFF)
 
 if(CUDA_DYNET)
     set(BACKEND "cuda")
+    append_cxx_compiler_flags("-DHAVE_CUDA" "GCC" CMAKE_CXX_FLAGS)
+    append_cxx_compiler_flags("-DHAVE_CUDA" "CLANG" CMAKE_CXX_FLAGS)
 else()
     set(BACKEND "eigen")
 endif()
@@ -75,6 +77,7 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
 
 if(CUDA_DYNET)
 	link_directories("/usr/local/cuda/lib64/")
+	include_directories("/usr/local/cuda/include/")
 endif()
 
 
@@ -94,15 +97,16 @@ add_test(TestsPass unit-test.x)
 
 
 ### NEW HYBRID STUFF
-add_executable(train-hyblm.x src/train-hyblm.cpp)
-target_link_libraries(train-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+#add_executable(train-hyblm.x src/train-hyblm.cpp)
+#target_link_libraries(train-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 
 add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
-target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 
 add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
 if(CUDA_DYNET)
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
+target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 else()
+target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 endif()

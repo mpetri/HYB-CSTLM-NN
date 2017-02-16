@@ -67,8 +67,10 @@ struct ParameterInitEigenMatrix : public dynet::ParameterInit {
 	{
 		float* in = matrix.data();
 #if HAVE_CUDA
+		cstlm::LOG(cstlm::INFO) << "RNNLM CUDA INIT";
 		cudaMemcpyAsync(values.v, in, sizeof(float) * matrix.size(), cudaMemcpyHostToDevice);
 #else
+		cstlm::LOG(cstlm::INFO) << "RNNLM EIGEN/CPU INIT";
 		memcpy(values.v, in, sizeof(float) * matrix.size());
 #endif
 	}
@@ -78,12 +80,12 @@ private:
 };
 
 struct LM {
+	dynet::Model					 model;
 	dynet::LSTMBuilder				 builder;
 	dynet::LookupParameter			 p_word_embeddings;
 	dynet::Parameter				 p_R;
 	dynet::Parameter				 p_bias;
 	cstlm::vocab_uncompressed<false> vocab;
-	dynet::Model					 model;
 	uint32_t						 layers;
 	uint32_t						 w2v_vec_size;
 	uint32_t						 hidden_dim;
@@ -306,20 +308,20 @@ public:
 		cstlm::LOG(cstlm::INFO) << "RNNLM sentences to process: " << sentences.size();
 
 		// data will be stored here
+		cstlm::LOG(cstlm::INFO) << "RNNLM init LM structure";
 		LM rnnlm(m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
+		cstlm::LOG(cstlm::INFO) << "RNNLM init SGD trainer";
 		dynet::SimpleSGDTrainer sgd(rnnlm.model);
 		sgd.eta0 = m_start_learning_rate;
 
 
 		std::mt19937 gen(word2vec::consts::RAND_SEED);
-		shuffle(sentences.begin(), sentences.end(), gen);
 		size_t cur_sentence_id = 0;
-
-
 		cstlm::LOG(cstlm::INFO) << "RNNLM start learning";
 
 		for (size_t i = 0; i < m_num_iterations; i++) {
+			cstlm::LOG(cstlm::INFO) << "RNNLM shuffle sentences";
 			std::shuffle(sentences.begin(), sentences.end(), gen);
 			cur_sentence_id		= 0;
 			size_t tokens		= 0;
@@ -336,7 +338,7 @@ public:
 				cg.backward(loss_expr);
 				sgd.update();
 
-				if ((cur_sentence_id + 1) % ((sentences.size() / 100000) + 1) == 0) {
+				if ((cur_sentence_id + 1) % ((sentences.size() / 20) + 1) == 0) {
 					// Print informations
 					cstlm::LOG(cstlm::INFO)
 					<< "RNNLM [" << i + 1 << "/" << m_num_iterations << "] ("
