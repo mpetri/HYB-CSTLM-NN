@@ -144,7 +144,7 @@ struct LM {
     }
 
 
-    dynet::expr::Expression build_lm_cgraph(const std::vector<uint32_t> sentence,
+    dynet::expr::Expression build_lm_cgraph(const std::vector<uint32_t>& sentence,
                                             dynet::ComputationGraph&    cg,
                                             double                      m_dropout)
     {
@@ -174,10 +174,43 @@ struct LM {
         return i_nerr;
     }
 
-    double evaluate_sentence_logprob(std::vector<uint32_t>& sentence)
+    struct eval_res {
+	double logprob;
+	double tokens;
+    };
+
+    double evaluate_sentence_logprob(const std::vector<uint32_t>& sentence)
     {
         double                  logprob = 0.0;
-        dynet::ComputationGraph cg;
+       dynet::ComputationGraph cg;
+        builder.new_graph(cg); // reset RNN builder for new graph
+        if (m_dropout > 0) {
+            builder.set_dropout(m_dropout);
+        } else {
+            builder.disable_dropout();
+        }
+
+        builder.start_new_sequence();
+        auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
+        auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
+        std::vector<dynet::expr::Expression> errs;
+        for (size_t i = 0; i < sentence.size() - 1; i++) {
+            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i]);
+            // y_t = RNN(x_t)
+            auto i_y_t = builder.add_input(i_x_t);
+            auto i_r_t = i_bias + i_R * i_y_t;
+
+            // LogSoftmax followed by PickElement can be written in one step
+            // using PickNegLogSoftmax
+	    if(sentence[i+1] != cstlm::UNKNOWN_SYM) {
+            	auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
+            	errs.push_back(i_err);
+	    }
+        }
+        auto i_nerr = dynet::expr::sum(errs);
+        return i_nerr;
+    }
+
         dynet::expr::Expression loss_expr = build_lm_cgraph(sentence, cg, 0.0);
         logprob                           = as_scalar(cg.forward(loss_expr));
         return logprob;
@@ -370,11 +403,11 @@ public:
                 double log_probs = 0;
                 size_t tokens    = 0;
                 for (const auto& sentence : dev_sentences) {
-                    auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
+                    auto eval_res = rnnlm.evaluate_sentence_logprob(sentence);
                     log_probs += eval_res.log_probs;
                     tokens += eval_res.tokens;
                 }
-                double dev_pplx = exp(perplexity);
+                double dev_pplx = exp(log_probs);
                 cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx= " << dev_pplx
                                         << " current best = " << best_dev_pplx;
                 if (dev_pplx > best_dev_pplx) {
