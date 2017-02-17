@@ -151,7 +151,7 @@ public:
     size_type size() const { return m_i2t.size(); }
 
 
-    vocab_uncompressed filter(std::string input_file, uint32_t threshold)
+    vocab_uncompressed filter(std::string input_file, uint32_t threshold) const
     {
         // (1) count frequencies
         sdsl::int_vector_buffer<0> text(input_file);
@@ -171,8 +171,9 @@ public:
         vocab_uncompressed filtered_vocab;
 
         // (3a) add special symbols
+        auto i2t = m_i2t;
         for (size_t i = 0; i < NUM_SPECIAL_SYMS; i++) {
-            auto tok                  = m_i2t[i];
+            auto tok                  = i2t[i];
             filtered_vocab.m_t2i[tok] = i;
             filtered_vocab.m_i2t[i]   = tok;
             filtered_vocab.m_b2s[i]   = i;
@@ -186,7 +187,7 @@ public:
             auto cur_big_id    = cur.first;
             auto next_small_id = filtered_vocab.size();
             if (cur_big_id >= NUM_SPECIAL_SYMS) {
-                auto tok                            = m_i2t[cur_big_id];
+                auto tok                            = i2t[cur_big_id];
                 filtered_vocab.m_t2i[tok]           = next_small_id;
                 filtered_vocab.m_i2t[next_small_id] = tok;
                 filtered_vocab.m_b2s[cur_big_id]    = next_small_id;

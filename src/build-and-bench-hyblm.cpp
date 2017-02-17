@@ -179,7 +179,7 @@ load_or_create_rnnlm(collection& col, const t_cstlm& cstlm, word2vec::embeddings
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
                   .layers(2)
-                  .vocab_threshold(30000)
+                  .vocab_threshold(VOCAB_THRESHOLD)
                   .hidden_dimensions(128)
                   .sampling(true)
                   .start_learning_rate(0.1)

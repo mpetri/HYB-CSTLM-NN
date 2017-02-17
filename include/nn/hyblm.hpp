@@ -23,10 +23,6 @@ using watch = std::chrono::high_resolution_clock;
 
 namespace HYBLM {
 
-struct word_token {
-    uint32_t small_id;
-    uint32_t big_id;
-}
 
 struct sentence_parser {
 

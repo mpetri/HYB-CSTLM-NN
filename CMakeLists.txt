@@ -65,7 +65,8 @@ add_subdirectory(external/sdsl-lite)
 set(EIGEN3_INCLUDE_DIR ${CMAKE_HOME_DIRECTORY}/external/eigen)
 add_subdirectory(external/dynet)
 
-include_directories(${CMAKE_HOME_DIRECTORY}/include/cstlm/
+include_directories(${CMAKE_HOME_DIRECTORY}/include/
+                    ${CMAKE_HOME_DIRECTORY}/include/cstlm/
                     ${CMAKE_HOME_DIRECTORY}/include/nn/
                     ${CMAKE_HOME_DIRECTORY}/external/dynet
                     ${CMAKE_HOME_DIRECTORY}/external/eigen

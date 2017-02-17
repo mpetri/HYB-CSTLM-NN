@@ -18,35 +18,30 @@
 #include "query.hpp"
 #include "query_kn.hpp"
 
+#include "common.hpp"
+
 namespace cstlm {
 
 
 template <class t_idx, class t_pattern>
-double sentence_logprob_kneser_ney(const t_idx&     idx,
-                                   const t_pattern& word_vec,
-                                   uint64_t& /*M*/,
-                                   uint64_t ngramsize,
-                                   bool     ismkn,
-                                   bool     use_cache)
+sentence_eval sentence_logprob_kneser_ney(const t_idx&     idx,
+                                          const t_pattern& word_vec,
+                                          uint64_t& /*M*/,
+                                          uint64_t ngramsize,
+                                          bool     ismkn,
+                                          bool     use_cache)
 {
-    if (ismkn) {
-        double            final_score = 0;
-        LMQueryMKN<t_idx> query(&idx, ngramsize, true, use_cache);
-        for (const auto& word : word_vec) {
-            final_score += query.append_symbol(word);
-            //LOG(INFO) << "\tprob: " << idx.m_vocab.id2token(word) << " is: " << prob;
+    double            final_score = 0;
+    size_t            num_tokens  = 0;
+    LMQueryMKN<t_idx> query(&idx, ngramsize, true, use_cache);
+    for (const auto& word : word_vec) {
+        auto score = query.append_symbol(word.big_id);
+        if (word.small_id != UNKNOWN_SYM && word.big_id != UNKNOWN_SYM) {
+            final_score += score;
+            num_tokens++;
         }
-        //LOG(INFO) << "sentence_logprob_kneser_ney for: "
-        //<< idx.m_vocab.id2token(word_vec.begin(), word_vec.end())
-        //<< " returning: " << final_score;
-        return final_score;
-    } else {
-        double           final_score = 0;
-        LMQueryKN<t_idx> query(&idx, ngramsize);
-        for (const auto& word : word_vec)
-            final_score += query.append_symbol(word);
-        return final_score;
     }
+    return sentence_eval(final_score, num_tokens);
 }
 
 template <class t_idx, class t_pattern>

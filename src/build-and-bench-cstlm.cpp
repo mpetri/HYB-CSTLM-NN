@@ -18,6 +18,7 @@
 #include "word2vec.hpp"
 
 #include "knm.hpp"
+#include "nn/nnconstants.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -114,42 +115,25 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
 }
 
 template <class t_idx>
-std::vector<std::vector<uint32_t>> load_and_parse_file(std::string file_name, const t_idx& index)
+std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& index)
 {
-    std::vector<std::vector<uint32_t>> sentences;
-    std::ifstream                      ifile(file_name);
-    LOG(INFO) << "reading input file '" << file_name << "'";
-    std::string line;
-    while (std::getline(ifile, line)) {
-        auto                  line_tokens = utils::parse_line(line, false);
-        std::vector<uint32_t> tokens;
-        tokens.push_back(PAT_START_SYM);
-        for (const auto& token : line_tokens) {
-            auto num = index.vocab.token2id(token, UNKNOWN_SYM);
-            tokens.push_back(num);
-        }
-        tokens.push_back(PAT_END_SYM);
-        sentences.push_back(tokens);
-    }
+    auto filtered_vocab = index.vocab.filter(file_name, nnlm::constants::VOCAB_THRESHOLD);
+    auto sentences      = sentence_parser::parse_from_raw(file_name, index.vocab, filtered_vocab);
     LOG(INFO) << "found " << sentences.size() << " sentences";
     return sentences;
 }
 
 template <class t_idx>
-void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences,
-                        const t_idx&                        index,
-                        size_t                              order)
+void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
+                        const t_idx&                          index,
+                        size_t                                order)
 {
     double   perplexity = 0;
     uint64_t M          = 0;
-    uint64_t cur        = 0;
     for (auto sentence : sentences) {
-        uint64_t plen = sentence.size();
-        M += plen - 1; // do not count <s>
-        double sentenceprob = sentence_logprob_kneser_ney(index, sentence, M, order, true, false);
-        double sperplexity  = pow(10, -(1.0 / (double)plen - 1) * sentenceprob);
-        //LOG(INFO) << "S(" << ++cur << ") = " << sentence_to_str(sentence, index) << " PPLX = " <<  sperplexity;
-        perplexity += sentenceprob;
+        auto eval_res = sentence_logprob_kneser_ney(index, sentence, M, order, true, false);
+        perplexity += eval_res.logprob;
+        M += eval_res.tokens;
     }
     perplexity = perplexity / M;
     LOG(INFO) << "CSTLM ORDER: " << order << " PPLX = " << std::setprecision(10)

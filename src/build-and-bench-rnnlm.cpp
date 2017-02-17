@@ -17,6 +17,7 @@
 
 #include "word2vec.hpp"
 #include "rnnlm.hpp"
+#include "nn/nnconstants.hpp"
 
 #include "knm.hpp"
 
@@ -79,36 +80,21 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
 }
 
 template <class t_idx>
-std::vector<std::vector<uint32_t>> load_and_parse_file(std::string file_name, const t_idx& index)
+std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& index)
 {
-    std::vector<std::vector<uint32_t>> sentences;
-    std::ifstream                      ifile(file_name);
-    LOG(INFO) << "reading input file '" << file_name << "'";
-    std::string line;
-    while (std::getline(ifile, line)) {
-        auto                  line_tokens = utils::parse_line(line, false);
-        std::vector<uint32_t> tokens;
-        tokens.push_back(PAT_START_SYM);
-        for (const auto& token : line_tokens) {
-            auto num = index.filtered_vocab.token2id(token, UNKNOWN_SYM);
-            tokens.push_back(num);
-        }
-        tokens.push_back(PAT_END_SYM);
-        LOG(INFO) << "S(" << sentences.size() << ") = " << sentence_to_str(tokens, index);
-        sentences.push_back(tokens);
-    }
+    auto sentences = index.parse_raw_sentences(file_name);
     LOG(INFO) << "found " << sentences.size() << " sentences";
     return sentences;
 }
 
-void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences, rnnlm::LM& rnn_lm)
+void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, rnnlm::LM& rnn_lm)
 {
     double perplexity          = 0;
     double num_words_predicted = 0;
     for (auto sentence : sentences) {
-        double sentence_logprob = rnn_lm.evaluate_sentence_logprob(sentence);
-        num_words_predicted += (sentence.size() - 1);
-        perplexity += sentence_logprob;
+        auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
+        num_words_predicted += eval_res.tokens;
+        perplexity += eval_res.logprob;
     }
     perplexity = perplexity / num_words_predicted;
     LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity);
@@ -131,14 +117,12 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 }
 
 
-rnnlm::LM load_or_create_rnnlm(collection&           col,
-                               std::string           sent_dev_file,
-                               word2vec::embeddings& w2v_embeddings)
+rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embeddings)
 {
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
                   .layers(2)
-                  .vocab_threshold(30000)
+                  .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
                   .hidden_dimensions(128)
                   .sampling(true)
                   .start_learning_rate(0.5)
@@ -165,7 +149,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto rnnlm = load_or_create_rnnlm(col, args.dev_file, word_embeddings);
+    auto rnnlm = load_or_create_rnnlm(col, word_embeddings);
 
     /* (4) parse test file */
     auto test_file      = col.file_map[KEY_TEST];

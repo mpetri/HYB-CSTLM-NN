@@ -12,6 +12,7 @@
 #include "dynet/dynet.h"
 #include "dynet/lstm.h"
 #include "word2vec.hpp"
+#include "common.hpp"
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -21,44 +22,6 @@ using watch = std::chrono::high_resolution_clock;
 
 namespace rnnlm {
 
-struct sentence_parser {
-
-    static std::vector<std::vector<uint32_t>> parse(std::string                       file_name,
-                                                    cstlm::vocab_uncompressed<false>& vocab)
-    {
-        std::vector<std::vector<uint32_t>> sentences;
-        sdsl::int_vector_buffer<0>         text(file_name);
-
-        std::vector<uint32_t> cur;
-        bool                  in_sentence = false;
-        for (size_t i = 0; i < text.size(); i++) {
-            auto sym = text[i];
-            if (in_sentence == false && sym != cstlm::PAT_START_SYM) continue;
-
-            if (sym == cstlm::PAT_START_SYM) {
-                cur.push_back(sym);
-                in_sentence = true;
-                continue;
-            }
-
-            if (sym == cstlm::PAT_END_SYM) {
-                cur.push_back(sym);
-                if (cur.size() > 2) { // more than <s> and </s>?
-                    sentences.push_back(cur);
-                }
-                cur.clear();
-                in_sentence = false;
-                continue;
-            }
-
-            // not start AND not END AND in sentence == true here
-            // translate non-special ids to their small vocab id OR UNK
-            auto small_vocab_id = vocab.big2small(sym);
-            cur.push_back(small_vocab_id);
-        }
-        return sentences;
-    }
-};
 
 // need this to load the w2v data into a lookup_parameter
 struct ParameterInitEigenMatrix : public dynet::ParameterInit {
@@ -86,6 +49,7 @@ struct LM {
     dynet::LookupParameter           p_word_embeddings;
     dynet::Parameter                 p_R;
     dynet::Parameter                 p_bias;
+    cstlm::vocab_uncompressed<false> full_vocab;
     cstlm::vocab_uncompressed<false> filtered_vocab;
     uint32_t                         layers;
     uint32_t                         w2v_vec_size;
@@ -94,9 +58,15 @@ struct LM {
 
     LM(std::string file_name) { load(file_name); }
 
+    std::vector<std::vector<word_token>> parse_raw_sentences(std::string file_name) const
+    {
+        return sentence_parser::parse_from_raw(file_name, full_vocab, filtered_vocab);
+    }
+
     void load(std::string file_name)
     {
         std::ifstream ifs(file_name);
+        full_vocab.load(ifs);
         filtered_vocab.load(ifs);
         boost::archive::text_iarchive ia(ifs);
         ia >> model;
@@ -112,6 +82,7 @@ struct LM {
     void store(std::string file_name)
     {
         std::ofstream ofs(file_name);
+        full_vocab.serialize(ofs);
         filtered_vocab.serialize(ofs);
         boost::archive::text_oarchive oa(ofs);
         oa << model;
@@ -127,6 +98,7 @@ struct LM {
     LM(uint32_t                          _layers,
        uint32_t                          _hidden_dim,
        word2vec::embeddings&             emb,
+       cstlm::vocab_uncompressed<false>& _full_vocab,
        cstlm::vocab_uncompressed<false>& _filtered_vocab)
         : builder(_layers, emb.cols(), _hidden_dim, model)
         , layers(_layers)
@@ -136,6 +108,7 @@ struct LM {
 
         uint32_t vocab_size = _filtered_vocab.size();
         filtered_vocab      = _filtered_vocab;
+        full_vocab          = _full_vocab;
         cstlm::LOG(cstlm::INFO) << "RNNLM W2V dimensions: " << vocab_size << "x" << w2v_vec_size;
         p_word_embeddings =
         model.add_lookup_parameters(vocab_size, {w2v_vec_size}, ParameterInitEigenMatrix(emb.data));
@@ -144,9 +117,9 @@ struct LM {
     }
 
 
-    dynet::expr::Expression build_lm_cgraph(const std::vector<uint32_t>& sentence,
-                                            dynet::ComputationGraph&    cg,
-                                            double                      m_dropout)
+    dynet::expr::Expression build_lm_cgraph(const std::vector<word_token>& sentence,
+                                            dynet::ComputationGraph&       cg,
+                                            double                         m_dropout)
     {
         builder.new_graph(cg); // reset RNN builder for new graph
         if (m_dropout > 0) {
@@ -160,60 +133,48 @@ struct LM {
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
         for (size_t i = 0; i < sentence.size() - 1; i++) {
-            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i]);
+            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
+            auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
             errs.push_back(i_err);
         }
         auto i_nerr = dynet::expr::sum(errs);
         return i_nerr;
     }
 
-    struct eval_res {
-	double logprob;
-	double tokens;
-    };
-
-    double evaluate_sentence_logprob(const std::vector<uint32_t>& sentence)
+    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence)
     {
         double                  logprob = 0.0;
-       dynet::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         builder.new_graph(cg); // reset RNN builder for new graph
-        if (m_dropout > 0) {
-            builder.set_dropout(m_dropout);
-        } else {
-            builder.disable_dropout();
-        }
+        builder.disable_dropout();
 
         builder.start_new_sequence();
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
         for (size_t i = 0; i < sentence.size() - 1; i++) {
-            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i]);
+            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-	    if(sentence[i+1] != cstlm::UNKNOWN_SYM) {
-            	auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
-            	errs.push_back(i_err);
-	    }
+            if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
+                sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
+                auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+                errs.push_back(i_err);
+            }
         }
-        auto i_nerr = dynet::expr::sum(errs);
-        return i_nerr;
-    }
-
-        dynet::expr::Expression loss_expr = build_lm_cgraph(sentence, cg, 0.0);
-        logprob                           = as_scalar(cg.forward(loss_expr));
-        return logprob;
+        auto loss_expr = dynet::expr::sum(errs);
+        logprob        = as_scalar(cg.forward(loss_expr));
+        return sentence_eval(logprob, errs.size());
     }
 };
 
@@ -353,7 +314,7 @@ public:
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "RNNLM init LM structure";
-        LM rnnlm(m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
+        LM rnnlm(m_num_layers, m_hidden_dim, filtered_w2vemb, vocab, filtered_vocab);
 
         cstlm::LOG(cstlm::INFO) << "RNNLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(rnnlm.model);
@@ -404,7 +365,7 @@ public:
                 size_t tokens    = 0;
                 for (const auto& sentence : dev_sentences) {
                     auto eval_res = rnnlm.evaluate_sentence_logprob(sentence);
-                    log_probs += eval_res.log_probs;
+                    log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
                 }
                 double dev_pplx = exp(log_probs);
