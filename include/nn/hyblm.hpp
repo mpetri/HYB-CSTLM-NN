@@ -12,6 +12,7 @@
 #include "dynet/dynet.h"
 #include "dynet/lstm.h"
 #include "word2vec.hpp"
+#include "common.hpp"
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -21,49 +22,8 @@
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
 
-namespace HYBLM {
+namespace hyblm {
 
-
-struct sentence_parser {
-
-    static std::vector<std::vector<word_token>>
-    parse(std::string                       file_name,
-          cstlm::vocab_uncompressed<false>& filtered_vocab,
-          cstlm::vocab_uncompressed<false>& vocab)
-    {
-        std::vector<std::vector<word_token>> sentences;
-        sdsl::int_vector_buffer<0>           text(file_name);
-
-        std::vector<word_token> cur;
-        bool                    in_sentence = false;
-        for (size_t i = 0; i < text.size(); i++) {
-            auto sym = text[i];
-            if (in_sentence == false && sym != cstlm::PAT_START_SYM) continue;
-
-            if (sym == cstlm::PAT_START_SYM) {
-                cur.push_back(sym);
-                in_sentence = true;
-                continue;
-            }
-
-            if (sym == cstlm::PAT_END_SYM) {
-                cur.push_back(sym);
-                if (cur.size() > 2) { // more than <s> and </s>?
-                    sentences.push_back(cur);
-                }
-                cur.clear();
-                in_sentence = false;
-                continue;
-            }
-
-            // not start AND not END AND in sentence == true here
-            // translate non-special ids to their small vocab id OR UNK
-            auto small_vocab_id = vocab.big2small(sym);
-            cur.emplace_back(small_vocab_id, sym);
-        }
-        return sentences;
-    }
-};
 
 // need this to load the w2v data into a lookup_parameter
 struct ParameterInitEigenMatrix : public dynet::ParameterInit {
@@ -97,15 +57,79 @@ struct LM {
     uint32_t                         w2v_vec_size;
     uint32_t                         hidden_dim;
     uint32_t                         cstlm_ngramsize;
-    t_cstlm*                         cstlm = nullptr;
+    const t_cstlm*                   cstlm = nullptr;
+
     LM();
 
+    LM(const LM& other)
+        : model(other.model)
+        , builder(other.builder)
+        , p_word_embeddings(other.p_word_embeddings)
+        , p_R(other.p_R)
+        , p_bias(other.p_bias)
+        , filtered_vocab(other.filtered_vocab)
+        , layers(other.layers)
+        , w2v_vec_size(other.w2v_vec_size)
+        , hidden_dim(other.hidden_dim)
+        , cstlm_ngramsize(other.cstlm_ngramsize)
+        , cstlm(other.cstlm)
+    {
+    }
+
+    LM(LM&& other)
+        : model(std::move(other.model))
+        , builder(std::move(other.builder))
+        , p_word_embeddings(std::move(other.p_word_embeddings))
+        , p_R(std::move(other.p_R))
+        , p_bias(std::move(other.p_bias))
+        , filtered_vocab(std::move(other.filtered_vocab))
+        , layers(std::move(other.layers))
+        , w2v_vec_size(std::move(other.w2v_vec_size))
+        , hidden_dim(std::move(other.hidden_dim))
+        , cstlm_ngramsize(other.cstlm_ngramsize)
+        , cstlm(other.cstlm)
+    {
+    }
+
+    LM& operator=(const LM& other)
+    {
+        if (this != &other) {
+            LM tmp(other);          // re-use copy-constructor
+            *this = std::move(tmp); // re-use move-assignment
+        }
+        return *this;
+    }
+
+    //! Assignment move operator
+    LM& operator=(LM&& other)
+    {
+        if (this != &other) {
+            model             = std::move(other.model);
+            builder           = std::move(other.builder);
+            p_word_embeddings = std::move(other.p_word_embeddings);
+            p_R               = std::move(other.p_R);
+            p_bias            = std::move(other.p_bias);
+            filtered_vocab    = std::move(other.filtered_vocab);
+            layers            = std::move(other.layers);
+            w2v_vec_size      = std::move(other.w2v_vec_size);
+            hidden_dim        = std::move(other.hidden_dim);
+            cstlm_ngramsize   = other.cstlm_ngramsize;
+            cstlm             = other.cstlm;
+        }
+        return *this;
+    }
+
     LM(const t_cstlm& _cstlm, std::string file_name) : cstlm(&_cstlm) { load(file_name); }
+
+    std::vector<std::vector<word_token>> parse_raw_sentences(std::string file_name) const
+    {
+        return sentence_parser::parse_from_raw(file_name, cstlm->vocab, filtered_vocab);
+    }
 
     void load(std::string file_name)
     {
         std::ifstream ifs(file_name);
-        vocab.load(ifs);
+        filtered_vocab.load(ifs);
         boost::archive::text_iarchive ia(ifs);
         ia >> model;
         ia >> layers;
@@ -115,13 +139,12 @@ struct LM {
         ia >> p_R;
         ia >> p_bias;
         ia >> builder;
-        ia >> cstlm_ngramsize;
     }
 
     void store(std::string file_name)
     {
         std::ofstream ofs(file_name);
-        vocab.serialize(ofs);
+        filtered_vocab.serialize(ofs);
         boost::archive::text_oarchive oa(ofs);
         oa << model;
         oa << layers;
@@ -131,10 +154,10 @@ struct LM {
         oa << p_R;
         oa << p_bias;
         oa << builder;
-        oa << cstlm_ngramsize;
     }
 
-    LM(const t_cstlm& _cstlm, uint32_t _cstlm_ngramsize;
+    LM(const t_cstlm&                    _cstlm,
+       uint32_t                          _cstlm_ngramsize,
        uint32_t                          _layers,
        uint32_t                          _hidden_dim,
        word2vec::embeddings&             emb,
@@ -157,9 +180,9 @@ struct LM {
     }
 
 
-    dynet::expr::Expression build_lm_cgraph(const std::vector<word_token> sentence,
-                                            dynet::ComputationGraph&      cg,
-                                            double                        m_dropout)
+    dynet::expr::Expression build_lm_cgraph(const std::vector<word_token>& sentence,
+                                            dynet::ComputationGraph&       cg,
+                                            double                         m_dropout)
     {
         builder.new_graph(cg); // reset RNN builder for new graph
         if (m_dropout > 0) {
@@ -172,12 +195,9 @@ struct LM {
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
-
-        LMQueryMKNE<t_idx> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
-
+        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
-            auto next_word_id = sentence[i].small_id;
-            auto i_x_t        = dynet::expr::lookup(cg, p_word_embeddings, next_word_id);
+            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
@@ -186,25 +206,51 @@ struct LM {
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
 
-            auto prod = logprob_from_cstlm * i_r_t;
+            // auto prod = logprob_from_cstlm * i_r_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            auto i_err = dynet::expr::pickneglogsoftmax(prod, sentence[i + 1]);
+            auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
             errs.push_back(i_err);
         }
         auto i_nerr = dynet::expr::sum(errs);
         return i_nerr;
     }
 
-    double evaluate_sentence_logprob(std::vector<word_token>& sentence)
+    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence)
     {
-        double                  prob = 0.0;
+        double                  logprob = 0.0;
         dynet::ComputationGraph cg;
-        dynet::expr::Expression loss_expr = build_lm_cgraph(sentence, cg, 0.0);
+        builder.new_graph(cg); // reset RNN builder for new graph
+        builder.disable_dropout();
 
-        prob = as_scalar(cg.forward(loss_expr));
-        return prob;
+        builder.start_new_sequence();
+        auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
+        auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
+        std::vector<dynet::expr::Expression> errs;
+        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
+        for (size_t i = 0; i < sentence.size() - 1; i++) {
+            auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
+            // y_t = RNN(x_t)
+            auto i_y_t = builder.add_input(i_x_t);
+            auto i_r_t = i_bias + i_R * i_y_t;
+            // query cstlm
+            auto next_word_bigid    = sentence[i].big_id;
+            auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+
+            // auto prod = logprob_from_cstlm * i_r_t;
+
+            // LogSoftmax followed by PickElement can be written in one step
+            // using PickNegLogSoftmax
+            if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
+                sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
+                auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+                errs.push_back(i_err);
+            }
+        }
+        auto loss_expr = dynet::expr::sum(errs);
+        logprob        = as_scalar(cg.forward(loss_expr));
+        return sentence_eval(logprob, errs.size());
     }
 };
 
@@ -227,15 +273,16 @@ struct builder {
     builder() {}
 
 private:
-    float    m_start_learning_rate = defaults::INIT_LEARNING_RATE;
-    uint32_t m_num_layers          = defaults::LAYERS;
-    uint32_t m_hidden_dim          = defaults::HIDDEN_DIM;
-    bool     m_sampling            = defaults::SAMPLE;
-    float    m_decay_rate          = defaults::DECAY_RATE;
-    float    m_dropout             = defaults::DROPOUT;
-    uint32_t m_vocab_threshold     = defaults::VOCAB_THRESHOLD;
-    uint32_t m_num_iterations      = defaults::NUM_ITERATIONS;
-    uint32_t m_cstlm_ngramsize     = defaults::DEFAULT_CSTLM_NGRAM_SIZE;
+    float       m_start_learning_rate = defaults::INIT_LEARNING_RATE;
+    uint32_t    m_num_layers          = defaults::LAYERS;
+    uint32_t    m_hidden_dim          = defaults::HIDDEN_DIM;
+    bool        m_sampling            = defaults::SAMPLE;
+    float       m_decay_rate          = defaults::DECAY_RATE;
+    float       m_dropout             = defaults::DROPOUT;
+    uint32_t    m_vocab_threshold     = defaults::VOCAB_THRESHOLD;
+    uint32_t    m_num_iterations      = defaults::NUM_ITERATIONS;
+    std::string m_dev_file            = "";
+    uint32_t    m_cstlm_ngramsize     = defaults::DEFAULT_CSTLM_NGRAM_SIZE;
 
 private:
     void output_params()
@@ -301,11 +348,18 @@ public:
         return *this;
     };
 
+    builder& dev_file(std::string dev_file)
+    {
+        m_dev_file = dev_file;
+        return *this;
+    };
+
     builder& cstlm_ngramsize(uint32_t v)
     {
         m_cstlm_ngramsize = v;
         return *this;
     };
+
 
     std::string file_name(cstlm::collection& col)
     {
@@ -316,8 +370,8 @@ public:
         fn << "d=" << m_dropout << "-";
         fn << "hd=" << m_hidden_dim << "-";
         fn << "s=" << m_sampling << "-";
-        fn << "n=" << m_cstlm_ngramsize << "-";
         fn << "lr=" << m_start_learning_rate << "-";
+        fn << "n=" << m_cstlm_ngramsize << "-";
         fn << "vt=" << m_vocab_threshold << "-";
         fn << "decay=" << m_decay_rate;
         fn << ".dynet";
@@ -336,24 +390,31 @@ public:
         cstlm::LOG(cstlm::INFO) << "HYBLM filter w2v embeddings";
         auto filtered_w2vemb = w2v_embeddings.filter(filtered_vocab);
 
-        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences";
-        auto sentences = sentence_parser::parse(input_file, filtered_vocab, cstlm.vocab);
+        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in training set";
+        auto sentences = sentence_parser::parse(input_file, filtered_vocab);
         cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
+
+        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
+        auto dev_sentences =
+        sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, filtered_vocab);
+        cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sentences.size();
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
-        LM hyblm(
+        LM<t_cstlm> hyblm(
         cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
         cstlm::LOG(cstlm::INFO) << "HYBLM init SGD trainer";
-        dynet::SimpleSGDTrainer sgd(HYBLM.model);
+        dynet::SimpleSGDTrainer sgd(hyblm.model);
         sgd.eta0 = m_start_learning_rate;
-
+        sgd.eta  = m_start_learning_rate;
 
         std::mt19937 gen(word2vec::consts::RAND_SEED);
         size_t       cur_sentence_id = 0;
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 
+        double best_dev_pplx   = 999999.0;
+        bool   finish_training = false;
         for (size_t i = 0; i < m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
@@ -386,34 +447,59 @@ public:
                 }
                 cur_sentence_id++;
             }
+            if (m_dev_file != "") {
+                cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx.";
+                double log_probs = 0;
+                size_t tokens    = 0;
+                for (const auto& sentence : dev_sentences) {
+                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence);
+                    log_probs += eval_res.logprob;
+                    tokens += eval_res.tokens;
+                }
+                double dev_pplx = exp(log_probs / tokens);
+                cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx= " << dev_pplx
+                                        << " current best = " << best_dev_pplx;
+                if (dev_pplx > best_dev_pplx) {
+                    cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx is getting worse. we stop.";
+                    finish_training = true;
+                } else {
+                    cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx improved. we continue.";
+                    best_dev_pplx = dev_pplx;
+                }
+            }
+
+            if (finish_training) {
+                break;
+            }
+
             cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
             sgd.eta *= m_decay_rate;
         }
 
 
-        return HYBLM;
+        return hyblm;
     }
 
     template <class t_cstlm>
-    LM train_or_load(cstlm::collection&    col,
-                     const t_cstlm&        cstlm,
-                     word2vec::embeddings& w2v_embeddings)
+    LM<t_cstlm> train_or_load(cstlm::collection&    col,
+                              const t_cstlm&        cstlm,
+                              word2vec::embeddings& w2v_embeddings)
     {
         // (0) output params
         output_params();
 
         // (1) if exists. just load
-        auto HYBLM_file = file_name(col);
-        if (cstlm::utils::file_exists(HYBLM_file)) {
-            return LM(cstlm, HYBLM_file);
+        auto hyblm_file = file_name(col);
+        if (cstlm::utils::file_exists(hyblm_file)) {
+            return LM<t_cstlm>(cstlm, hyblm_file);
         }
 
         // (3) train
-        auto hyb_lm = train_lm(col, cstlm, w2v_embeddings);
+        auto hybl_lm = train_lm(col, cstlm, w2v_embeddings);
 
-        hyb_lm.store(HYBLM_file);
+        hybl_lm.store(hyblm_file);
 
-        return hyb_lm;
+        return hybl_lm;
     }
 };
 }

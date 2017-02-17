@@ -104,10 +104,15 @@ add_test(TestsPass unit-test.x)
 add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
 
 add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
+
+add_executable(build-and-bench-hyblm.x src/build-and-bench-hyblm.cpp)
+
 if(CUDA_DYNET)
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
+target_link_libraries(build-and-bench-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 else()
 target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+target_link_libraries(build-and-bench-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 endif()
