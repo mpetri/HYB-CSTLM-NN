@@ -202,14 +202,15 @@ struct builder {
     builder() {}
 
 private:
-    float    m_start_learning_rate = defaults::INIT_LEARNING_RATE;
-    uint32_t m_num_layers          = defaults::LAYERS;
-    uint32_t m_hidden_dim          = defaults::HIDDEN_DIM;
-    bool     m_sampling            = defaults::SAMPLE;
-    float    m_decay_rate          = defaults::DECAY_RATE;
-    float    m_dropout             = defaults::DROPOUT;
-    uint32_t m_vocab_threshold     = defaults::VOCAB_THRESHOLD;
-    uint32_t m_num_iterations      = defaults::NUM_ITERATIONS;
+    float       m_start_learning_rate = defaults::INIT_LEARNING_RATE;
+    uint32_t    m_num_layers          = defaults::LAYERS;
+    uint32_t    m_hidden_dim          = defaults::HIDDEN_DIM;
+    bool        m_sampling            = defaults::SAMPLE;
+    float       m_decay_rate          = defaults::DECAY_RATE;
+    float       m_dropout             = defaults::DROPOUT;
+    uint32_t    m_vocab_threshold     = defaults::VOCAB_THRESHOLD;
+    uint32_t    m_num_iterations      = defaults::NUM_ITERATIONS;
+    std::string m_dev_file            = "";
 
 private:
     void output_params()
@@ -274,6 +275,12 @@ public:
         return *this;
     };
 
+    builder& dev_file(std::string dev_file)
+    {
+        m_dev_file = dev_file;
+        return *this;
+    };
+
     std::string file_name(cstlm::collection& col)
     {
         std::stringstream fn;
@@ -303,9 +310,13 @@ public:
         cstlm::LOG(cstlm::INFO) << "RNNLM filter w2v embeddings";
         auto filtered_w2vemb = w2v_embeddings.filter(filtered_vocab);
 
-        cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences";
+        cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in training set";
         auto sentences = sentence_parser::parse(input_file, filtered_vocab);
         cstlm::LOG(cstlm::INFO) << "RNNLM sentences to process: " << sentences.size();
+
+        cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in dev set";
+        auto dev_sentences = sentence_parser::parse(m_dev_file, filtered_vocab);
+        cstlm::LOG(cstlm::INFO) << "RNNLM dev sentences to process: " << dev_sentences.size();
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "RNNLM init LM structure";
@@ -314,12 +325,14 @@ public:
         cstlm::LOG(cstlm::INFO) << "RNNLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(rnnlm.model);
         sgd.eta0 = m_start_learning_rate;
-
+        sgd.eta  = m_start_learning_rate;
 
         std::mt19937 gen(word2vec::consts::RAND_SEED);
         size_t       cur_sentence_id = 0;
         cstlm::LOG(cstlm::INFO) << "RNNLM start learning";
 
+        double best_dev_pplx   = 999999.0;
+        bool   finish_training = false;
         for (size_t i = 0; i < m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "RNNLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
@@ -352,6 +365,30 @@ public:
                 }
                 cur_sentence_id++;
             }
+            if (m_dev_file != "") {
+                cstlm::LOG(cstlm::INFO) << "RNNLM evaluate dev pplx.";
+                double log_probs = 0;
+                size_t tokens    = 0;
+                for (const auto& sentence : dev_sentences) {
+                    auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
+                    log_probs += eval_res.log_probs;
+                    tokens += eval_res.tokens;
+                }
+                double dev_pplx = exp(perplexity);
+                cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx= " << dev_pplx
+                                        << " current best = " << best_dev_pplx;
+                if (dev_pplx > best_dev_pplx) {
+                    cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx is getting worse. we stop.";
+                    finish_training = true;
+                } else {
+                    best_dev_pplx = dev_pplx;
+                }
+            }
+
+            if (finish_training) {
+                break;
+            }
+
             cstlm::LOG(cstlm::INFO) << "RNNLM update learning rate.";
             sgd.eta *= m_decay_rate;
         }

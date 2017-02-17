@@ -41,6 +41,7 @@ void print_usage(const char* program)
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
     fprintf(stdout, "  -T <test file>       : the location of the test file.\n");
+    fprintf(stdout, "  -D <dev file>        : the location of the dev file.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -137,7 +138,9 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 }
 
 
-rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embeddings)
+rnnlm::LM load_or_create_rnnlm(collection&           col,
+                               std::string           sent_dev_file,
+                               word2vec::embeddings& w2v_embeddings)
 {
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
@@ -148,6 +151,7 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
                   .start_learning_rate(0.5)
                   .decay_rate(0.85)
                   .num_iterations(20)
+                  .dev_file(sent_dev_file)
                   .train_or_load(col, w2v_embeddings);
 
     return rnn_lm;
