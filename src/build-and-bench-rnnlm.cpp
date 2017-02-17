@@ -32,6 +32,7 @@ using namespace cstlm;
 typedef struct cmdargs {
     std::string collection_dir;
     std::string test_file;
+    std::string dev_file;
 } cmdargs_t;
 
 void print_usage(const char* program)
@@ -50,7 +51,8 @@ cmdargs_t parse_args(int argc, const char* argv[])
     int       op;
     args.collection_dir = "";
     args.test_file      = "";
-    while ((op = getopt(argc, (char* const*)argv, "c:t:T:")) != -1) {
+    args.dev_file       = "";
+    while ((op = getopt(argc, (char* const*)argv, "c:t:T:D:")) != -1) {
         switch (op) {
             case 'c':
                 args.collection_dir = optarg;
@@ -60,6 +62,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
                 break;
             case 'T':
                 args.test_file = optarg;
+                break;
+            case 'D':
+                args.dev_file = optarg;
                 break;
         }
     }
@@ -172,7 +177,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto rnnlm = load_or_create_rnnlm(col, word_embeddings);
+    auto rnnlm = load_or_create_rnnlm(col, args.dev_file, word_embeddings);
 
     /* (4) parse test file */
     auto test_sentences = load_and_parse_file(args.test_file, rnnlm);
