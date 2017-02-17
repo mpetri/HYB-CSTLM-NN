@@ -69,7 +69,7 @@ template <class t_idx>
 t_idx load_or_create_cstlm(collection& col)
 {
     t_idx idx;
-    auto  output_file = col.path + "/index/index-" + col.file_map[KEY_CSTLM_TEXT] + "-" +
+    auto  output_file = col.file_map[KEY_CSTLM_TEXT] + "-cstlm-" +
                        sdsl::util::class_to_hash(idx) + ".sdsl";
     if (cstlm::utils::file_exists(output_file)) {
         LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
@@ -115,10 +115,12 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
 }
 
 template <class t_idx>
-std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& index)
+std::vector<std::vector<word_token>> load_and_parse_file(collection& col, const t_idx& index)
 {
-    auto filtered_vocab = index.vocab.filter(file_name, nnlm::constants::VOCAB_THRESHOLD);
-    auto sentences      = sentence_parser::parse_from_raw(file_name, index.vocab, filtered_vocab);
+    auto test_file      = col.file_map[KEY_TEST];
+    LOG(INFO) << "parsing test sentences from file " << test_file;
+    auto filtered_vocab = index.vocab.filter(col.file_map[KEY_SMALL_TEXT], nnlm::constants::VOCAB_THRESHOLD);
+    auto sentences      = sentence_parser::parse_from_raw(test_file, index.vocab, filtered_vocab);
     LOG(INFO) << "found " << sentences.size() << " sentences";
     return sentences;
 }
@@ -143,7 +145,7 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
 
 int main(int argc, char** argv)
 {
-    dynet::initialize(argc, argv);
+    //dynet::initialize(argc, argv);
     enable_logging = true;
 
     /* parse command line */
@@ -157,8 +159,7 @@ int main(int argc, char** argv)
     auto cstlm = load_or_create_cstlm<wordlm>(col);
 
     /* (3) parse test file */
-    auto test_file      = col.file_map[KEY_TEST];
-    auto test_sentences = load_and_parse_file(test_file, cstlm);
+    auto test_sentences = load_and_parse_file(col,cstlm);
 
     /* (4) evaluate sentences */
     for (size_t i = 2; i < 20; i++) {

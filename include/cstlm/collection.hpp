@@ -98,7 +98,7 @@ struct collection {
             auto sa_path = path + "/" + prefix + key + "." + KEY_SA;
             if (utils::file_exists(sa_path)) {
                 file_map[KEY_SA] = sa_path;
-                if (output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
+                if (output) LOG(INFO) << "FOUND '" << KEY_SA << "' at '" << sa_path << "'";
             }
         }
 
