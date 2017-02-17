@@ -212,7 +212,8 @@ int main(int argc, char** argv)
     auto hyblm = load_or_create_hyblm(col, cstlm, word_embeddings);
 
     /* (4) parse test file */
-    auto test_sentences = load_and_parse_file(args.test_file, hyblm);
+    auto test_file      = col.file_map[KEY_TEST];
+    auto test_sentences = load_and_parse_file(test_file, hyblm);
 
     /* (5) evaluate sentences */
     evaluate_sentences(test_sentences, hyblm);

@@ -31,18 +31,14 @@ using namespace cstlm;
 
 typedef struct cmdargs {
     std::string collection_dir;
-    std::string test_file;
-    std::string dev_file;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c -t -T\n", program);
+    fprintf(stdout, "%s -c -t\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
-    fprintf(stdout, "  -T <test file>       : the location of the test file.\n");
-    fprintf(stdout, "  -D <dev file>        : the location of the dev file.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -50,9 +46,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
-    args.test_file      = "";
-    args.dev_file       = "";
-    while ((op = getopt(argc, (char* const*)argv, "c:t:T:D:")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "c:t:")) != -1) {
         switch (op) {
             case 'c':
                 args.collection_dir = optarg;
@@ -60,15 +54,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 't':
                 num_cstlm_threads = std::atoi(optarg);
                 break;
-            case 'T':
-                args.test_file = optarg;
-                break;
-            case 'D':
-                args.dev_file = optarg;
-                break;
         }
     }
-    if (args.collection_dir == "" || args.test_file == "") {
+    if (args.collection_dir == "") {
         LOG(FATAL) << "Missing command line parameters.";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -156,7 +144,7 @@ rnnlm::LM load_or_create_rnnlm(collection&           col,
                   .start_learning_rate(0.5)
                   .decay_rate(0.85)
                   .num_iterations(20)
-                  .dev_file(sent_dev_file)
+                  .dev_file(col.file_map[KEY_DEV])
                   .train_or_load(col, w2v_embeddings);
 
     return rnn_lm;
@@ -180,7 +168,8 @@ int main(int argc, char** argv)
     auto rnnlm = load_or_create_rnnlm(col, args.dev_file, word_embeddings);
 
     /* (4) parse test file */
-    auto test_sentences = load_and_parse_file(args.test_file, rnnlm);
+    auto test_file      = col.file_map[KEY_TEST];
+    auto test_sentences = load_and_parse_file(test_file, rnnlm);
 
     /* (5) evaluate sentences */
     evaluate_sentences(test_sentences, rnnlm);

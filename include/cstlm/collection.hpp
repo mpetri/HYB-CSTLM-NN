@@ -32,6 +32,9 @@ const std::string KEY_COMBINED_TEXTREV = "COMBINED_TEXTREV";
 const std::string KEY_CSTLM_TEXT    = "CSTLM_TEXT";
 const std::string KEY_CSTLM_TEXTREV = "CSTLM_TEXTREV";
 
+const std::string KEY_TEST = "TEST_SET";
+const std::string KEY_DEV  = "DEV_SET";
+
 std::vector<std::string> collection_keys = {KEY_BIG_TEXT,
                                             KEY_BIG_TEXTREV,
                                             KEY_COMBINED_TEXT,
@@ -39,6 +42,8 @@ std::vector<std::string> collection_keys = {KEY_BIG_TEXT,
                                             KEY_SMALL_TEXT,
                                             KEY_SMALL_TEXT_REV,
                                             KEY_SA,
+                                            KEY_TEST,
+                                            KEY_DEV,
                                             KEY_SAREV,
                                             KEY_VOCAB};
 
@@ -90,6 +95,13 @@ struct collection {
                 if (output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
         }
+
+        auto sa_path = col.path + "/" + col.prefix + col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
+        if (utils::file_exists(sa_path)) {
+            file_map[KEY_SA] = sa_path;
+            if (output) LOG(INFO) << "FOUND '" << KEY_SA << "' at '" << sa_path << "'";
+        }
+
         auto stats_file = path + "/" + prefix + KEY_STATS;
         if (utils::file_exists(stats_file)) {
             std::ifstream ifs(path + "/" + prefix + KEY_STATS);

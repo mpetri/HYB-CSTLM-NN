@@ -13,15 +13,21 @@ typedef struct cmdargs {
     std::string big_input_file;
     std::string small_input_file;
     std::string collection_dir;
+    std::string dev_set;
+    std::string test_set;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -b <big input file> -s <small input file> -c <coldir>\n", program);
+    fprintf(stdout,
+            "%s -b <big input file> -s <small input file> -c <coldir> -D <dev> -T <test>\n",
+            program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -b <big input file>    : the big input file.\n");
     fprintf(stdout, "  -s <small input file>  : the small input file.\n");
     fprintf(stdout, "  -c <collection dir>    : the collection dir.\n");
+    fprintf(stdout, "  -D <dev set>           : path to the dev set.\n");
+    fprintf(stdout, "  -T <test set>          : path to the test set.\n");
 };
 
 
@@ -32,7 +38,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
     args.big_input_file   = "";
     args.small_input_file = "";
     args.collection_dir   = "";
-    while ((op = getopt(argc, (char* const*)argv, "b:s:c:")) != -1) {
+    args.dev_set          = "";
+    args.test_set         = "";
+    while ((op = getopt(argc, (char* const*)argv, "b:s:c:D:T:")) != -1) {
         switch (op) {
             case 'b':
                 args.big_input_file = optarg;
@@ -43,9 +51,16 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 'c':
                 args.collection_dir = optarg;
                 break;
+            case 'D':
+                args.dev_set = optarg;
+                break;
+            case 'T':
+                args.test_set = optarg;
+                break;
         }
     }
-    if (args.collection_dir == "" || args.big_input_file == "" || args.small_input_file == "") {
+    if (args.collection_dir == "" || args.big_input_file == "" || args.small_input_file == "" ||
+        args.dev_set == "" || args.test_set == "") {
         std::cerr << "Missing command line parameters.\n";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -63,9 +78,26 @@ int main(int argc, const char* argv[])
     LOG(INFO) << "collection dir = " << args.collection_dir;
     LOG(INFO) << "big input file = " << args.big_input_file;
     LOG(INFO) << "small input file = " << args.small_input_file;
+    LOG(INFO) << "dev file = " << args.dev_set;
+    LOG(INFO) << "test file = " << args.test_set;
 
     /* create collection dir */
     utils::create_directory(args.collection_dir);
+
+    /* (0) copy dev and test */
+    auto dev_file_name  = args.collection_dir + "/" + KEY_PREFIX + KEY_DEV;
+    auto test_file_name = args.collection_dir + "/" + KEY_PREFIX + KEY_TEST;
+    LOG(INFO) << "Copy dev and test sets";
+    {
+        std::ifstream src(args.dev_set, std::ios::binary);
+        std::ofstream dst(dev_file_name, std::ios::binary);
+        dst << src.rdbuf();
+    }
+    {
+        std::ifstream src(args.test_set, std::ios::binary);
+        std::ofstream dst(test_file_name, std::ios::binary);
+        dst << src.rdbuf();
+    }
 
     /* (1) create dict */
     std::unordered_map<std::string, uint64_t> dict;

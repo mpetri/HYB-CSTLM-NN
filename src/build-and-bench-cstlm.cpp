@@ -31,17 +31,14 @@ using namespace cstlm;
 
 typedef struct cmdargs {
     std::string collection_dir;
-    std::string test_file;
-    bool        use_mkn;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c -t -T\n", program);
+    fprintf(stdout, "%s -c -t\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
-    fprintf(stdout, "  -T <test file>       : the location of the test file.\n");
 };
 
 cmdargs_t parse_args(int argc, const char* argv[])
@@ -49,7 +46,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
-    args.use_mkn        = true;
     args.test_file      = "";
     while ((op = getopt(argc, (char* const*)argv, "c:t:T:")) != -1) {
         switch (op) {
@@ -59,12 +55,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 't':
                 num_cstlm_threads = std::atoi(optarg);
                 break;
-            case 'T':
-                args.test_file = optarg;
-                break;
         }
     }
-    if (args.collection_dir == "" || args.test_file == "") {
+    if (args.collection_dir == "") {
         LOG(FATAL) << "Missing command line parameters.";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -182,7 +175,8 @@ int main(int argc, char** argv)
     auto cstlm = load_or_create_cstlm<wordlm>(col, args.use_mkn);
 
     /* (3) parse test file */
-    auto test_sentences = load_and_parse_file(args.test_file, cstlm);
+    auto test_file      = col.file_map[KEY_TEST];
+    auto test_sentences = load_and_parse_file(test_file, cstlm);
 
     /* (4) evaluate sentences */
     for (size_t i = 2; i < 20; i++) {
