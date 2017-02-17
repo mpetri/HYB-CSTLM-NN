@@ -16,7 +16,6 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "word2vec.hpp"
-#include "hyblm.hpp"
 
 #include "knm.hpp"
 
@@ -46,7 +45,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
-    args.test_file      = "";
     while ((op = getopt(argc, (char* const*)argv, "c:t:T:")) != -1) {
         switch (op) {
             case 'c':
@@ -172,7 +170,7 @@ int main(int argc, char** argv)
     col.file_map[KEY_CSTLM_TEXT] = col.file_map[KEY_COMBINED_TEXT];
 
     /* (2) create the cstlm model */
-    auto cstlm = load_or_create_cstlm<wordlm>(col, args.use_mkn);
+    auto cstlm = load_or_create_cstlm<wordlm>(col);
 
     /* (3) parse test file */
     auto test_file      = col.file_map[KEY_TEST];
