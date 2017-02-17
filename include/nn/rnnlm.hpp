@@ -422,15 +422,15 @@ public:
                     auto eval_res = rnnlm.evaluate_sentence_logprob(sentence);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
-                    cstlm::LOG(cstlm::INFO) << eval_res.logprob << " " << eval_res.tokens;
                 }
-                double dev_pplx = exp(log_probs);
+                double dev_pplx = exp(log_probs/tokens);
                 cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx= " << dev_pplx
                                         << " current best = " << best_dev_pplx;
                 if (dev_pplx > best_dev_pplx) {
                     cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx is getting worse. we stop.";
                     finish_training = true;
                 } else {
+                    cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx improved. we continue.";
                     best_dev_pplx = dev_pplx;
                 }
             }
