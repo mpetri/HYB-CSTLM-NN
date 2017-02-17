@@ -188,7 +188,7 @@ struct collection {
 
 void construct_SA(collection& col)
 {
-    auto sa_path = col.path + "/" + col.prefix + col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
+    auto sa_path = col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
     lm_construct_timer timer(KEY_SA);
     if (col.alphabet == alphabet_type::byte_alphabet) {
         sdsl::int_vector<8> text;
