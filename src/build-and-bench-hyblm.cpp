@@ -16,7 +16,8 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "word2vec.hpp"
-#include "rnnlm.hpp"
+#include "hyblm.hpp"
+#include "nn/nnconstants.hpp"
 
 #include "knm.hpp"
 
@@ -31,25 +32,22 @@ using namespace cstlm;
 
 typedef struct cmdargs {
     std::string collection_dir;
-    std::string test_file;
 } cmdargs_t;
 
 void print_usage(const char* program)
 {
-    fprintf(stdout, "%s -c -t -T\n", program);
+    fprintf(stdout, "%s -c -t\n", program);
     fprintf(stdout, "where\n");
     fprintf(stdout, "  -c <collection dir>  : the collection dir.\n");
     fprintf(stdout, "  -t <threads>         : limit the number of threads.\n");
-    fprintf(stdout, "  -T <test file>       : the location of the test file.\n");
-};
+}
 
 cmdargs_t parse_args(int argc, const char* argv[])
 {
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
-    args.test_file      = "";
-    while ((op = getopt(argc, (char* const*)argv, "c:t:T:")) != -1) {
+    while ((op = getopt(argc, (char* const*)argv, "c:t:")) != -1) {
         switch (op) {
             case 'c':
                 args.collection_dir = optarg;
@@ -57,12 +55,9 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 't':
                 num_cstlm_threads = std::atoi(optarg);
                 break;
-            case 'T':
-                args.test_file = optarg;
-                break;
         }
     }
-    if (args.collection_dir == "" || args.test_file == "") {
+    if (args.collection_dir == "") {
         LOG(FATAL) << "Missing command line parameters.";
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -84,41 +79,27 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
     return str;
 }
 
+
 template <class t_idx>
-std::vector<std::vector<uint32_t>> load_and_parse_file(std::string file_name, const t_idx& index)
+std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& hyb_lm)
 {
-    std::vector<std::vector<uint32_t>> sentences;
-    std::ifstream                      ifile(file_name);
-    LOG(INFO) << "reading input file '" << file_name << "'";
-    std::string line;
-    while (std::getline(ifile, line)) {
-        auto                  line_tokens = utils::parse_line(line, false);
-        std::vector<uint32_t> tokens;
-        tokens.push_back(PAT_START_SYM);
-        for (const auto& token : line_tokens) {
-            auto num = index.vocab.token2id(token, UNKNOWN_SYM);
-            tokens.push_back(num);
-        }
-        tokens.push_back(PAT_END_SYM);
-        LOG(INFO) << "S(" << sentences.size() << ") = " << sentence_to_str(tokens, index);
-        sentences.push_back(tokens);
-    }
+    auto sentences = hyb_lm.parse_raw_sentences(file_name);
     LOG(INFO) << "found " << sentences.size() << " sentences";
     return sentences;
 }
 
-void evaluate_sentences(std::vector<std::vector<uint32_t>>& sentences, rnnlm::LM& rnn_lm)
+template <class t_idx>
+void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, t_idx& hyb_lm)
 {
     double perplexity          = 0;
     double num_words_predicted = 0;
     for (auto sentence : sentences) {
-        double sentenceprob = rnn_lm.evaluate_sentence_logprob(sentence);
-        num_words_predicted += (sentence.size() - 1);
-        perplexity += sentenceprob;
+        auto eval_res = hyb_lm.evaluate_sentence_logprob(sentence);
+        num_words_predicted += eval_res.tokens;
+        perplexity += eval_res.logprob;
     }
     perplexity = perplexity / num_words_predicted;
-    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << pow(10, -perplexity);
-    ;
+    LOG(INFO) << "HYBLM PPLX = " << std::setprecision(10) << exp(perplexity);
 }
 
 
@@ -129,7 +110,7 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
                       .window_size(5)
                       .sample_threadhold(1e-5)
                       .num_negative_samples(5)
-                      .num_threads(cstlm::num_cstlm_threads)
+                      .num_threads(num_cstlm_threads)
                       .num_iterations(5)
                       .min_freq_threshold(5)
                       .start_learning_rate(0.025)
@@ -144,7 +125,7 @@ t_idx load_or_create_cstlm(collection& col)
     t_idx idx;
     auto  output_file = col.path + "/index/index-" + col.file_map[KEY_CSTLM_TEXT] + "-" +
                        sdsl::util::class_to_hash(idx) + ".sdsl";
-    if (cstlm::utils::file_exists(output_file)) {
+    if (utils::file_exists(output_file)) {
         LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
         std::ifstream ifs(output_file);
         idx.load(ifs);
@@ -172,22 +153,24 @@ t_idx load_or_create_cstlm(collection& col)
     return idx;
 }
 
+
 template <class t_cstlm>
-rnnlm::LM
-load_or_create_rnnlm(collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings)
+hyblm::LM<t_cstlm>
+load_or_create_hyblm(collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings)
 {
-    auto rnn_lm = rnnlm::builder{}
+    auto hyb_lm = hyblm::builder{}
                   .dropout(0.3)
                   .layers(2)
-                  .vocab_threshold(VOCAB_THRESHOLD)
+                  .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
                   .hidden_dimensions(128)
                   .sampling(true)
-                  .start_learning_rate(0.1)
-                  .decay_rate(0.5)
-                  .num_iterations(5)
+                  .start_learning_rate(0.5)
+                  .decay_rate(0.85)
+                  .num_iterations(20)
+                  .cstlm_ngramsize(5)
                   .train_or_load(col, cstlm, w2v_embeddings);
 
-    return rnn_lm;
+    return hyb_lm;
 }
 
 int main(int argc, char** argv)
@@ -203,7 +186,7 @@ int main(int argc, char** argv)
     col.file_map[KEY_CSTLM_TEXT] = col.file_map[KEY_BIG_TEXT];
 
     /* (2) create the cstlm model */
-    auto cstlm = load_or_create_cstlm<wordlm>(col, true);
+    auto cstlm = load_or_create_cstlm<wordlm>(col);
 
     /* (2) load the word2vec embeddings */
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
