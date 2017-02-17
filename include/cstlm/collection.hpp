@@ -94,12 +94,12 @@ struct collection {
                 file_map[key] = file_path;
                 if (output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
-        }
-
-        auto sa_path = col.path + "/" + col.prefix + col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
-        if (utils::file_exists(sa_path)) {
-            file_map[KEY_SA] = sa_path;
-            if (output) LOG(INFO) << "FOUND '" << KEY_SA << "' at '" << sa_path << "'";
+            // sa check
+            auto sa_path = path + "/" + prefix + key + "." + KEY_SA;
+            if (utils::file_exists(sa_path)) {
+                file_map[KEY_SA] = sa_path;
+                if (output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
+            }
         }
 
         auto stats_file = path + "/" + prefix + KEY_STATS;
