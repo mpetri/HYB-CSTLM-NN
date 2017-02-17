@@ -186,10 +186,11 @@ struct LM {
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
 
+            auto prod = logprob_from_cstlm * i_r_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1]);
+            auto i_err = dynet::expr::pickneglogsoftmax(prod, sentence[i + 1]);
             errs.push_back(i_err);
         }
         auto i_nerr = dynet::expr::sum(errs);

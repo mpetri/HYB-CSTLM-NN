@@ -56,6 +56,61 @@ struct LM {
     uint32_t                         hidden_dim;
     LM();
 
+    LM(const LM& other)
+        : model(other.model)
+        , builder(other.builder)
+        , p_word_embeddings(other.p_word_embeddings)
+        , p_R(other.p_R)
+        , p_bias(other.p_bias)
+        , full_vocab(other.full_vocab)
+        , filtered_vocab(other.filtered_vocab)
+        , layers(other.layers)
+        , w2v_vec_size(other.w2v_vec_size)
+        , hidden_dim(other.hidden_dim)
+    {
+    }
+
+    LM(LM&& other)
+        : model(std::move(other.model))
+        , builder(std::move(other.builder))
+        , p_word_embeddings(std::move(other.p_word_embeddings))
+        , p_R(std::move(other.p_R))
+        , p_bias(std::move(other.p_bias))
+        , full_vocab(std::move(other.full_vocab))
+        , filtered_vocab(std::move(other.filtered_vocab))
+        , layers(std::move(other.layers))
+        , w2v_vec_size(std::move(other.w2v_vec_size))
+        , hidden_dim(std::move(other.hidden_dim))
+    {
+    }
+
+    LM& operator=(const LM& other)
+    {
+        if (this != &other) {
+            LM tmp(other);          // re-use copy-constructor
+            *this = std::move(tmp); // re-use move-assignment
+        }
+        return *this;
+    }
+
+    //! Assignment move operator
+    LM& operator=(LM&& other)
+    {
+        if (this != &other) {
+            model             = std::move(other.model);
+            builder           = std::move(other.builder);
+            p_word_embeddings = std::move(other.p_word_embeddings);
+            p_R               = std::move(other.p_R);
+            p_bias            = std::move(other.p_bias);
+            full_vocab        = std::move(other.full_vocab);
+            filtered_vocab    = std::move(other.filtered_vocab);
+            layers            = std::move(other.layers);
+            w2v_vec_size      = std::move(other.w2v_vec_size);
+            hidden_dim        = std::move(other.hidden_dim);
+        }
+        return *this;
+    }
+
     LM(std::string file_name) { load(file_name); }
 
     std::vector<std::vector<word_token>> parse_raw_sentences(std::string file_name) const
@@ -367,6 +422,7 @@ public:
                     auto eval_res = rnnlm.evaluate_sentence_logprob(sentence);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
+                    cstlm::LOG(cstlm::INFO) << eval_res.logprob << " " << eval_res.tokens;
                 }
                 double dev_pplx = exp(log_probs);
                 cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx= " << dev_pplx
