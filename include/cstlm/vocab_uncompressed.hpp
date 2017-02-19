@@ -77,6 +77,14 @@ public:
         }
         written_bytes += sdsl::serialize(token_data, out, child, "tokens");
         written_bytes += sdsl::serialize(ids, out, child, "ids");
+
+	sdsl::int_vector<> b2s(m_b2s.size()*2);
+	size_t cur = 0;
+	for(const auto& item : m_b2s) {
+		b2s[cur++] = item.first;
+		b2s[cur++] = item.second;
+	}
+        written_bytes += sdsl::serialize(b2s, out, child, "b2s");
         sdsl::structure_tree::add_size(child, written_bytes);
         return written_bytes;
     }
@@ -138,6 +146,14 @@ public:
             m_i2t.emplace(id, tok);
             m_t2i.emplace(tok, id);
         }
+	sdsl::int_vector<> b2s;
+	sdsl::load(b2s,in);
+	for(size_t i=0;i<b2s.size();i+=2) {
+	     auto big = b2s[i];
+	     auto small = b2s[i+1];
+	     m_b2s[big] = small;
+	     m_s2b[small] = big;
+	}
     }
 
     void swap(vocab_uncompressed& a)
@@ -145,6 +161,8 @@ public:
         if (this != &a) {
             m_i2t.swap(a.m_i2t);
             m_t2i.swap(a.m_t2i);
+            m_b2s.swap(a.m_b2s);
+            m_s2b.swap(a.m_s2b);
         }
     }
 

@@ -121,7 +121,9 @@ std::vector<std::vector<word_token>> load_and_parse_file(collection& col, const 
     LOG(INFO) << "parsing test sentences from file " << test_file;
     auto filtered_vocab = index.vocab.filter(col.file_map[KEY_SMALL_TEXT], nnlm::constants::VOCAB_THRESHOLD);
     auto sentences      = sentence_parser::parse_from_raw(test_file, index.vocab, filtered_vocab);
-    LOG(INFO) << "found " << sentences.size() << " sentences";
+    size_t tokens = 0;
+    for(const auto& s : sentences) tokens += s.size();
+    LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
 
@@ -132,14 +134,14 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
 {
     double   perplexity = 0;
     uint64_t M          = 0;
-    for (auto sentence : sentences) {
+    for (const auto& sentence : sentences) {
         auto eval_res = sentence_logprob_kneser_ney(index, sentence, M, order, true, false);
         perplexity += eval_res.logprob;
         M += eval_res.tokens;
     }
     perplexity = perplexity / M;
     LOG(INFO) << "CSTLM ORDER: " << order << " PPLX = " << std::setprecision(10)
-              << pow(10, -perplexity);
+              << pow(10, -perplexity) << " (predicted tokens = " << M << ")";
 }
 
 

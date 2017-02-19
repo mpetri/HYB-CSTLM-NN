@@ -83,7 +83,9 @@ template <class t_idx>
 std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& index)
 {
     auto sentences = index.parse_raw_sentences(file_name);
-    LOG(INFO) << "found " << sentences.size() << " sentences";
+    size_t tokens = 0;
+    for(const auto& s : sentences) tokens += s.size();
+    LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
 
@@ -91,13 +93,13 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, rnnlm::
 {
     double perplexity          = 0;
     double num_words_predicted = 0;
-    for (auto sentence : sentences) {
+    for (const auto& sentence : sentences) {
         auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
         num_words_predicted += eval_res.tokens;
         perplexity += eval_res.logprob;
     }
-    perplexity = perplexity / num_words_predicted;
-    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity);
+    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity/num_words_predicted) 
+	      << " (predicted tokens = " << num_words_predicted << ")";
 }
 
 
@@ -125,8 +127,8 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
                   .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
                   .hidden_dimensions(128)
                   .sampling(true)
-                  .start_learning_rate(0.5)
-                  .decay_rate(0.85)
+                  .start_learning_rate(0.1)
+                  .decay_rate(0.5)
                   .num_iterations(20)
                   .dev_file(col.file_map[KEY_DEV])
                   .train_or_load(col, w2v_embeddings);
