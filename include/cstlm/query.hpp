@@ -61,6 +61,8 @@ public:
         return m_idx->words_following(m_last_nodes_incl.back());
     }
 
+    std::string cur_node_label() { return m_idx->node_label(m_last_nodes_incl.back()); }
+
 public:
     const index_type*      m_idx;
     uint64_t               m_ngramsize;
