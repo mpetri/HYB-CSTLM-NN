@@ -171,7 +171,7 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
                   .decay_rate(0.85)
                   .num_iterations(20)
                   .cstlm_ngramsize(5)
-                  .dev_file(col.file_map[KEY_DEV])
+                  .dev_file(collection.file_map[KEY_DEV])
                   .train_or_load(argc, argv, collection, cstlm, w2v_embeddings);
 
     return hyb_lm;
