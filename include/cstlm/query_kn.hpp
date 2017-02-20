@@ -71,7 +71,7 @@ template <class t_idx>
 double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
 {
     if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM)
-        return log10(1);
+        return log(1);
 
     m_pattern.push_back(symbol);
     while (m_ngramsize > 0 && m_pattern.size() > m_ngramsize)

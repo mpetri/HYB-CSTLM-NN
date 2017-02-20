@@ -95,7 +95,7 @@ template <class t_idx>
 double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
 {
     if (symbol == PAT_START_SYM && m_pattern.size() == 1 && m_pattern.front() == PAT_START_SYM) {
-        return log10(1);
+        return log(1);
     }
 
     m_pattern.push_back(symbol);
@@ -220,7 +220,7 @@ double LMQueryMKN<t_idx>::append_symbol(const value_type& symbol)
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
 
-    return log10(p);
+    return log(p);
 }
 
 

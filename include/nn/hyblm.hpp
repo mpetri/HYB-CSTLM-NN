@@ -202,15 +202,20 @@ struct LM {
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
+
             // query cstlm
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+
+            auto i_cstlm_t = cg.add_input(logprob_from_cstlm.data());
+
+            auto i_prod_t = i_cstlm_t + i_r_t;
 
             // auto prod = logprob_from_cstlm * i_r_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+            auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
             errs.push_back(i_err);
         }
         auto i_nerr = dynet::expr::sum(errs);
@@ -234,13 +239,14 @@ struct LM {
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
+
+
             // query cstlm
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+            auto i_cstlm_t          = cg.add_input(logprob_from_cstlm.data());
 
-            auto i_cstlm_t = cg.add_input(logprob_from_cstlm.data());
-
-            auto i_prod_t = i_cstlm_t * i_r_t;
+            auto i_prod_t = i_cstlm_t + i_r_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax

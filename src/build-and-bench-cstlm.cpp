@@ -69,8 +69,8 @@ template <class t_idx>
 t_idx load_or_create_cstlm(collection& col)
 {
     t_idx idx;
-    auto  output_file = col.file_map[KEY_CSTLM_TEXT] + "-cstlm-" +
-                       sdsl::util::class_to_hash(idx) + ".sdsl";
+    auto  output_file =
+    col.file_map[KEY_CSTLM_TEXT] + "-cstlm-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (cstlm::utils::file_exists(output_file)) {
         LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
         std::ifstream ifs(output_file);
@@ -117,12 +117,14 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
 template <class t_idx>
 std::vector<std::vector<word_token>> load_and_parse_file(collection& col, const t_idx& index)
 {
-    auto test_file      = col.file_map[KEY_TEST];
+    auto test_file = col.file_map[KEY_TEST];
     LOG(INFO) << "parsing test sentences from file " << test_file;
-    auto filtered_vocab = index.vocab.filter(col.file_map[KEY_SMALL_TEXT], nnlm::constants::VOCAB_THRESHOLD);
-    auto sentences      = sentence_parser::parse_from_raw(test_file, index.vocab, filtered_vocab);
-    size_t tokens = 0;
-    for(const auto& s : sentences) tokens += s.size();
+    auto filtered_vocab =
+    index.vocab.filter(col.file_map[KEY_SMALL_TEXT], nnlm::constants::VOCAB_THRESHOLD);
+    auto   sentences = sentence_parser::parse_from_raw(test_file, index.vocab, filtered_vocab);
+    size_t tokens    = 0;
+    for (const auto& s : sentences)
+        tokens += s.size();
     LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
@@ -140,8 +142,8 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
         M += eval_res.tokens;
     }
     perplexity = perplexity / M;
-    LOG(INFO) << "CSTLM ORDER: " << order << " PPLX = " << std::setprecision(10)
-              << pow(10, -perplexity) << " (predicted tokens = " << M << ")";
+    LOG(INFO) << "CSTLM ORDER: " << order << " PPLX = " << std::setprecision(10) << exp(-perplexity)
+              << " (predicted tokens = " << M << ")";
 }
 
 
@@ -161,7 +163,7 @@ int main(int argc, char** argv)
     auto cstlm = load_or_create_cstlm<wordlm>(col);
 
     /* (3) parse test file */
-    auto test_sentences = load_and_parse_file(col,cstlm);
+    auto test_sentences = load_and_parse_file(col, cstlm);
 
     /* (4) evaluate sentences */
     for (size_t i = 2; i < 20; i++) {
