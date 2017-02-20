@@ -530,10 +530,8 @@ public:
     {
         std::vector<uint32_t> words;
         auto                  node_id = m_cst.id(node);
-
-        static mutable std::unordered_map<uint64_t, std::vector<uint32_t>> following_cache;
         {
-            utils::lm_general_timer timer("words_following");
+            static std::unordered_map<uint64_t, std::vector<uint32_t>> following_cache;
 
             auto itr = following_cache.find(node_id);
             if (itr != following_cache.end()) {
@@ -544,11 +542,10 @@ public:
             for (const auto& child : cst.children(node)) {
                 auto tok_id = m_cst.edge(child, current_node_strdepth + 1);
                 words.push_back(tok_id);
-                // auto tok_str = m_vocab.id2token(tok_id);
-                // std::cout << "following (" << words.size() << ") = <" << tok_id << ",'" << tok_str
-                //           << "'>" << std::endl;
             }
             if (words.size() > 100) {
+		std::cout << "add to cache ("<<node_label(node)<<") -> size = " << words.size() << std::endl;
+		std::cout << "cache size = " << following_cache.size() << std::endl;
                 following_cache[node_id] = words;
             }
         }
