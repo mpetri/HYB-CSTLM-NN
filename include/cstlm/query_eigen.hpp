@@ -25,7 +25,7 @@ namespace cstlm {
 
 template <class t_idx>
 class LMQueryMKNE {
-
+    using eigen_type = Eigen::Matrix<float, Eigen::Dynamic, 1>;
 
 public:
     LMQueryMKNE() { m_dest_vocab = nullptr; }
@@ -37,12 +37,21 @@ public:
     {
     }
 
-    Eigen::Matrix<float, Eigen::Dynamic, 1> append_symbol(const uint32_t& symbol)
+    eigen_type append_symbol(const uint32_t& symbol)
     {
+        m_local_state.append_symbol(symbol);
+
+        /* cache first */
+        static std::unordered_map<uint64_t, eigen_type> local_cache;
+        auto cur_hash = m_local_state.hash();
+        auto itr      = local_cache.find(cur_hash);
+        if (itr != local_cache.end()) {
+            return itr->second;
+        }
+
+        /* compute if we can't find it */
         Eigen::Matrix<float, Eigen::Dynamic, 1> log_prob_vec(m_dest_vocab->size());
         log_prob_vec.fill(0);
-
-        m_local_state.append_symbol(symbol);
         auto wordsfollowing = m_local_state.words_following();
         for (const auto& word : wordsfollowing) {
             auto mapped_word_id = m_dest_vocab->big2small(word);
@@ -55,6 +64,10 @@ public:
             log_prob_vec(mapped_word_id) = prob;
         }
 
+        // add to cache if it is a bit more complex to compute
+        if (wordsfollowing.size() > 20) {
+            local_cache[cur_hash] = log_prob_vec;
+        }
         return log_prob_vec;
     }
 
