@@ -397,9 +397,8 @@ public:
         cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
 
         cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
-        auto dev_sentences =
-        sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, filtered_vocab);
-        cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sentences.size();
+        auto dev_sents = sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, filtered_vocab);
+        cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sents.size();
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
@@ -453,7 +452,7 @@ public:
                 cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx.";
                 double log_probs = 0;
                 size_t tokens    = 0;
-                for (const auto& sentence : dev_sentences) {
+                for (const auto& sentence : dev_sents) {
                     auto eval_res = hyblm.evaluate_sentence_logprob(sentence);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
