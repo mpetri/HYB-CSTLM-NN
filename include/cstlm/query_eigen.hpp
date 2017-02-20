@@ -46,7 +46,6 @@ public:
         auto cur_hash = m_local_state.hash();
         auto itr      = local_cache.find(cur_hash);
         if (itr != local_cache.end()) {
-            std::cout << "PROB_CACHE_HIT('" << m_local_state.cur_node_label() << "')" << std::endl;
             return itr->second;
         }
 
