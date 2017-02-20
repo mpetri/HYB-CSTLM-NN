@@ -119,7 +119,7 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 }
 
 
-rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embeddings)
+rnnlm::LM load_or_create_rnnlm(int argc,char** argv,collection& col, word2vec::embeddings& w2v_embeddings)
 {
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
@@ -131,14 +131,13 @@ rnnlm::LM load_or_create_rnnlm(collection& col, word2vec::embeddings& w2v_embedd
                   .decay_rate(0.5)
                   .num_iterations(20)
                   .dev_file(col.file_map[KEY_DEV])
-                  .train_or_load(col, w2v_embeddings);
+                  .train_or_load(argc,argv,col, w2v_embeddings);
 
     return rnn_lm;
 }
 
 int main(int argc, char** argv)
 {
-    dynet::initialize(argc, argv);
     enable_logging = true;
 
     /* parse command line */
@@ -151,7 +150,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto rnnlm = load_or_create_rnnlm(col, word_embeddings);
+    auto rnnlm = load_or_create_rnnlm(argc,argv,col, word_embeddings);
 
     /* (4) parse test file */
     auto test_file      = col.file_map[KEY_TEST];
