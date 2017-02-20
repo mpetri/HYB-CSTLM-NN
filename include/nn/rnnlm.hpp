@@ -361,12 +361,10 @@ public:
 
         cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in training set";
         auto sentences = sentence_parser::parse(input_file, filtered_vocab);
-        sentences.resize(200);
         cstlm::LOG(cstlm::INFO) << "RNNLM sentences to process: " << sentences.size();
 
         cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in dev set";
         auto dev_sentences = sentence_parser::parse_from_raw(m_dev_file, vocab, filtered_vocab);
-        dev_sentences.resize(200);
         cstlm::LOG(cstlm::INFO) << "RNNLM dev sentences to process: " << dev_sentences.size();
 
         // data will be stored here
