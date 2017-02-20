@@ -513,31 +513,34 @@ public:
 
     std::string node_label(const node_type& node) const
     {
-        std::string nlabel = "[";
-        auto        d      = m_cst.depth(node);
-
+        std::string nlabel    = "[";
+        auto        initial_d = m_cst.depth(node);
+        auto        d         = initial_d;
+        if (d > 10) d         = 10;
         for (size_t i = 1; i <= d; i++) {
             auto tok_id  = m_cst.edge(node, i);
             auto tok_str = m_vocab.id2token(tok_id);
             nlabel += "<" + std::to_string(tok_id) + ",'" + tok_str + "'>";
         }
+        if (initial_d > 10) return nlabel + "...]";
         return nlabel + "]";
     }
 
     std::vector<uint32_t> words_following(const node_type& node) const
     {
         std::vector<uint32_t> words;
-
-        std::cout << "node = " << node_label(node) << std::endl;
-
-        auto current_node_strdepth = m_cst.depth(node);
-        for (const auto& child : cst.children(node)) {
-            auto tok_id = m_cst.edge(child, current_node_strdepth + 1);
-            words.push_back(tok_id);
-            auto tok_str = m_vocab.id2token(tok_id);
-            std::cout << "following (" << words.size() << ") = <" << tok_id << ",'" << tok_str
-                      << "'>" << std::endl;
+        {
+            utils::lm_general_timer timer("words_following");
+            auto                    current_node_strdepth = m_cst.depth(node);
+            for (const auto& child : cst.children(node)) {
+                auto tok_id = m_cst.edge(child, current_node_strdepth + 1);
+                words.push_back(tok_id);
+                // auto tok_str = m_vocab.id2token(tok_id);
+                // std::cout << "following (" << words.size() << ") = <" << tok_id << ",'" << tok_str
+                //           << "'>" << std::endl;
+            }
         }
+        std::cout << "node = " << node_label(node) << " #following = " << words.size() << std::endl;
 
         return words;
     }

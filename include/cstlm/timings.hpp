@@ -29,6 +29,22 @@ struct lm_construct_timer {
     }
 };
 
+struct lm_general_timer {
+    watch::time_point start;
+    std::string       name;
+    lm_general_timer(const std::string& _n) : name(_n)
+    {
+        LOG(INFO) << "START(" << name << ")";
+        start = watch::now();
+    }
+    ~lm_general_timer()
+    {
+        auto stop = watch::now();
+        LOG(INFO) << "STOP(" << name << ") - "
+                  << duration_cast<milliseconds>(stop - start).count() / 1000.0f << " sec";
+    }
+};
+
 enum class timer_type {
     N1PlusBack = 0,
     N123PlusBack,
