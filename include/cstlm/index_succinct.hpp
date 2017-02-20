@@ -529,9 +529,18 @@ public:
     std::vector<uint32_t> words_following(const node_type& node) const
     {
         std::vector<uint32_t> words;
+        auto                  node_id = m_cst.id(node);
+
+        static mutable std::unordered_map<uint64_t, std::vector<uint32_t>> following_cache;
         {
             utils::lm_general_timer timer("words_following");
-            auto                    current_node_strdepth = m_cst.depth(node);
+
+            auto itr = following_cache.find(node_id);
+            if (itr != following_cache.end()) {
+                return itr->second;
+            }
+
+            auto current_node_strdepth = m_cst.depth(node);
             for (const auto& child : cst.children(node)) {
                 auto tok_id = m_cst.edge(child, current_node_strdepth + 1);
                 words.push_back(tok_id);
@@ -539,8 +548,10 @@ public:
                 // std::cout << "following (" << words.size() << ") = <" << tok_id << ",'" << tok_str
                 //           << "'>" << std::endl;
             }
+            if (words.size() > 100) {
+                following_cache[node_id] = words;
+            }
         }
-        std::cout << "node = " << node_label(node) << " #following = " << words.size() << std::endl;
 
         return words;
     }
