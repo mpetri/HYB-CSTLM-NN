@@ -82,9 +82,10 @@ std::string sentence_to_str(std::vector<uint32_t> sentence, const t_idx& index)
 template <class t_idx>
 std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, const t_idx& index)
 {
-    auto sentences = index.parse_raw_sentences(file_name);
-    size_t tokens = 0;
-    for(const auto& s : sentences) tokens += s.size();
+    auto   sentences = index.parse_raw_sentences(file_name);
+    size_t tokens    = 0;
+    for (const auto& s : sentences)
+        tokens += s.size();
     LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
@@ -98,8 +99,8 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, rnnlm::
         num_words_predicted += eval_res.tokens;
         perplexity += eval_res.logprob;
     }
-    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity/num_words_predicted) 
-	      << " (predicted tokens = " << num_words_predicted << ")";
+    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity / num_words_predicted)
+              << " (predicted tokens = " << num_words_predicted << ")";
 }
 
 
@@ -119,19 +120,20 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
 }
 
 
-rnnlm::LM load_or_create_rnnlm(int argc,char** argv,collection& col, word2vec::embeddings& w2v_embeddings)
+rnnlm::LM
+load_or_create_rnnlm(int argc, char** argv, collection& col, word2vec::embeddings& w2v_embeddings)
 {
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
                   .layers(2)
                   .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
-                  .hidden_dimensions(128)
+                  .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .sampling(true)
                   .start_learning_rate(0.1)
                   .decay_rate(0.5)
                   .num_iterations(20)
                   .dev_file(col.file_map[KEY_DEV])
-                  .train_or_load(argc,argv,col, w2v_embeddings);
+                  .train_or_load(argc, argv, col, w2v_embeddings);
 
     return rnn_lm;
 }
@@ -150,7 +152,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto rnnlm = load_or_create_rnnlm(argc,argv,col, word_embeddings);
+    auto rnnlm = load_or_create_rnnlm(argc, argv, col, word_embeddings);
 
     /* (4) parse test file */
     auto test_file      = col.file_map[KEY_TEST];

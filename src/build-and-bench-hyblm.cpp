@@ -165,7 +165,7 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
                   .dropout(0.3)
                   .layers(2)
                   .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
-                  .hidden_dimensions(128)
+                  .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .sampling(true)
                   .start_learning_rate(0.5)
                   .decay_rate(0.85)

@@ -239,7 +239,7 @@ namespace constants {
 namespace defaults {
 const uint32_t LAYERS             = 2;
 const float    DROPOUT            = 0.3f;
-const uint32_t HIDDEN_DIM         = 128;
+const uint32_t HIDDEN_DIM         = 512;
 const bool     SAMPLE             = true;
 const float    INIT_LEARNING_RATE = 0.1f;
 const float    DECAY_RATE         = 0.5f;
