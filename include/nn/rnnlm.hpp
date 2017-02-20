@@ -361,12 +361,12 @@ public:
 
         cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in training set";
         auto sentences = sentence_parser::parse(input_file, filtered_vocab);
-	sentences.resize(200);
+        sentences.resize(200);
         cstlm::LOG(cstlm::INFO) << "RNNLM sentences to process: " << sentences.size();
 
         cstlm::LOG(cstlm::INFO) << "RNNLM parse sentences in dev set";
         auto dev_sentences = sentence_parser::parse_from_raw(m_dev_file, vocab, filtered_vocab);
-	dev_sentences.resize(200);
+        dev_sentences.resize(200);
         cstlm::LOG(cstlm::INFO) << "RNNLM dev sentences to process: " << dev_sentences.size();
 
         // data will be stored here
@@ -425,7 +425,7 @@ public:
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
                 }
-                double dev_pplx = exp(log_probs/tokens);
+                double dev_pplx = exp(log_probs / tokens);
                 cstlm::LOG(cstlm::INFO) << "RNNLM dev pplx= " << dev_pplx
                                         << " current best = " << best_dev_pplx;
                 if (dev_pplx > best_dev_pplx) {
@@ -449,7 +449,10 @@ public:
         return rnnlm;
     }
 
-    LM train_or_load(int argc,char** argv,cstlm::collection& col, word2vec::embeddings& w2v_embeddings)
+    LM train_or_load(int                   argc,
+                     char**                argv,
+                     cstlm::collection&    col,
+                     word2vec::embeddings& w2v_embeddings)
     {
         // (0) output params
         output_params();
@@ -457,14 +460,15 @@ public:
         // (1) if exists. just load. otherwise construct
         auto rnnlm_file = file_name(col);
         if (!cstlm::utils::file_exists(rnnlm_file)) {
-		dynet::initialize(argc, argv);
-        	auto rnn_lm = train_lm(col, w2v_embeddings);
-            	cstlm::LOG(cstlm::INFO) << "RNNLM store to file.";
-        	rnn_lm.store(rnnlm_file);
+            dynet::initialize(argc, argv);
+            auto rnn_lm = train_lm(col, w2v_embeddings);
+            cstlm::LOG(cstlm::INFO) << "RNNLM store to file.";
+            rnn_lm.store(rnnlm_file);
         }
         cstlm::LOG(cstlm::INFO) << "RNNLM load from file.";
-	dynet::cleanup();
-	dynet::initialize(argc, argv);
+        dynet::cleanup();
+        dynet::initialize(argc, argv);
+
         return LM(rnnlm_file);
     }
 };

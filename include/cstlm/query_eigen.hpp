@@ -37,14 +37,14 @@ public:
     {
     }
 
-    Eigen::VectorXd append_symbol(const uint32_t& symbol)
+    Eigen::Matrix<float, Eigen::Dynamic, 1> append_symbol(const uint32_t& symbol)
     {
-        Eigen::VectorXd log_prob_vec(m_dest_vocab->size());
+        Eigen::Matrix<float, Eigen::Dynamic, 1> log_prob_vec(m_dest_vocab->size());
+        log_prob_vec.fill(0);
 
-        /*
         m_local_state.append_symbol(symbol);
-        auto words_following = m_local_state->words_following();
-        for (word : words_following) {
+        auto wordsfollowing = m_local_state.words_following();
+        for (const auto& word : wordsfollowing) {
             auto mapped_word_id = m_dest_vocab->big2small(word);
             if (word == UNKNOWN_SYM) {
                 // TODO UNK HANDLING?
@@ -54,7 +54,6 @@ public:
             auto prob                    = state_copy.append_symbol(word);
             log_prob_vec(mapped_word_id) = prob;
         }
-        */
 
         return log_prob_vec;
     }

@@ -7,7 +7,7 @@
 namespace cstlm {
 
 using default_csa_int_type =
-sdsl::csa_wt_int<sdsl::wt_huff_int<sdsl::bit_vector, sdsl::rank_support_v<>>>;
+sdsl::csa_wt_int<sdsl::wt_huff_int<sdsl::bit_vector, sdsl::rank_support_v<>>, 2, 2>;
 using default_cst_int_type =
 sdsl::cst_sct3<default_csa_int_type,
                sdsl::lcp_dac<>,

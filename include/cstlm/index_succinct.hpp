@@ -510,5 +510,18 @@ public:
         }
         return total_contexts;
     }
+
+    std::vector<uint32_t> words_following(const node_type& node) const
+    {
+        std::vector<uint32_t> words;
+
+        auto current_node_strdepth = m_cst.depth(node);
+        for (const auto& child : cst.children(node)) {
+            auto tok = m_cst.edge(child, current_node_strdepth + 1);
+            words.push_back(tok);
+        }
+
+        return words;
+    }
 };
 }

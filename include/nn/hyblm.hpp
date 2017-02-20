@@ -238,13 +238,15 @@ struct LM {
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
 
-            // auto prod = logprob_from_cstlm * i_r_t;
+            auto i_cstlm_t = cg.add_input(logprob_from_cstlm.data());
+
+            auto i_prod_t = i_cstlm_t * i_r_t;
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
             if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
                 sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
-                auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+                auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
                 errs.push_back(i_err);
             }
         }
@@ -481,25 +483,25 @@ public:
     }
 
     template <class t_cstlm>
-    LM<t_cstlm> train_or_load(cstlm::collection&    col,
+    LM<t_cstlm> train_or_load(int                   argc,
+                              char**                argv,
+                              cstlm::collection&    col,
                               const t_cstlm&        cstlm,
                               word2vec::embeddings& w2v_embeddings)
     {
         // (0) output params
         output_params();
 
-        // (1) if exists. just load
+        // (1) if exists. just load otherwise train and store
         auto hyblm_file = file_name(col);
-        if (cstlm::utils::file_exists(hyblm_file)) {
-            return LM<t_cstlm>(cstlm, hyblm_file);
+        if (!cstlm::utils::file_exists(hyblm_file)) {
+            dynet::initialize(argc, argv);
+            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings);
+            hybl_lm.store(hyblm_file);
         }
-
-        // (3) train
-        auto hybl_lm = train_lm(col, cstlm, w2v_embeddings);
-
-        hybl_lm.store(hyblm_file);
-
-        return hybl_lm;
+        dynet::cleanup();
+        dynet::initialize(argc, argv);
+        return LM<t_cstlm>(cstlm, hyblm_file);
     }
 };
 }

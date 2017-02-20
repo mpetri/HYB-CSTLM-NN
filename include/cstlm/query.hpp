@@ -56,6 +56,10 @@ public:
 
     bool is_start() const { return m_pattern.size() == 1 && m_pattern.back() == PAT_START_SYM; }
 
+    std::vector<uint32_t> words_following()
+    {
+        return m_idx->words_following(m_last_nodes_incl.back());
+    }
 
 public:
     const index_type*      m_idx;

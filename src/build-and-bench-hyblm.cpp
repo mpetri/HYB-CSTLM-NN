@@ -155,8 +155,11 @@ t_idx load_or_create_cstlm(collection& col)
 
 
 template <class t_cstlm>
-hyblm::LM<t_cstlm>
-load_or_create_hyblm(collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings)
+hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
+                                        char**                argv,
+                                        collection&           collection,
+                                        const t_cstlm&        cstlm,
+                                        word2vec::embeddings& w2v_embeddings)
 {
     auto hyb_lm = hyblm::builder{}
                   .dropout(0.3)
@@ -168,14 +171,13 @@ load_or_create_hyblm(collection& col, const t_cstlm& cstlm, word2vec::embeddings
                   .decay_rate(0.85)
                   .num_iterations(20)
                   .cstlm_ngramsize(5)
-                  .train_or_load(col, cstlm, w2v_embeddings);
+                  .train_or_load(argc, argv, collection, cstlm, w2v_embeddings);
 
     return hyb_lm;
 }
 
 int main(int argc, char** argv)
 {
-    dynet::initialize(argc, argv);
     enable_logging = true;
 
     /* parse command line */
@@ -192,7 +194,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto hyblm = load_or_create_hyblm(col, cstlm, word_embeddings);
+    auto hyblm = load_or_create_hyblm(argc, argv, col, cstlm, word_embeddings);
 
     /* (4) parse test file */
     auto test_file      = col.file_map[KEY_TEST];

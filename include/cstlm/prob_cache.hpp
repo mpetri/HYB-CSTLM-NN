@@ -141,8 +141,8 @@ public:
     }
 
 
-    size_type serialize(std::ostream&              out,
-                        const cst_type&            cst,
+    size_type serialize(std::ostream& /*out*/,
+                        const cst_type& /*cst*/,
                         sdsl::structure_tree_node* v    = NULL,
                         std::string                name = "") const
     {
@@ -200,13 +200,13 @@ public:
 		written_bytes += sdsl::serialize(probabilities, out, child, "probabilities");
 		written_bytes += sdsl::serialize(pattern_data, out, child, "pattern_data");
 		written_bytes += sdsl::serialize(pattern_node_data, out, child, "pattern_node_data");
+        */
+        sdsl::structure_tree::add_size(child, written_bytes);
 
-		sdsl::structure_tree::add_size(child, written_bytes);
-		*/
         return written_bytes;
     }
 
-    void load(std::istream& in, const cst_type& cst)
+    void load(std::istream& /*in*/, const cst_type& /*cst*/)
     {
         /*
 		sdsl::int_vector<> pattern_lens;
