@@ -123,8 +123,8 @@ template <class t_idx>
 t_idx load_or_create_cstlm(collection& col)
 {
     t_idx idx;
-    auto  output_file = col.path + "/index/index-" + col.file_map[KEY_CSTLM_TEXT] + "-" +
-                       sdsl::util::class_to_hash(idx) + ".sdsl";
+    auto  output_file =
+    col.file_map[KEY_CSTLM_TEXT] + "-cstlm-" + sdsl::util::class_to_hash(idx) + ".sdsl";
     if (utils::file_exists(output_file)) {
         LOG(INFO) << "CSTLM loading cstlm index from file : " << output_file;
         std::ifstream ifs(output_file);
