@@ -65,7 +65,7 @@ public:
         }
 
         // add to cache if it is a bit more complex to compute
-        if (wordsfollowing.size() > 20) {
+        if (wordsfollowing.size() > 10) {
             local_cache[cur_hash] = log_prob_vec;
         }
         return log_prob_vec;
