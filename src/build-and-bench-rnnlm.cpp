@@ -92,15 +92,27 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
 
 void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, rnnlm::LM& rnn_lm)
 {
-    double perplexity          = 0;
-    double num_words_predicted = 0;
+
+    double   logprobs = 0;
+    uint64_t M          = 0;
+    uint64_t OOV        = 0;
+    uint64_t sent_size  = 0;
     for (const auto& sentence : sentences) {
+	for(size_t i=0;i<sentence.size();i++) {
+		if(sentence[i].big_id == UNKNOWN_SYM &&
+		   sentence[i].small_id == UNKNOWN_SYM ) OOV++;
+	}
         auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
-        num_words_predicted += eval_res.tokens;
-        perplexity += eval_res.logprob;
+        M += eval_res.tokens;
+        logprobs += eval_res.logprob;
+	sent_size += sentence.size();
     }
-    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << exp(perplexity / num_words_predicted)
-              << " (predicted tokens = " << num_words_predicted << ")";
+    double perplexity = exp( logprobs / M );
+    LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << perplexity
+              << " (logprob = " << logprobs 
+	      << ";predicted tokens = " << M 
+	      << ";OOV = " << OOV
+              << ";#W = " << sent_size << ")";
 }
 
 
