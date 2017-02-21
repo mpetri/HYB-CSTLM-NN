@@ -138,7 +138,7 @@ double LMQueryKN<t_idx>::append_symbol(const value_type& symbol)
     while (m_pattern.size() > m_last_nodes_incl.size())
         m_pattern.pop_front();
 
-    return log10(p);
+    return log(p);
 }
 
 template <class t_idx>
