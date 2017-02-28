@@ -20,14 +20,55 @@ struct word_token {
     }
 };
 
-template<class t_stream>
+template <class t_stream>
 t_stream& operator<<(t_stream& stream, const word_token& tok)
 {
-    stream << "<" << tok.small_id << "," << tok.big_id << ",'" << tok.tok_str << "'," << tok.is_oov << ">";
+    stream << "<" << tok.small_id << "," << tok.big_id << ",'" << tok.tok_str << "'," << tok.is_oov
+           << ">";
     return stream;
 }
 
 struct sentence_parser {
+
+    static std::vector<std::vector<word_token>> parse(std::string file_name,
+                                                      const cstlm::vocab_uncompressed<false>& vocab)
+    {
+        std::vector<std::vector<word_token>> sentences;
+        sdsl::int_vector_buffer<0>           text(file_name);
+
+        std::vector<word_token> cur;
+        bool                    in_sentence = false;
+        for (size_t i = 0; i < text.size(); i++) {
+            auto sym = text[i];
+            if (in_sentence == false && sym != cstlm::PAT_START_SYM) continue;
+
+            if (sym == cstlm::PAT_START_SYM) {
+                cur.emplace_back(sym, sym, "<S>", false);
+                in_sentence = true;
+                continue;
+            }
+
+            if (sym == cstlm::PAT_END_SYM) {
+                cur.emplace_back(sym, sym, "</S>", false);
+                if (cur.size() > 2) { // more than <s> and </s>?
+                    sentences.push_back(cur);
+                }
+                cur.clear();
+                in_sentence = false;
+                continue;
+            }
+
+            // not start AND not END AND in sentence == true here
+            // translate non-special ids to their small vocab id OR UNK
+            auto tok            = vocab.id2token(sym);
+            auto small_vocab_id = vocab.big2small(sym);
+            if (sym == cstlm::UNKNOWN_SYM && small_vocab_id == cstlm::UNKNOWN_SYM)
+                cur.emplace_back(small_vocab_id, sym, tok, true);
+            else
+                cur.emplace_back(small_vocab_id, sym, tok, false);
+        }
+        return sentences;
+    }
 
     static std::vector<std::vector<word_token>>
     parse_from_raw(std::string                             file_name,
