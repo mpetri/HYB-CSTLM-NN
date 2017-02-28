@@ -272,6 +272,7 @@ const uint32_t HIDDEN_DIM               = 512;
 const bool     SAMPLE                   = true;
 const float    INIT_LEARNING_RATE       = 0.1f;
 const float    DECAY_RATE               = 0.5f;
+const uint32_t DECAY_AFTER_EPOCH	= 8;
 const uint32_t VOCAB_THRESHOLD          = 30000;
 const uint32_t NUM_ITERATIONS           = 5;
 const uint32_t DEFAULT_CSTLM_NGRAM_SIZE = 5;
@@ -286,6 +287,7 @@ private:
     uint32_t    m_hidden_dim          = defaults::HIDDEN_DIM;
     bool        m_sampling            = defaults::SAMPLE;
     float       m_decay_rate          = defaults::DECAY_RATE;
+    float       m_decay_after_epoch   = defaults::DECAY_AFTER_EPOCH;
     float       m_dropout             = defaults::DROPOUT;
     uint32_t    m_vocab_threshold     = defaults::VOCAB_THRESHOLD;
     uint32_t    m_num_iterations      = defaults::NUM_ITERATIONS;
@@ -301,6 +303,7 @@ private:
         cstlm::LOG(cstlm::INFO) << "HYBLM sampling: " << m_sampling;
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning rate: " << m_start_learning_rate;
         cstlm::LOG(cstlm::INFO) << "HYBLM decay rate: " << m_decay_rate;
+        cstlm::LOG(cstlm::INFO) << "HYBLM decay after epoch: " << m_decay_after_epoch;
         cstlm::LOG(cstlm::INFO) << "HYBLM vocab threshold: " << m_vocab_threshold;
         cstlm::LOG(cstlm::INFO) << "HYBLM num iterations: " << m_num_iterations;
         cstlm::LOG(cstlm::INFO) << "HYBLM cstlm ngramsize: " << m_cstlm_ngramsize;
@@ -350,6 +353,12 @@ public:
         return *this;
     };
 
+    builder& decay_after_epoch(uint32_t v)
+    {
+        m_decay_after_epoch = v;
+        return *this;
+    };
+
     builder& vocab_threshold(uint32_t v)
     {
         m_vocab_threshold = v;
@@ -377,18 +386,18 @@ public:
         fn << "l=" << m_num_layers << "-";
         fn << "d=" << m_dropout << "-";
         fn << "hd=" << m_hidden_dim << "-";
-        fn << "s=" << m_sampling << "-";
         fn << "lr=" << m_start_learning_rate << "-";
         fn << "n=" << m_cstlm_ngramsize << "-";
         fn << "vt=" << m_vocab_threshold << "-";
-        fn << "decay=" << m_decay_rate;
+        fn << "da=" << m_decay_after_epoch;
+        fn << "d=" << m_decay_rate;
         fn << ".dynet";
         return fn.str();
     }
 
     template <class t_cstlm>
     LM<t_cstlm>
-    train_lm(cstlm::collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings)
+    train_lm(cstlm::collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings,std::string out_file)
     {
         auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
 
@@ -421,8 +430,8 @@ public:
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 
         double best_dev_pplx   = 999999.0;
-        bool   finish_training = false;
-        for (size_t i = 0; i < m_num_iterations; i++) {
+        int finish_training = 0;
+        for (size_t i = 1; i <= m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
             cur_sentence_id     = 0;
@@ -443,7 +452,7 @@ public:
                 if ((cur_sentence_id + 1) % ((sentences.size() / 20) + 1) == 0) {
                     // Print informations
                     cstlm::LOG(cstlm::INFO)
-                    << "HYBLM [" << i + 1 << "/" << m_num_iterations << "] ("
+                    << "HYBLM [" << i << "/" << m_num_iterations << "] ("
                     << 100 * float(cur_sentence_id) / float(sentences.size() + 1)
                     << "%) S = " << cur_sentence_id << " T = " << total_tokens
                     << " eta = " << sgd.eta << " E = " << (loss / (tokens + 1))
@@ -467,20 +476,24 @@ public:
                 cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx= " << dev_pplx
                                         << " current best = " << best_dev_pplx;
                 if (dev_pplx > best_dev_pplx) {
-                    cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx is getting worse. we stop.";
-                    finish_training = true;
+                    cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx is getting worse.";
+                    finish_training++;
                 } else {
                     cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx improved. we continue.";
+		    finish_training = 0;
                     best_dev_pplx = dev_pplx;
+            	    hyblm.store(out_file);
                 }
             }
 
-            if (finish_training) {
+            if (finish_training >= 3) {
                 break;
             }
 
-            cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
-            sgd.eta *= m_decay_rate;
+	    if(i >= m_decay_after_epoch) {
+            	cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
+            	sgd.eta *= m_decay_rate;
+	    }
         }
 
 
@@ -501,8 +514,7 @@ public:
         auto hyblm_file = file_name(col);
         if (!cstlm::utils::file_exists(hyblm_file)) {
             dynet::initialize(argc, argv);
-            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings);
-            hybl_lm.store(hyblm_file);
+            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings,hyblm_file);
         }
         dynet::cleanup();
         dynet::initialize(argc, argv);

@@ -24,44 +24,7 @@ namespace utils {
 
 std::string clean_word(const char* buf, size_t n)
 {
-    // check if the word contains non-ascii symbols -> skip
-    for (size_t i = 0; i < n; i++) {
-        int sym = buf[i];
-        if (!isascii(sym)) return "";
-    }
-    std::string word;
-    // skip garbage at front
-    size_t offset = 0;
-    while (offset < n) {
-        int sym = buf[offset];
-        if (isalnum(sym)) {
-            break;
-        } else {
-            offset++;
-        }
-    }
-    size_t word_start = offset;
-
-    // remove garbage from the end
-    size_t last = n - 1;
-    while (word_start < last) {
-        int sym = buf[last];
-        if (!isalnum(sym)) {
-            last--;
-        } else {
-            break;
-        }
-    }
-
-    if (word_start >= last) return "";
-    size_t word_len = last - word_start + 1;
-
-    // don't want single symbol words that are not alphanumerical
-    if (word_len == 1) {
-        int sym = buf[word_start];
-        if (!isalnum(sym)) return "";
-    }
-    return std::string(buf + word_start, word_len);
+    return std::string(buf,n);
 }
 
 

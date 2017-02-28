@@ -164,6 +164,9 @@ struct precomputed_stats {
                 D2[size] = 2 - 3 * Y[size] * (double)counts.n3[size] / (double)counts.n2[size];
             if (counts.n3[size] != 0)
                 D3[size] = 3 - 4 * Y[size] * (double)counts.n4[size] / (double)counts.n3[size];
+	     
+		if(D2[size] < 0) D2[size] = D1[size];
+		if(D3[size] < 0) D3[size] = D2[size];
         }
 
         for (auto size = 1ULL; size <= max_ngram_len; size++) {
@@ -178,6 +181,9 @@ struct precomputed_stats {
             if (counts.n3_cnt[size] != 0)
                 D3_cnt[size] =
                 3 - 4 * Y_cnt[size] * (double)counts.n4_cnt[size] / (double)counts.n3_cnt[size];
+
+	    if(D2_cnt[size] < 0) D2_cnt[size] = D1_cnt[size];
+	    if(D3_cnt[size] < 0) D3_cnt[size] = D2_cnt[size];
         }
     }
 

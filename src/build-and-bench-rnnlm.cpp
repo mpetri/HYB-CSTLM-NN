@@ -47,6 +47,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
+    num_cstlm_threads = 1;
     while ((op = getopt(argc, (char* const*)argv, "c:t:")) != -1) {
         switch (op) {
             case 'c':
@@ -123,7 +124,7 @@ word2vec::embeddings load_or_create_word2vec_embeddings(collection& col)
                       .window_size(5)
                       .sample_threadhold(1e-5)
                       .num_negative_samples(5)
-                      .num_threads(cstlm::num_cstlm_threads)
+                      .num_threads(num_cstlm_threads)
                       .num_iterations(5)
                       .min_freq_threshold(5)
                       .start_learning_rate(0.025)
@@ -142,6 +143,7 @@ load_or_create_rnnlm(int argc, char** argv, collection& col, word2vec::embedding
                   .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .sampling(true)
                   .start_learning_rate(0.1)
+		  .decay_after_epoch(8)
                   .decay_rate(0.5)
                   .num_iterations(20)
                   .dev_file(col.file_map[KEY_DEV])

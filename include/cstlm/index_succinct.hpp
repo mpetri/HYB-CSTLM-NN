@@ -75,8 +75,8 @@ public:
     }
     index_succinct(collection& col, bool is_mkn = false, bool debug_output = true)
     {
-        if (col.file_map.count(KEY_SA) == 0) {
-            construct_SA(col);
+	{
+        	construct_SA(col);
         }
         auto cst_file = col.path + "/tmp/CST-" + sdsl::util::class_to_hash(m_cst) + ".sdsl";
         if (!utils::file_exists(cst_file)) {

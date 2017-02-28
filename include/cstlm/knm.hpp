@@ -47,6 +47,30 @@ sentence_eval sentence_logprob_kneser_ney(const t_idx&     idx,
 }
 
 template <class t_idx, class t_pattern>
+sentence_eval sentence_logprob_kneser_ney2(const t_idx&     idx,
+                                          const t_pattern& word_vec,
+                                          uint64_t& /*M*/,
+                                          uint64_t ngramsize,
+                                          bool     ismkn,
+                                          bool     use_cache)
+{
+    double            final_score = 0;
+    size_t            num_tokens  = 0;
+    LMQueryMKN<t_idx> query(&idx, ngramsize, true, use_cache);
+    bool first = true;
+    for (const auto& word : word_vec) {
+        auto score = query.append_symbol(word.big_id);
+        if(!first) {
+		num_tokens++;
+        	final_score += score;
+	}
+	first = false;
+    }
+    return sentence_eval(final_score, num_tokens);
+}
+
+
+template <class t_idx, class t_pattern>
 double sentence_perplexity_kneser_ney(
 const t_idx& idx, t_pattern& pattern, uint32_t ngramsize, bool ismkn, bool use_cache = true)
 {
@@ -56,7 +80,7 @@ const t_idx& idx, t_pattern& pattern, uint32_t ngramsize, bool ismkn, bool use_c
     // run the query
     uint64_t M          = pattern_size + 1;
     double sentenceprob = sentence_logprob_kneser_ney(idx, pattern, M, ngramsize, ismkn, use_cache);
-    double perplexity   = pow(10, -(1 / (double)M) * sentenceprob);
+    double perplexity   = exp(-(1 / (double)M) * sentenceprob);
     return perplexity;
 }
 

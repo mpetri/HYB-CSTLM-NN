@@ -63,7 +63,7 @@ struct sentence_parser {
         std::ifstream                        ifile(file_name);
         std::string                          line;
         while (std::getline(ifile, line)) {
-            auto                    line_tokens = cstlm::utils::parse_line(line, false);
+            auto line_tokens = cstlm::utils::parse_line(line, false);
             std::vector<word_token> tokens;
             tokens.emplace_back(cstlm::PAT_START_SYM, cstlm::PAT_START_SYM);
             for (const auto& token : line_tokens) {

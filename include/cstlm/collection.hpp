@@ -94,12 +94,6 @@ struct collection {
                 file_map[key] = file_path;
                 if (output) LOG(INFO) << "FOUND '" << key << "' at '" << file_path << "'";
             }
-            // sa check
-            auto sa_path = path + "/" + prefix + key + "." + KEY_SA;
-            if (utils::file_exists(sa_path)) {
-                file_map[KEY_SA] = sa_path;
-                if (output) LOG(INFO) << "FOUND '" << KEY_SA << "' at '" << sa_path << "'";
-            }
         }
 
         auto stats_file = path + "/" + prefix + KEY_STATS;
@@ -189,6 +183,9 @@ struct collection {
 void construct_SA(collection& col)
 {
     auto sa_path = col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
+    if (utils::file_exists(sa_path)) {
+	return;
+    } 
     lm_construct_timer timer(KEY_SA);
     if (col.alphabet == alphabet_type::byte_alphabet) {
         sdsl::int_vector<8> text;
