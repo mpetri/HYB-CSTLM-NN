@@ -47,7 +47,7 @@ cmdargs_t parse_args(int argc, const char* argv[])
     cmdargs_t args;
     int       op;
     args.collection_dir = "";
-    num_cstlm_threads = 1;
+    num_cstlm_threads   = 1;
     while ((op = getopt(argc, (char* const*)argv, "c:t:")) != -1) {
         switch (op) {
             case 'c':
@@ -85,8 +85,15 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
 {
     auto   sentences = index.parse_raw_sentences(file_name);
     size_t tokens    = 0;
-    for (const auto& s : sentences)
+    size_t num_sents = 1;
+    for (const auto& s : sentences) {
+        LOG(INFO) << "START SENTENCE [" << num_sents << "] = ";
+        for (size_t i = 0; i < s.size(); i++) {
+            LOG(INFO) << s[i] << std::endl;
+        }
+        LOG(INFO) << "STOP SENTENCE [" << num_sents++ << "] = ";
         tokens += s.size();
+    }
     LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
@@ -94,25 +101,22 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
 void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, rnnlm::LM& rnn_lm)
 {
 
-    double   logprobs = 0;
-    uint64_t M          = 0;
-    uint64_t OOV        = 0;
-    uint64_t sent_size  = 0;
+    double   logprobs  = 0;
+    uint64_t M         = 0;
+    uint64_t OOV       = 0;
+    uint64_t sent_size = 0;
     for (const auto& sentence : sentences) {
-	for(size_t i=0;i<sentence.size();i++) {
-		if(sentence[i].big_id == UNKNOWN_SYM &&
-		   sentence[i].small_id == UNKNOWN_SYM ) OOV++;
-	}
+        for (size_t i = 0; i < sentence.size(); i++) {
+            if (sentence[i].big_id == UNKNOWN_SYM && sentence[i].small_id == UNKNOWN_SYM) OOV++;
+        }
         auto eval_res = rnn_lm.evaluate_sentence_logprob(sentence);
         M += eval_res.tokens;
         logprobs += eval_res.logprob;
-	sent_size += sentence.size();
+        sent_size += sentence.size();
     }
-    double perplexity = exp( logprobs / M );
+    double perplexity = exp(logprobs / M);
     LOG(INFO) << "RNNLM PPLX = " << std::setprecision(10) << perplexity
-              << " (logprob = " << logprobs 
-	      << ";predicted tokens = " << M 
-	      << ";OOV = " << OOV
+              << " (logprob = " << logprobs << ";predicted tokens = " << M << ";OOV = " << OOV
               << ";#W = " << sent_size << ")";
 }
 
@@ -143,7 +147,7 @@ load_or_create_rnnlm(int argc, char** argv, collection& col, word2vec::embedding
                   .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .sampling(true)
                   .start_learning_rate(0.1)
-		  .decay_after_epoch(8)
+                  .decay_after_epoch(8)
                   .decay_rate(0.5)
                   .num_iterations(20)
                   .dev_file(col.file_map[KEY_DEV])
