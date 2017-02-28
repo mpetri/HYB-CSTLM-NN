@@ -20,9 +20,10 @@ struct word_token {
     }
 };
 
-std::ostream& operator<<(std::ostream& stream, const word_token& tok)
+template<class t_stream>
+t_stream& operator<<(t_stream& stream, const word_token& tok)
 {
-    stream << "<" << small_id << "," << big_id << ",'" << tok_str << "'," << is_oov << ">";
+    stream << "<" << tok.small_id << "," << tok.big_id << ",'" << tok.tok_str << "'," << tok.is_oov << ">";
     return stream;
 }
 

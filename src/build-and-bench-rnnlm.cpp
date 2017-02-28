@@ -87,11 +87,11 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
     size_t tokens    = 0;
     size_t num_sents = 1;
     for (const auto& s : sentences) {
-        LOG(INFO) << "START SENTENCE [" << num_sents << "] = ";
+        std::cout << "START SENTENCE [" << num_sents << "] = ";
         for (size_t i = 0; i < s.size(); i++) {
-            LOG(INFO) << s[i] << std::endl;
+            std::cout << s[i] << std::endl;
         }
-        LOG(INFO) << "STOP SENTENCE [" << num_sents++ << "] = ";
+        std::cout << "STOP SENTENCE [" << num_sents++ << "] = ";
         tokens += s.size();
     }
     LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
