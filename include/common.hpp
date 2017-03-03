@@ -23,8 +23,23 @@ struct word_token {
 template <class t_stream>
 t_stream& operator<<(t_stream& stream, const word_token& tok)
 {
-    stream << "<" << tok.small_id << "," << tok.big_id << ",'" << tok.tok_str << "'," << tok.is_oov
-           << ">";
+    stream << "<";
+    if(tok.small_id == cstlm::UNKNOWN_SYM)
+	stream  << "UNK" << ",";
+    else
+	stream  << tok.small_id << ",";
+
+    if(tok.big_id == cstlm::UNKNOWN_SYM)
+	stream << "UNK" << ",";
+    else
+	stream << tok.big_id << ",";
+    
+    stream << "'" << tok.tok_str << "',";
+
+    if(tok.is_oov)
+	stream << "OOV>";
+    else
+	stream << "REG>";
     return stream;
 }
 
@@ -60,7 +75,12 @@ struct sentence_parser {
 
             // not start AND not END AND in sentence == true here
             // translate non-special ids to their small vocab id OR UNK
-            auto tok            = vocab.id2token(sym);
+            std::string tok            = "<UNK>";
+	    try {
+		tok = vocab.id2token(sym);
+	    } catch(...) {
+
+	    }
             auto small_vocab_id = vocab.big2small(sym);
             if (sym == cstlm::UNKNOWN_SYM && small_vocab_id == cstlm::UNKNOWN_SYM)
                 cur.emplace_back(small_vocab_id, sym, tok, true);

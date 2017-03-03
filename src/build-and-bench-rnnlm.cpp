@@ -86,6 +86,7 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
     auto   sentences = index.parse_raw_sentences(file_name);
     size_t tokens    = 0;
     size_t num_sents = 1;
+/*
     for (const auto& s : sentences) {
         std::cout << "START SENTENCE [" << num_sents << "] = ";
         for (size_t i = 0; i < s.size(); i++) {
@@ -94,6 +95,7 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
         std::cout << "STOP SENTENCE [" << num_sents++ << "] = ";
         tokens += s.size();
     }
+*/
     LOG(INFO) << "found " << sentences.size() << " sentences (" << tokens << " tokens)";
     return sentences;
 }
@@ -143,7 +145,7 @@ load_or_create_rnnlm(int argc, char** argv, collection& col, word2vec::embedding
     auto rnn_lm = rnnlm::builder{}
                   .dropout(0.3)
                   .layers(2)
-                  .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
+                  .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD*2)
                   .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .sampling(true)
                   .start_learning_rate(0.1)

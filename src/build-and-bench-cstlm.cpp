@@ -140,10 +140,9 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
     uint64_t sent_size  = 0;
     for (const auto& sentence : sentences) {
 	for(size_t i=0;i<sentence.size();i++) {
-		if(sentence[i].big_id == UNKNOWN_SYM &&
-		   sentence[i].small_id == UNKNOWN_SYM ) OOV++;
+		if(sentence[i].big_id == UNKNOWN_SYM /* && sentence[i].small_id == UNKNOWN_SYM*/ ) OOV++;
 	}
-        auto eval_res = sentence_logprob_kneser_ney(index, sentence, M, order, true, false);
+        auto eval_res = sentence_logprob_kneser_ney2(index, sentence, M, order, true, false);
         logprobs += eval_res.logprob;
         M += eval_res.tokens;
 	sent_size += sentence.size();

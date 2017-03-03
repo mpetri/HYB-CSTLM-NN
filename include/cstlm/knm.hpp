@@ -60,7 +60,7 @@ sentence_eval sentence_logprob_kneser_ney2(const t_idx&     idx,
     bool first = true;
     for (const auto& word : word_vec) {
         auto score = query.append_symbol(word.big_id);
-        if(!first) {
+        if(!first && word.big_id != UNKNOWN_SYM) {
 		num_tokens++;
         	final_score += score;
 	}

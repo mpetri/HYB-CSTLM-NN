@@ -207,7 +207,11 @@ struct LM {
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
 
-            auto i_cstlm_t = cg.add_input(logprob_from_cstlm.data());
+	    for(size_t i=0;i<logprob_from_cstlm.size();i++) {
+		if( logprob_from_cstlm[i] != 0) printf("CSTLMLOGP[%lu] = %f\n",i,logprob_from_cstlm[i]);
+	    }
+
+            auto i_cstlm_t = cg.add_input({(uint32_t)logprob_from_cstlm.size(),1},logprob_from_cstlm);
 
             auto i_prod_t = i_cstlm_t + i_r_t;
 
@@ -430,6 +434,32 @@ public:
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 
         double best_dev_pplx   = 999999.0;
+	{
+        	cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx.";
+        	double log_probs = 0;
+                size_t tokens    = 0;
+                for (const auto& sentence : dev_sents) {
+                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence);
+                    log_probs += eval_res.logprob;
+                    tokens += eval_res.tokens;
+                }
+                double dev_pplx = exp(log_probs / tokens);
+                cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx before learning = " << dev_pplx;
+	}
+
+	{
+        	cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx with CSTLM.";
+        	double log_probs = 0;
+                size_t tokens    = 0;
+                for (const auto& sentence : dev_sents) {
+                    auto eval_res = sentence_logprob_kneser_ney(cstlm, sentence, tokens, m_cstlm_ngramsize, true, false);
+                    log_probs += eval_res.logprob;
+                    tokens += eval_res.tokens;
+                }
+                double dev_pplx = exp(-log_probs / tokens);
+                cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx with CSTLM before learning = " << dev_pplx;
+	}
+
         int finish_training = 0;
         for (size_t i = 1; i <= m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
