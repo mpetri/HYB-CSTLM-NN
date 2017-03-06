@@ -49,17 +49,17 @@ public:
         }
 
         /* compute if we can't find it */
-	vector_type log_prob_vec(m_dest_vocab->size(),0.0f);
+	vector_type log_prob_vec(m_dest_vocab->size(),-999999);
         auto wordsfollowing = m_local_state.words_following();
         for (const auto& word : wordsfollowing) {
             auto mapped_word_id = m_dest_vocab->big2small(word);
-            if (word == UNKNOWN_SYM) {
+            if (mapped_word_id == UNKNOWN_SYM) {
                 // TODO UNK HANDLING?
                 continue;
             }
             auto state_copy              = m_local_state;
             auto prob                    = state_copy.append_symbol(word);
-            log_prob_vec[mapped_word_id] = -prob;
+            log_prob_vec[mapped_word_id] = prob;
         }
 
         // add to cache if it is a bit more complex to compute

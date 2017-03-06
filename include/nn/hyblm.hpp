@@ -18,9 +18,16 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "query_eigen.hpp"
+#include "query.hpp"
 
 using namespace std::chrono;
 using watch = std::chrono::high_resolution_clock;
+
+#define WTF(expression) \
+    std::cout << #expression << " has dimensions " << cg.nodes[expression.i]->dim << std::endl;
+
+#define KTHXBYE(expression) \
+    std::cout << cg.get_value(expression) << std::endl;
 
 namespace hyblm {
 
@@ -206,12 +213,16 @@ struct LM {
             // query cstlm
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+	    
 
+	    
+
+/*
 	    for(size_t i=0;i<logprob_from_cstlm.size();i++) {
 		if( logprob_from_cstlm[i] != 0) printf("CSTLMLOGP[%lu] = %f\n",i,logprob_from_cstlm[i]);
 	    }
-
-            auto i_cstlm_t = cg.add_input({(uint32_t)logprob_from_cstlm.size(),1},logprob_from_cstlm);
+*/
+            auto i_cstlm_t = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
 
             auto i_prod_t = i_cstlm_t + i_r_t;
 
@@ -238,30 +249,47 @@ struct LM {
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
         cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
+        cstlm::LMQueryMKN<t_cstlm> cstlm_sentence2(cstlm,cstlm_ngramsize, true,false);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
             auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
+/*
+		WTF(i_r_t);
+		KTHXBYE(i_r_t);
+*/
 
             // query cstlm
             auto next_word_bigid    = sentence[i].big_id;
             auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
-            auto i_cstlm_t          = cg.add_input(logprob_from_cstlm.data());
+            auto i_cstlm_t          = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
 
+	    auto cstlm_prob = cstlm_sentence2.append_symbol(next_word_bigid);
+	    cstlm::LOG(cstlm::INFO) << "RAW FROM CSTLM = " << cstlm_prob;
+	    cstlm::LOG(cstlm::INFO) << "LOGPROB OF NEXT SYM FROM CSTLM = " << logprob_from_cstlm[ sentence[i+1].small_id];
+	   
+/*	
             auto i_prod_t = i_cstlm_t + i_r_t;
 
+		WTF(i_prod_t);
+		KTHXBYE(i_prod_t);
+*/
+		WTF(i_cstlm_t);
+		KTHXBYE(i_cstlm_t);
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
             if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
                 sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
-                auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
+                auto i_err = dynet::expr::pickneglogsoftmax(i_cstlm_t, sentence[i + 1].small_id);
                 errs.push_back(i_err);
             }
         }
         auto loss_expr = dynet::expr::sum(errs);
         logprob        = as_scalar(cg.forward(loss_expr));
+	cstlm::LOG(cstlm::INFO) << "LOGPROB = " << logprob;
+	cstlm::LOG(cstlm::INFO) << "sentence len = " << errs.size();
         return sentence_eval(logprob, errs.size());
     }
 };
