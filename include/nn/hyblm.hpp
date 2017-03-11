@@ -65,6 +65,7 @@ struct LM {
     uint32_t                         hidden_dim;
     uint32_t                         cstlm_ngramsize;
     const t_cstlm*                   cstlm = nullptr;
+    std::unordered_map<uint64_t,std::vector<float>> cstlm_cache;
 
     LM();
 
@@ -189,7 +190,8 @@ struct LM {
 
     dynet::expr::Expression build_lm_cgraph(const std::vector<word_token>& sentence,
                                             dynet::ComputationGraph&       cg,
-                                            double                         m_dropout)
+                                            double                         m_dropout,
+					    bool use_cstlm)
     {
         builder.new_graph(cg); // reset RNN builder for new graph
         if (m_dropout > 0) {
@@ -197,37 +199,25 @@ struct LM {
         } else {
             builder.disable_dropout();
         }
-
         builder.start_new_sequence();
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
-        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
+        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true,cstlm_cache);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
             auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
-
             // query cstlm
-            auto next_word_bigid    = sentence[i].big_id;
-            auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
-	    
-
-	    
-
-/*
-	    for(size_t i=0;i<logprob_from_cstlm.size();i++) {
-		if( logprob_from_cstlm[i] != 0) printf("CSTLMLOGP[%lu] = %f\n",i,logprob_from_cstlm[i]);
+	    auto i_prod_t = i_r_t;
+	    if(use_cstlm) {
+            	auto next_word_bigid    = sentence[i].big_id;
+            	auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+            	auto i_cstlm_t = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
+            	i_prod_t = i_r_t + i_cstlm_t;
 	    }
-*/
-            auto i_cstlm_t = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
-
-            auto i_prod_t = i_cstlm_t + i_r_t;
-
-            // auto prod = logprob_from_cstlm * i_r_t;
-
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
             auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
@@ -237,7 +227,7 @@ struct LM {
         return i_nerr;
     }
 
-    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence)
+    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence,bool use_cstlm = true)
     {
         double                  logprob = 0.0;
         dynet::ComputationGraph cg;
@@ -248,48 +238,32 @@ struct LM {
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
-        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true);
-        cstlm::LMQueryMKN<t_cstlm> cstlm_sentence2(cstlm,cstlm_ngramsize, true,false);
+        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true,cstlm_cache);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
             auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
             auto i_y_t = builder.add_input(i_x_t);
             auto i_r_t = i_bias + i_R * i_y_t;
 
-/*
-		WTF(i_r_t);
-		KTHXBYE(i_r_t);
-*/
-
             // query cstlm
-            auto next_word_bigid    = sentence[i].big_id;
-            auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
-            auto i_cstlm_t          = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
+	    auto i_prod_t = i_r_t;
+	    if(use_cstlm) {
+            	auto next_word_bigid    = sentence[i].big_id;
+            	auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+            	auto i_cstlm_t          = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
+            	i_prod_t = i_cstlm_t + i_r_t;
+	    }
 
-	    auto cstlm_prob = cstlm_sentence2.append_symbol(next_word_bigid);
-	    cstlm::LOG(cstlm::INFO) << "RAW FROM CSTLM = " << cstlm_prob;
-	    cstlm::LOG(cstlm::INFO) << "LOGPROB OF NEXT SYM FROM CSTLM = " << logprob_from_cstlm[ sentence[i+1].small_id];
-	   
-/*	
-            auto i_prod_t = i_cstlm_t + i_r_t;
-
-		WTF(i_prod_t);
-		KTHXBYE(i_prod_t);
-*/
-		WTF(i_cstlm_t);
-		KTHXBYE(i_cstlm_t);
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
             if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
                 sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
-                auto i_err = dynet::expr::pickneglogsoftmax(i_cstlm_t, sentence[i + 1].small_id);
+                auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
                 errs.push_back(i_err);
             }
         }
         auto loss_expr = dynet::expr::sum(errs);
         logprob        = as_scalar(cg.forward(loss_expr));
-	cstlm::LOG(cstlm::INFO) << "LOGPROB = " << logprob;
-	cstlm::LOG(cstlm::INFO) << "sentence len = " << errs.size();
         return sentence_eval(logprob, errs.size());
     }
 };
@@ -428,6 +402,83 @@ public:
     }
 
     template <class t_cstlm>
+    void prefill_cstlm_cache(std::vector<std::vector<word_token>>& sentences,
+			     std::vector<std::vector<word_token>>& dev_sentences,LM<t_cstlm>& hyblm)
+    {
+	size_t num_threads = 25;
+	size_t sents_per_thread = sentences.size() / num_threads;
+	using cache_type = std::unordered_map<uint64_t,std::vector<float>>;
+	std::vector<std::future<int>> partial_caches;
+							std::mutex m;
+	for(size_t i=0;i<num_threads;i++) {
+		auto start = sentences.begin() + (i*sents_per_thread);
+		auto end = start + sents_per_thread;
+		if( (i+1)*sents_per_thread > sentences.size()) {
+			end = sentences.end();
+		}
+		partial_caches.push_back( 
+			std::async(std::launch::async,
+				[&hyblm,start,end,i,&m]() {
+					auto itr = start;
+					auto num_sents = std::distance(start,end);
+					int processed = 0;
+					int total = 0;
+					while(itr != end) {
+						auto cur = *itr;
+        					cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,hyblm.filtered_vocab,hyblm.cstlm_ngramsize,false,hyblm.cstlm_cache);
+						for(size_t j=0;j<cur.size();j++) {
+							s.append_symbol(cur[j].big_id);
+						}
+						++itr;
+						processed++;
+						if(processed == 50) {
+							std::lock_guard<std::mutex> lock(m);
+							total += processed;
+							processed = 0;
+							cstlm::LOG(cstlm::INFO) << "["<<i<<"] " << total << "/" << num_sents; 
+						}
+					} 
+					return total;	
+				}
+			));
+	}	
+	for(size_t i=0;i<partial_caches.size();i++) {
+		auto total = partial_caches[i].get();
+		cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
+	}
+	sents_per_thread = dev_sentences.size() / num_threads;
+	partial_caches.clear();
+	for(size_t i=0;i<num_threads;i++) {
+		auto start = dev_sentences.begin() + (i*sents_per_thread);
+		auto end = start + sents_per_thread;
+		if( (i+1)*sents_per_thread > sentences.size()) {
+			end = sentences.end();
+		}
+		partial_caches.push_back( 
+			std::async(std::launch::async,
+				[&hyblm,start,end]() {
+					auto itr = start;
+					int total = 0;
+					while(itr != end) {
+						auto cur = *itr;
+        					cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,hyblm.filtered_vocab,hyblm.cstlm_ngramsize,false,hyblm.cstlm_cache);
+						for(size_t j=0;j<cur.size();j++) {
+							s.append_symbol(cur[j].big_id);
+						}
+						++itr;
+						total++;
+					}
+					return total;
+				}
+			));
+	}	
+	for(size_t i=0;i<partial_caches.size();i++) {
+		auto total = partial_caches[i].get();
+		cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
+	}
+    }
+
+    template <class t_cstlm>
     LM<t_cstlm>
     train_lm(cstlm::collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings,std::string out_file)
     {
@@ -441,6 +492,7 @@ public:
 
         cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in training set";
         auto sentences = sentence_parser::parse(input_file, filtered_vocab);
+	sentences.resize(100000);
         cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
 
         cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
@@ -452,6 +504,9 @@ public:
         LM<t_cstlm> hyblm(
         cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
+        cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache";
+	prefill_cstlm_cache(sentences,dev_sents,hyblm);
+
         cstlm::LOG(cstlm::INFO) << "HYBLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(hyblm.model);
         sgd.eta0 = m_start_learning_rate;
@@ -461,34 +516,8 @@ public:
         size_t       cur_sentence_id = 0;
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 
-        double best_dev_pplx   = 999999.0;
-	{
-        	cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx.";
-        	double log_probs = 0;
-                size_t tokens    = 0;
-                for (const auto& sentence : dev_sents) {
-                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence);
-                    log_probs += eval_res.logprob;
-                    tokens += eval_res.tokens;
-                }
-                double dev_pplx = exp(log_probs / tokens);
-                cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx before learning = " << dev_pplx;
-	}
-
-	{
-        	cstlm::LOG(cstlm::INFO) << "HYBLM evaluate dev pplx with CSTLM.";
-        	double log_probs = 0;
-                size_t tokens    = 0;
-                for (const auto& sentence : dev_sents) {
-                    auto eval_res = sentence_logprob_kneser_ney(cstlm, sentence, tokens, m_cstlm_ngramsize, true, false);
-                    log_probs += eval_res.logprob;
-                    tokens += eval_res.tokens;
-                }
-                double dev_pplx = exp(-log_probs / tokens);
-                cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx with CSTLM before learning = " << dev_pplx;
-	}
-
         int finish_training = 0;
+	double best_dev_pplx = 99999;
         for (size_t i = 1; i <= m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
@@ -501,7 +530,7 @@ public:
                 total_tokens += sentence.size();
                 dynet::ComputationGraph cg;
 
-                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout);
+                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout,i >= 10);
                 loss += dynet::as_scalar(cg.forward(loss_expr));
 
                 cg.backward(loss_expr);
@@ -526,7 +555,7 @@ public:
                 double log_probs = 0;
                 size_t tokens    = 0;
                 for (const auto& sentence : dev_sents) {
-                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence);
+                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence,i >= 10);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
                 }
@@ -544,13 +573,16 @@ public:
                 }
             }
 
-            if (finish_training >= 3) {
+            if (i >= 10 && finish_training >= 8) {
                 break;
             }
 
 	    if(i >= m_decay_after_epoch) {
             	cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
             	sgd.eta *= m_decay_rate;
+		if(i > 10) {
+			sgd.eta = m_start_learning_rate;
+		}
 	    }
         }
 

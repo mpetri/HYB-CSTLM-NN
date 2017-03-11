@@ -33,7 +33,7 @@ sentence_eval sentence_logprob_kneser_ney(const t_idx&     idx,
 {
     double            final_score = 0;
     size_t            num_tokens  = 0;
-    LMQueryMKN<t_idx> query(&idx, ngramsize, true, use_cache);
+    LMQueryMKN<t_idx> query(&idx, ngramsize, false, use_cache);
     bool first = true;
     for (const auto& word : word_vec) {
         auto score = query.append_symbol(word.big_id);
@@ -56,7 +56,7 @@ sentence_eval sentence_logprob_kneser_ney2(const t_idx&     idx,
 {
     double            final_score = 0;
     size_t            num_tokens  = 0;
-    LMQueryMKN<t_idx> query(&idx, ngramsize, true, use_cache);
+    LMQueryMKN<t_idx> query(&idx, ngramsize, false, use_cache);
     bool first = true;
     for (const auto& word : word_vec) {
         auto score = query.append_symbol(word.big_id);
