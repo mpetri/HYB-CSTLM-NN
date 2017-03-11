@@ -26,8 +26,7 @@ using watch = std::chrono::high_resolution_clock;
 #define WTF(expression) \
     std::cout << #expression << " has dimensions " << cg.nodes[expression.i]->dim << std::endl;
 
-#define KTHXBYE(expression) \
-    std::cout << cg.get_value(expression) << std::endl;
+#define KTHXBYE(expression) std::cout << cg.get_value(expression) << std::endl;
 
 namespace hyblm {
 
@@ -65,7 +64,7 @@ struct LM {
     uint32_t                         hidden_dim;
     uint32_t                         cstlm_ngramsize;
     const t_cstlm*                   cstlm = nullptr;
-    std::unordered_map<uint64_t,std::vector<float>> cstlm_cache;
+    std::unordered_map<uint64_t, std::vector<float>> cstlm_cache;
 
     LM();
 
@@ -191,7 +190,7 @@ struct LM {
     dynet::expr::Expression build_lm_cgraph(const std::vector<word_token>& sentence,
                                             dynet::ComputationGraph&       cg,
                                             double                         m_dropout,
-					    bool use_cstlm)
+                                            bool                           use_cstlm)
     {
         builder.new_graph(cg); // reset RNN builder for new graph
         if (m_dropout > 0) {
@@ -203,7 +202,8 @@ struct LM {
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
-        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true,cstlm_cache);
+        cstlm::LMQueryMKNE<t_cstlm>          cstlm_sentence(
+        cstlm, filtered_vocab, cstlm_ngramsize, true, cstlm_cache);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
             auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
@@ -211,23 +211,27 @@ struct LM {
             auto i_r_t = i_bias + i_R * i_y_t;
 
             // query cstlm
-	    auto i_prod_t = i_r_t;
-	    if(use_cstlm) {
-            	auto next_word_bigid    = sentence[i].big_id;
-            	auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
-            	auto i_cstlm_t = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
-            	i_prod_t = i_r_t + i_cstlm_t;
-	    }
+            if (use_cstlm) {
+                auto next_word_bigid    = sentence[i].big_id;
+                auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+                auto i_cstlm_t =
+                dynet::expr::input(cg, {(uint32_t)logprob_from_cstlm.size()}, logprob_from_cstlm);
+                auto i_prod_t = i_r_t + i_cstlm_t;
+                auto i_err    = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
+                errs.push_back(i_err);
+            } else {
+                auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+                errs.push_back(i_err);
+            }
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
-            errs.push_back(i_err);
         }
         auto i_nerr = dynet::expr::sum(errs);
         return i_nerr;
     }
 
-    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence,bool use_cstlm = true)
+    sentence_eval evaluate_sentence_logprob(const std::vector<word_token>& sentence,
+                                            bool                           use_cstlm = true)
     {
         double                  logprob = 0.0;
         dynet::ComputationGraph cg;
@@ -238,7 +242,8 @@ struct LM {
         auto i_R    = dynet::expr::parameter(cg, p_R);    // hidden -> word rep parameter
         auto i_bias = dynet::expr::parameter(cg, p_bias); // word bias
         std::vector<dynet::expr::Expression> errs;
-        cstlm::LMQueryMKNE<t_cstlm> cstlm_sentence(cstlm, filtered_vocab, cstlm_ngramsize, true,cstlm_cache);
+        cstlm::LMQueryMKNE<t_cstlm>          cstlm_sentence(
+        cstlm, filtered_vocab, cstlm_ngramsize, true, cstlm_cache);
         for (size_t i = 0; i < sentence.size() - 1; i++) {
             auto i_x_t = dynet::expr::lookup(cg, p_word_embeddings, sentence[i].small_id);
             // y_t = RNN(x_t)
@@ -246,21 +251,27 @@ struct LM {
             auto i_r_t = i_bias + i_R * i_y_t;
 
             // query cstlm
-	    auto i_prod_t = i_r_t;
-	    if(use_cstlm) {
-            	auto next_word_bigid    = sentence[i].big_id;
-            	auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
-            	auto i_cstlm_t          = dynet::expr::input(cg,{(uint32_t)logprob_from_cstlm.size()},logprob_from_cstlm);
-            	i_prod_t = i_cstlm_t + i_r_t;
-	    }
+            if (use_cstlm) {
+                auto next_word_bigid    = sentence[i].big_id;
+                auto logprob_from_cstlm = cstlm_sentence.append_symbol(next_word_bigid);
+                auto i_cstlm_t =
+                dynet::expr::input(cg, {(uint32_t)logprob_from_cstlm.size()}, logprob_from_cstlm);
+                auto i_prod_t = i_cstlm_t + i_r_t;
+                if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
+                    sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
+                    auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
+                    errs.push_back(i_err);
+                }
+            } else {
+                if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
+                    sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
+                    auto i_err = dynet::expr::pickneglogsoftmax(i_r_t, sentence[i + 1].small_id);
+                    errs.push_back(i_err);
+                }
+            }
 
             // LogSoftmax followed by PickElement can be written in one step
             // using PickNegLogSoftmax
-            if (sentence[i + 1].small_id != cstlm::UNKNOWN_SYM &&
-                sentence[i + 1].big_id != cstlm::UNKNOWN_SYM) {
-                auto i_err = dynet::expr::pickneglogsoftmax(i_prod_t, sentence[i + 1].small_id);
-                errs.push_back(i_err);
-            }
         }
         auto loss_expr = dynet::expr::sum(errs);
         logprob        = as_scalar(cg.forward(loss_expr));
@@ -278,7 +289,7 @@ const uint32_t HIDDEN_DIM               = 512;
 const bool     SAMPLE                   = true;
 const float    INIT_LEARNING_RATE       = 0.1f;
 const float    DECAY_RATE               = 0.5f;
-const uint32_t DECAY_AFTER_EPOCH	= 8;
+const uint32_t DECAY_AFTER_EPOCH        = 8;
 const uint32_t VOCAB_THRESHOLD          = 30000;
 const uint32_t NUM_ITERATIONS           = 5;
 const uint32_t DEFAULT_CSTLM_NGRAM_SIZE = 5;
@@ -299,6 +310,7 @@ private:
     uint32_t    m_num_iterations      = defaults::NUM_ITERATIONS;
     std::string m_dev_file            = "";
     uint32_t    m_cstlm_ngramsize     = defaults::DEFAULT_CSTLM_NGRAM_SIZE;
+    uint32_t    m_num_threads         = 1;
 
 private:
     void output_params()
@@ -313,6 +325,7 @@ private:
         cstlm::LOG(cstlm::INFO) << "HYBLM vocab threshold: " << m_vocab_threshold;
         cstlm::LOG(cstlm::INFO) << "HYBLM num iterations: " << m_num_iterations;
         cstlm::LOG(cstlm::INFO) << "HYBLM cstlm ngramsize: " << m_cstlm_ngramsize;
+        cstlm::LOG(cstlm::INFO) << "HYBLM num threads: " << m_num_threads;
     }
 
 
@@ -344,6 +357,12 @@ public:
     builder& num_iterations(uint32_t n)
     {
         m_num_iterations = n;
+        return *this;
+    };
+
+    builder& num_threads(uint32_t n)
+    {
+        m_num_threads = n;
         return *this;
     };
 
@@ -403,110 +422,91 @@ public:
 
     template <class t_cstlm>
     void prefill_cstlm_cache(std::vector<std::vector<word_token>>& sentences,
-			     std::vector<std::vector<word_token>>& dev_sentences,LM<t_cstlm>& hyblm)
+                             std::vector<std::vector<word_token>>& dev_sentences,
+                             size_t                                num_threads,
+                             LM<t_cstlm>&                          hyblm)
     {
-	size_t num_threads = 25;
-	size_t sents_per_thread = sentences.size() / num_threads;
-	using cache_type = std::unordered_map<uint64_t,std::vector<float>>;
-	std::vector<std::future<int>> partial_caches;
-							std::mutex m;
-	for(size_t i=0;i<num_threads;i++) {
-		auto start = sentences.begin() + (i*sents_per_thread);
-		auto end = start + sents_per_thread;
-		if( (i+1)*sents_per_thread > sentences.size()) {
-			end = sentences.end();
-		}
-		partial_caches.push_back( 
-			std::async(std::launch::async,
-				[&hyblm,start,end,i,&m]() {
-					auto itr = start;
-					auto num_sents = std::distance(start,end);
-					int processed = 0;
-					int total = 0;
-					while(itr != end) {
-						auto cur = *itr;
-        					cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,hyblm.filtered_vocab,hyblm.cstlm_ngramsize,false,hyblm.cstlm_cache);
-						for(size_t j=0;j<cur.size();j++) {
-							s.append_symbol(cur[j].big_id);
-						}
-						++itr;
-						processed++;
-						if(processed == 50) {
-							std::lock_guard<std::mutex> lock(m);
-							total += processed;
-							processed = 0;
-							cstlm::LOG(cstlm::INFO) << "["<<i<<"] " << total << "/" << num_sents; 
-						}
-					} 
-					return total;	
-				}
-			));
-	}	
-	for(size_t i=0;i<partial_caches.size();i++) {
-		auto total = partial_caches[i].get();
-		cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
-	}
-	sents_per_thread = dev_sentences.size() / num_threads;
-	partial_caches.clear();
-	for(size_t i=0;i<num_threads;i++) {
-		auto start = dev_sentences.begin() + (i*sents_per_thread);
-		auto end = start + sents_per_thread;
-		if( (i+1)*sents_per_thread > sentences.size()) {
-			end = sentences.end();
-		}
-		partial_caches.push_back( 
-			std::async(std::launch::async,
-				[&hyblm,start,end]() {
-					auto itr = start;
-					int total = 0;
-					while(itr != end) {
-						auto cur = *itr;
-        					cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,hyblm.filtered_vocab,hyblm.cstlm_ngramsize,false,hyblm.cstlm_cache);
-						for(size_t j=0;j<cur.size();j++) {
-							s.append_symbol(cur[j].big_id);
-						}
-						++itr;
-						total++;
-					}
-					return total;
-				}
-			));
-	}	
-	for(size_t i=0;i<partial_caches.size();i++) {
-		auto total = partial_caches[i].get();
-		cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
-	}
+        cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache";
+        size_t sents_per_thread = sentences.size() / num_threads;
+        using cache_type        = std::unordered_map<uint64_t, std::vector<float>>;
+        std::vector<std::future<int>> partial_caches;
+        std::mutex                    m;
+        for (size_t i = 0; i < num_threads; i++) {
+            auto start = sentences.begin() + (i * sents_per_thread);
+            auto end   = start + sents_per_thread;
+            if ((i + 1) * sents_per_thread > sentences.size()) {
+                end = sentences.end();
+            }
+            partial_caches.push_back(std::async(std::launch::async, [&hyblm, start, end, i, &m]() {
+                auto itr       = start;
+                auto num_sents = std::distance(start, end);
+                int  processed = 0;
+                int  total     = 0;
+                while (itr != end) {
+                    auto                        cur = *itr;
+                    cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,
+                                                  hyblm.filtered_vocab,
+                                                  hyblm.cstlm_ngramsize,
+                                                  false,
+                                                  hyblm.cstlm_cache);
+                    for (size_t j = 0; j < cur.size(); j++) {
+                        s.append_symbol(cur[j].big_id);
+                    }
+                    ++itr;
+                    processed++;
+                    if (processed == 50) {
+                        std::lock_guard<std::mutex> lock(m);
+                        total += processed;
+                        processed = 0;
+                        cstlm::LOG(cstlm::INFO) << "[" << i << "] " << total << "/" << num_sents;
+                    }
+                }
+                return total;
+            }));
+        }
+        for (size_t i = 0; i < partial_caches.size(); i++) {
+            auto total = partial_caches[i].get();
+            cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
+        }
+        sents_per_thread = dev_sentences.size() / num_threads;
+        partial_caches.clear();
+        for (size_t i = 0; i < num_threads; i++) {
+            auto start = dev_sentences.begin() + (i * sents_per_thread);
+            auto end   = start + sents_per_thread;
+            if ((i + 1) * sents_per_thread > sentences.size()) {
+                end = sentences.end();
+            }
+            partial_caches.push_back(std::async(std::launch::async, [&hyblm, start, end]() {
+                auto itr   = start;
+                int  total = 0;
+                while (itr != end) {
+                    auto                        cur = *itr;
+                    cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,
+                                                  hyblm.filtered_vocab,
+                                                  hyblm.cstlm_ngramsize,
+                                                  false,
+                                                  hyblm.cstlm_cache);
+                    for (size_t j = 0; j < cur.size(); j++) {
+                        s.append_symbol(cur[j].big_id);
+                    }
+                    ++itr;
+                    total++;
+                }
+                return total;
+            }));
+        }
+        for (size_t i = 0; i < partial_caches.size(); i++) {
+            auto total = partial_caches[i].get();
+            cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
+        }
     }
 
     template <class t_cstlm>
-    LM<t_cstlm>
-    train_lm(cstlm::collection& col, const t_cstlm& cstlm, word2vec::embeddings& w2v_embeddings,std::string out_file)
+    void learn_model(LM<t_cstlm>                          hyblm,
+                     std::vector<std::vector<word_token>> sentences,
+                     std::vector<std::vector<word_token>> dev_sents,
+                     std::string                          out_file)
     {
-        auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
-
-        cstlm::LOG(cstlm::INFO) << "HYBLM filter vocab";
-        auto filtered_vocab = cstlm.vocab.filter(input_file, m_vocab_threshold);
-
-        cstlm::LOG(cstlm::INFO) << "HYBLM filter w2v embeddings";
-        auto filtered_w2vemb = w2v_embeddings.filter(filtered_vocab);
-
-        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in training set";
-        auto sentences = sentence_parser::parse(input_file, filtered_vocab);
-	sentences.resize(100000);
-        cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
-
-        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
-        auto dev_sents = sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, filtered_vocab);
-        cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sents.size();
-
-        // data will be stored here
-        cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
-        LM<t_cstlm> hyblm(
-        cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
-
-        cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache";
-	prefill_cstlm_cache(sentences,dev_sents,hyblm);
-
         cstlm::LOG(cstlm::INFO) << "HYBLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(hyblm.model);
         sgd.eta0 = m_start_learning_rate;
@@ -516,8 +516,8 @@ public:
         size_t       cur_sentence_id = 0;
         cstlm::LOG(cstlm::INFO) << "HYBLM start learning";
 
-        int finish_training = 0;
-	double best_dev_pplx = 99999;
+        int    finish_training = 0;
+        double best_dev_pplx   = 99999;
         for (size_t i = 1; i <= m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
@@ -530,7 +530,7 @@ public:
                 total_tokens += sentence.size();
                 dynet::ComputationGraph cg;
 
-                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout,i >= 10);
+                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout, i >= 10);
                 loss += dynet::as_scalar(cg.forward(loss_expr));
 
                 cg.backward(loss_expr);
@@ -555,7 +555,7 @@ public:
                 double log_probs = 0;
                 size_t tokens    = 0;
                 for (const auto& sentence : dev_sents) {
-                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence,i >= 10);
+                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence, i >= 10);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
                 }
@@ -567,9 +567,9 @@ public:
                     finish_training++;
                 } else {
                     cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx improved. we continue.";
-		    finish_training = 0;
-                    best_dev_pplx = dev_pplx;
-            	    hyblm.store(out_file);
+                    finish_training = 0;
+                    best_dev_pplx   = dev_pplx;
+                    hyblm.store(out_file);
                 }
             }
 
@@ -577,15 +577,58 @@ public:
                 break;
             }
 
-	    if(i >= m_decay_after_epoch) {
-            	cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
-            	sgd.eta *= m_decay_rate;
-		if(i > 10) {
-			sgd.eta = m_start_learning_rate;
-		}
-	    }
+            if (i >= m_decay_after_epoch) {
+                cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
+                sgd.eta *= m_decay_rate;
+                if (i > 10) {
+                    sgd.eta = m_start_learning_rate;
+                }
+            }
         }
+    }
 
+
+    template <class t_cstlm>
+    LM<t_cstlm> train_lm(cstlm::collection&    col,
+                         const t_cstlm&        cstlm,
+                         word2vec::embeddings& w2v_embeddings,
+                         std::string           out_file)
+    {
+        auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
+
+        cstlm::LOG(cstlm::INFO) << "HYBLM filter vocab";
+        auto filtered_vocab = cstlm.vocab.filter(input_file, m_vocab_threshold);
+
+        cstlm::LOG(cstlm::INFO) << "HYBLM filter w2v embeddings";
+        auto filtered_w2vemb = w2v_embeddings.filter(filtered_vocab);
+
+        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in training set";
+        auto sentences = sentence_parser::parse(input_file, filtered_vocab);
+        cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
+
+        cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
+        auto dev_sents = sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, filtered_vocab);
+        cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sents.size();
+
+        // data will be stored here
+        cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
+        LM<t_cstlm> hyblm(
+        cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
+
+
+        std::thread cache_thread(
+        &builder::prefill_cstlm_cache, sentences, dev_sents, m_num_threads - 1, hyblm);
+
+        bool use_cstlm = false;
+
+        std::thread model_thread(
+        &builder::learn_model, hyblm, sentences, dev_sents, out_file, use_cstlm);
+
+        cache_thread.join();
+        model_thread.join();
+
+        use_cstlm = true;
+        learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);
 
         return hyblm;
     }
@@ -604,7 +647,7 @@ public:
         auto hyblm_file = file_name(col);
         if (!cstlm::utils::file_exists(hyblm_file)) {
             dynet::initialize(argc, argv);
-            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings,hyblm_file);
+            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings, hyblm_file);
         }
         dynet::cleanup();
         dynet::initialize(argc, argv);
