@@ -31,7 +31,7 @@ public:
     LMQueryMKNE(const t_idx*                     idx,
                 const vocab_uncompressed<false>& vocab,
                 uint64_t                         ngramsize,
-                bool                             start_sentence ,
+                bool                             /*start_sentence*/ ,
 		std::unordered_map<uint64_t,std::vector<float>>& cache)
         : m_dest_vocab(&vocab), m_local_state(idx, ngramsize, false),local_cache(cache)
     {

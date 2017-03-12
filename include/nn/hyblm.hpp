@@ -421,14 +421,13 @@ public:
     }
 
     template <class t_cstlm>
-    void prefill_cstlm_cache(std::vector<std::vector<word_token>>& sentences,
-                             std::vector<std::vector<word_token>>& dev_sentences,
+    void prefill_cstlm_cache(const std::vector<std::vector<word_token>>& sentences,
+                             const std::vector<std::vector<word_token>>& dev_sentences,
                              size_t                                num_threads,
                              LM<t_cstlm>&                          hyblm)
     {
         cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache";
         size_t sents_per_thread = sentences.size() / num_threads;
-        using cache_type        = std::unordered_map<uint64_t, std::vector<float>>;
         std::vector<std::future<int>> partial_caches;
         std::mutex                    m;
         for (size_t i = 0; i < num_threads; i++) {
@@ -505,7 +504,8 @@ public:
     void learn_model(LM<t_cstlm>                          hyblm,
                      std::vector<std::vector<word_token>> sentences,
                      std::vector<std::vector<word_token>> dev_sents,
-                     std::string                          out_file)
+                     std::string                          out_file,
+		     bool use_cstlm)
     {
         cstlm::LOG(cstlm::INFO) << "HYBLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(hyblm.model);
@@ -530,7 +530,7 @@ public:
                 total_tokens += sentence.size();
                 dynet::ComputationGraph cg;
 
-                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout, i >= 10);
+                auto loss_expr = hyblm.build_lm_cgraph(sentence, cg, m_dropout, use_cstlm);
                 loss += dynet::as_scalar(cg.forward(loss_expr));
 
                 cg.backward(loss_expr);
@@ -555,7 +555,7 @@ public:
                 double log_probs = 0;
                 size_t tokens    = 0;
                 for (const auto& sentence : dev_sents) {
-                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence, i >= 10);
+                    auto eval_res = hyblm.evaluate_sentence_logprob(sentence, use_cstlm);
                     log_probs += eval_res.logprob;
                     tokens += eval_res.tokens;
                 }
@@ -573,16 +573,13 @@ public:
                 }
             }
 
-            if (i >= 10 && finish_training >= 8) {
+            if (finish_training >= 5) {
                 break;
             }
 
             if (i >= m_decay_after_epoch) {
                 cstlm::LOG(cstlm::INFO) << "HYBLM update learning rate.";
                 sgd.eta *= m_decay_rate;
-                if (i > 10) {
-                    sgd.eta = m_start_learning_rate;
-                }
             }
         }
     }
@@ -615,17 +612,12 @@ public:
         LM<t_cstlm> hyblm(
         cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
-
-        std::thread cache_thread(
-        &builder::prefill_cstlm_cache, sentences, dev_sents, m_num_threads - 1, hyblm);
+        std::thread cache_thread( [&] { prefill_cstlm_cache(sentences,dev_sents,m_num_threads-1,hyblm); });
 
         bool use_cstlm = false;
-
-        std::thread model_thread(
-        &builder::learn_model, hyblm, sentences, dev_sents, out_file, use_cstlm);
+        learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);
 
         cache_thread.join();
-        model_thread.join();
 
         use_cstlm = true;
         learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);

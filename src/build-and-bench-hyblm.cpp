@@ -52,9 +52,6 @@ cmdargs_t parse_args(int argc, const char* argv[])
             case 'c':
                 args.collection_dir = optarg;
                 break;
-            case 't':
-                num_cstlm_threads = std::atoi(optarg);
-                break;
         }
     }
     if (args.collection_dir == "") {
@@ -177,6 +174,7 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
                   .layers(2)
                   .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
                   .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
+                  .num_threads(num_cstlm_threads)
                   .start_learning_rate(0.1)
                   .decay_after_epoch(8)
                   .decay_rate(0.5)
@@ -191,6 +189,7 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
 int main(int argc, char** argv)
 {
     enable_logging = true;
+    num_cstlm_threads = 27;
 
     /* parse command line */
     cmdargs_t args = parse_args(argc, (const char**)argv);
