@@ -420,45 +420,135 @@ public:
         return fn.str();
     }
 
+    struct trie_node {
+        std::unordered_map<uint64_t, trie_node> children;
+        template <class t_itr>
+        trie_node(t_itr itr, t_itr end)
+        {
+            if (itr != end) {
+                auto sym  = itr->big_id;
+                auto mitr = children.find(sym);
+                if (mitr != children.end()) {
+                    mitr.second.insert(itr + 1, end);
+                } else {
+                    children[sym] = trie_node(itr + 1, end);
+                }
+            }
+        }
+        template <class t_itr>
+        insert(t_itr itr, t_itr end)
+        {
+            if (itr != end) {
+                auto sym  = itr->big_id;
+                auto mitr = children.find(sym);
+                if (mitr != children.end()) {
+                    mitr.second.insert(itr + 1, end);
+                } else {
+                    children[sym] = trie_node(itr + 1, end);
+                }
+            }
+        }
+    };
+
     template <class t_cstlm>
     void prefill_cstlm_cache(const std::vector<std::vector<word_token>>& sentences,
                              const std::vector<std::vector<word_token>>& dev_sentences,
-                             size_t                                num_threads,
-                             LM<t_cstlm>&                          hyblm)
+                             size_t                                      num_threads,
+                             LM<t_cstlm>&                                hyblm)
     {
+        cstlm::LOG(cstlm::INFO) << "HYBLM determine all ngrams";
+        std::unordered_map<uint64_t, trie_node> ngrams;
+        for (const auto& s : sentences) {
+            auto itr = s.begin();
+            while (end != s.end()) {
+                auto sym  = itr->big_id;
+                auto mitr = ngrams.find(sym);
+                if (mitr != ngrams.end()) {
+                    mitr.second.insert(itr + 1, end);
+                } else {
+                    ngrams[sym] = trie_node(itr + 1, end);
+                }
+                ++itr;
+                ++end;
+            }
+            // insert last
+            auto sym  = itr->big_id;
+            auto mitr = ngrams.find(sym);
+            if (mitr != ngrams.end()) {
+                mitr.second.insert(itr + 1, s.end());
+            } else {
+                ngrams[sym] = trie_node(itr + 1, s.end());
+            }
+            ++itr;
+            ++end;
+        }
+        for (const auto& s : dev_sentences) {
+            auto itr = s.begin();
+            while (end != s.end()) {
+                auto sym  = itr->big_id;
+                auto mitr = ngrams.find(sym);
+                if (mitr != ngrams.end()) {
+                    mitr.second.insert(itr + 1, end);
+                } else {
+                    ngrams[sym] = trie_node(itr + 1, end);
+                }
+                ++itr;
+                ++end;
+            }
+            // insert last
+            auto sym  = itr->big_id;
+            auto mitr = ngrams.find(sym);
+            if (mitr != ngrams.end()) {
+                mitr.second.insert(itr + 1, s.end());
+            } else {
+                ngrams[sym] = trie_node(itr + 1, s.end());
+            }
+            ++itr;
+            ++end;
+        }
+
+        void fill_cache(
+        cstlm::LMQueryMKNE<t_cstlm> s, uint64_t cur_sym, const trie_node& cur_trie_node)
+        {
+            s.append_symbol(cur_sym);
+            auto itr = cur_trie_node.children.begin();
+            auto end = cur_trie_node.children.end();
+            while (itr != end) {
+                fill_cache(s, itr->first, itr->second);
+                ++itr;
+            }
+        }
+
         cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache";
-        size_t sents_per_thread = sentences.size() / num_threads;
+        size_t                        sents_per_thread = ngrams.size() / num_threads;
         std::vector<std::future<int>> partial_caches;
         std::mutex                    m;
         for (size_t i = 0; i < num_threads; i++) {
-            auto start = sentences.begin() + (i * sents_per_thread);
+            auto start = ngrams.begin() + (i * sents_per_thread);
             auto end   = start + sents_per_thread;
-            if ((i + 1) * sents_per_thread > sentences.size()) {
-                end = sentences.end();
+            if ((i + 1) * sents_per_thread > ngrams.size()) {
+                end = ngrams.end();
             }
             partial_caches.push_back(std::async(std::launch::async, [&hyblm, start, end, i, &m]() {
                 auto itr       = start;
                 auto num_sents = std::distance(start, end);
-                int  processed = 0;
                 int  total     = 0;
                 while (itr != end) {
-                    auto                        cur = *itr;
+                    auto                        cur_sym       = itr->first;
+                    const auto&                 cur_trie_node = itr->second;
                     cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,
                                                   hyblm.filtered_vocab,
                                                   hyblm.cstlm_ngramsize,
                                                   false,
                                                   hyblm.cstlm_cache);
-                    for (size_t j = 0; j < cur.size(); j++) {
-                        s.append_symbol(cur[j].big_id);
-                    }
+
+                    fill_cache(s, cur_sym, cur_trie_node);
                     ++itr;
                     processed++;
-                    if (processed == 50) {
-                        std::lock_guard<std::mutex> lock(m);
-                        total += processed;
-                        processed = 0;
-                        cstlm::LOG(cstlm::INFO) << "[" << i << "] " << total << "/" << num_sents;
-                    }
+                    std::lock_guard<std::mutex> lock(m);
+                    total += processed;
+                    cstlm::LOG(cstlm::INFO) << "[" << i << "] " << total << "/" << num_sents
+                                            << " cache size = " << hyblm.cstlm_cache.size();
                 }
                 return total;
             }));
@@ -505,7 +595,7 @@ public:
                      std::vector<std::vector<word_token>> sentences,
                      std::vector<std::vector<word_token>> dev_sents,
                      std::string                          out_file,
-		     bool use_cstlm)
+                     bool                                 use_cstlm)
     {
         cstlm::LOG(cstlm::INFO) << "HYBLM init SGD trainer";
         dynet::SimpleSGDTrainer sgd(hyblm.model);
@@ -612,7 +702,8 @@ public:
         LM<t_cstlm> hyblm(
         cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
-        std::thread cache_thread( [&] { prefill_cstlm_cache(sentences,dev_sents,m_num_threads-1,hyblm); });
+        std::thread cache_thread(
+        [&] { prefill_cstlm_cache(sentences, dev_sents, m_num_threads - 1, hyblm); });
 
         bool use_cstlm = false;
         learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);

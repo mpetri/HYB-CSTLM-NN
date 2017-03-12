@@ -26,14 +26,22 @@ namespace cstlm {
 template <class t_idx>
 class LMQueryMKNE {
     using vector_type = std::vector<float>;
+
 public:
     LMQueryMKNE() { m_dest_vocab = nullptr; }
     LMQueryMKNE(const t_idx*                     idx,
                 const vocab_uncompressed<false>& vocab,
                 uint64_t                         ngramsize,
-                bool                             /*start_sentence*/ ,
-		std::unordered_map<uint64_t,std::vector<float>>& cache)
-        : m_dest_vocab(&vocab), m_local_state(idx, ngramsize, false),local_cache(cache)
+                bool /*start_sentence*/,
+                std::unordered_map<uint64_t, std::vector<float>>& cache)
+        : m_dest_vocab(&vocab), m_local_state(idx, ngramsize, false), local_cache(cache)
+    {
+    }
+
+    LMQueryMKNE(const LMQueryMKNE& other)
+        : m_dest_vocab(other.m_dest_vocab)
+        , m_local_state(other.m_local_state)
+        , local_cache(other.local_cache)
     {
     }
 
@@ -42,34 +50,35 @@ public:
         m_local_state.append_symbol(symbol);
 
         /* cache first */
-	static std::mutex m;
-        auto cur_hash = m_local_state.hash();
-	{
-		std::lock_guard<std::mutex> lock(m);
-        	auto itr      = local_cache.find(cur_hash);
-        	if (itr != local_cache.end()) {
-            		return itr->second;
-        	}
-	}
+        static std::mutex m;
+        auto              cur_hash = m_local_state.hash();
+        {
+            std::lock_guard<std::mutex> lock(m);
+            auto                        itr = local_cache.find(cur_hash);
+            if (itr != local_cache.end()) {
+                return itr->second;
+            }
+        }
 
         /* compute if we can't find it */
-	vector_type log_prob_vec(m_dest_vocab->size(),-99);
+        vector_type log_prob_vec(m_dest_vocab->size(), -99);
         //auto wordsfollowing = m_local_state.words_following();
         for (const auto& word_itr : *m_dest_vocab) {
-	    auto word = word_itr.second;
+            auto word           = word_itr.second;
             auto mapped_word_id = m_dest_vocab->small2big(word);
             if (word != UNKNOWN_SYM && mapped_word_id == UNKNOWN_SYM) {
-                std::cerr <<  "TODO UNK IN BIG BUT NOT IN SMALL???? " << word << " - " <<  mapped_word_id  << std::endl;
+                std::cerr << "TODO UNK IN BIG BUT NOT IN SMALL???? " << word << " - "
+                          << mapped_word_id << std::endl;
                 continue;
             }
-            auto state_copy              = m_local_state;
-            auto logprob                    = state_copy.append_symbol(mapped_word_id);
+            auto state_copy    = m_local_state;
+            auto logprob       = state_copy.append_symbol(mapped_word_id);
             log_prob_vec[word] = logprob;
         }
 
         // add to cache if it is a bit more complex to compute
         {
-	    std::lock_guard<std::mutex> lock(m);
+            std::lock_guard<std::mutex> lock(m);
             local_cache[cur_hash] = log_prob_vec;
         }
         return log_prob_vec;
