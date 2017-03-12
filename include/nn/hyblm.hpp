@@ -676,10 +676,11 @@ public:
 
 
     template <class t_cstlm>
-    LM<t_cstlm> train_lm(cstlm::collection&    col,
-                         const t_cstlm&        cstlm,
-                         word2vec::embeddings& w2v_embeddings,
-                         std::string           out_file)
+    void train_lm(cstlm::collection&    col,
+                  const t_cstlm&        cstlm,
+                  word2vec::embeddings& w2v_embeddings,
+                  LM<t_cstlm>           hyblm,
+                  std::string           out_file)
     {
         auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
 
@@ -699,8 +700,6 @@ public:
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
-        LM<t_cstlm> hyblm(
-        cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
 
         std::thread cache_thread(
         [&] { prefill_cstlm_cache(sentences, dev_sents, m_num_threads - 1, hyblm); });
@@ -717,11 +716,11 @@ public:
     }
 
     template <class t_cstlm>
-    LM<t_cstlm> train_or_load(int                   argc,
-                              char**                argv,
-                              cstlm::collection&    col,
-                              const t_cstlm&        cstlm,
-                              word2vec::embeddings& w2v_embeddings)
+    LM<t_cstlm> train(int                   argc,
+                      char**                argv,
+                      cstlm::collection&    col,
+                      const t_cstlm&        cstlm,
+                      word2vec::embeddings& w2v_embeddings)
     {
         // (0) output params
         output_params();
@@ -730,7 +729,34 @@ public:
         auto hyblm_file = file_name(col);
         if (!cstlm::utils::file_exists(hyblm_file)) {
             dynet::initialize(argc, argv);
-            auto hybl_lm = train_lm(col, cstlm, w2v_embeddings, hyblm_file);
+            auto        hybl_lm = train_lm(col, cstlm, w2v_embeddings, hyblm_file);
+            LM<t_cstlm> hyblm(
+            cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
+            train_lm(col, cstlm, w2v_embeddings, hyb_lm, hyblm_file);
+        } else {
+            LM<t_cstlm> hyb_lm(cstlm, hyblm_file);
+            train_lm(col, cstlm, w2v_embeddings, hyb_lm, hyblm_file);
+        }
+        dynet::cleanup();
+        dynet::initialize(argc, argv);
+        return LM<t_cstlm>(cstlm, hyblm_file);
+    }
+
+    template <class t_cstlm>
+    LM<t_cstlm> load(int                   argc,
+                     char**                argv,
+                     cstlm::collection&    col,
+                     const t_cstlm&        cstlm,
+                     word2vec::embeddings& w2v_embeddings)
+    {
+        // (0) output params
+        output_params();
+
+        // (1) if exists. just load otherwise train and store
+        auto hyblm_file = file_name(col);
+        if (!cstlm::utils::file_exists(hyblm_file)) {
+            std::cerr << "hyblm file does not exist" << std::endl;
+            exit(EXIT_FAILURE);
         }
         dynet::cleanup();
         dynet::initialize(argc, argv);

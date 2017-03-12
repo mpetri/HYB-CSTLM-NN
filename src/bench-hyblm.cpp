@@ -88,25 +88,22 @@ std::vector<std::vector<word_token>> load_and_parse_file(std::string file_name, 
 template <class t_idx>
 void evaluate_sentences(std::vector<std::vector<word_token>>& sentences, t_idx& hyb_lm)
 {
-    double   logprobs = 0;
-    uint64_t M          = 0;
-    uint64_t OOV        = 0;
-    uint64_t sent_size  = 0;
+    double   logprobs  = 0;
+    uint64_t M         = 0;
+    uint64_t OOV       = 0;
+    uint64_t sent_size = 0;
     for (auto sentence : sentences) {
-	for(size_t i=0;i<sentence.size();i++) {
-		if(sentence[i].big_id == UNKNOWN_SYM &&
-		   sentence[i].small_id == UNKNOWN_SYM ) OOV++;
-	}
+        for (size_t i = 0; i < sentence.size(); i++) {
+            if (sentence[i].big_id == UNKNOWN_SYM && sentence[i].small_id == UNKNOWN_SYM) OOV++;
+        }
         auto eval_res = hyb_lm.evaluate_sentence_logprob(sentence);
         M += eval_res.tokens;
         logprobs += eval_res.logprob;
-	sent_size += sentence.size();
+        sent_size += sentence.size();
     }
-    double perplexity = exp( logprobs / M );
+    double perplexity = exp(logprobs / M);
     LOG(INFO) << "HYBLM PPLX = " << std::setprecision(10) << perplexity
-              << " (logprob = " << logprobs 
-	      << ";predicted tokens = " << M 
-	      << ";OOV = " << OOV
+              << " (logprob = " << logprobs << ";predicted tokens = " << M << ";OOV = " << OOV
               << ";#W = " << sent_size << ")";
 }
 
@@ -163,11 +160,11 @@ t_idx load_or_create_cstlm(collection& col)
 
 
 template <class t_cstlm>
-hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
-                                        char**                argv,
-                                        collection&           collection,
-                                        const t_cstlm&        cstlm,
-                                        word2vec::embeddings& w2v_embeddings)
+hyblm::LM<t_cstlm> load_hyblm(int                   argc,
+                              char**                argv,
+                              collection&           collection,
+                              const t_cstlm&        cstlm,
+                              word2vec::embeddings& w2v_embeddings)
 {
     auto hyb_lm = hyblm::builder{}
                   .dropout(0.3)
@@ -181,14 +178,14 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
                   .num_iterations(30)
                   .cstlm_ngramsize(5)
                   .dev_file(collection.file_map[KEY_DEV])
-                  .train_or_load(argc, argv, collection, cstlm, w2v_embeddings);
+                  .load(argc, argv, collection, cstlm, w2v_embeddings);
 
     return hyb_lm;
 }
 
 int main(int argc, char** argv)
 {
-    enable_logging = true;
+    enable_logging    = true;
     num_cstlm_threads = 27;
 
     /* parse command line */
@@ -205,7 +202,7 @@ int main(int argc, char** argv)
     auto word_embeddings = load_or_create_word2vec_embeddings(col);
 
     /* (3) create the cstlm model */
-    auto hyblm = load_or_create_hyblm(argc, argv, col, cstlm, word_embeddings);
+    auto hyblm = load_hyblm(argc, argv, col, cstlm, word_embeddings);
 
     /* (4) parse test file */
     auto test_file      = col.file_map[KEY_TEST];
