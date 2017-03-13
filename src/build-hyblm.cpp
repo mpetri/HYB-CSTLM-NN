@@ -172,7 +172,7 @@ hyblm::LM<t_cstlm> load_or_create_hyblm(int                   argc,
                   .vocab_threshold(nnlm::constants::VOCAB_THRESHOLD)
                   .hidden_dimensions(nnlm::constants::HIDDEN_DIMENSIONS)
                   .num_threads(num_cstlm_threads)
-                  .start_learning_rate(0.1)
+                  .start_learning_rate(0.01)
                   .decay_after_epoch(8)
                   .decay_rate(0.5)
                   .num_iterations(30)
