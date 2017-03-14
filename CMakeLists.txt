@@ -60,6 +60,8 @@ if( TIMINGS )
     endif()
 endif()
 
+add_subdirectory(external/parallel-range-lite)
+
 add_subdirectory(external/sdsl-lite)
 
 set(EIGEN3_INCLUDE_DIR ${CMAKE_HOME_DIRECTORY}/external/eigen)
@@ -72,6 +74,7 @@ include_directories(${CMAKE_HOME_DIRECTORY}/include/
                     ${CMAKE_HOME_DIRECTORY}/external/eigen
                     ${CMAKE_HOME_DIRECTORY}/external/googletest/include
                     ${CMAKE_HOME_DIRECTORY}/external/mem_monitor/
+                    ${CMAKE_BINARY_DIR}/external/parallel-range-lite/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/include
                     ${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort/include/
                     )
@@ -113,7 +116,7 @@ target_link_libraries(precompute-ngrams.x sdsl pthread divsufsort divsufsort64 c
 
 if(CUDA_DYNET)
 target_link_libraries(build-and-bench-rnnlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
-target_link_libraries(build-and-bench-cstlm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
+target_link_libraries(build-and-bench-cstlm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(build-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(bench-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 else()

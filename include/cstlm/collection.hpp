@@ -12,7 +12,7 @@
 #include "utils.hpp"
 
 #include "parallel_sa_construct.hpp"
-
+#include "parallel-range.h"
 
 namespace cstlm {
 
@@ -184,8 +184,8 @@ void construct_SA(collection& col)
 {
     auto sa_path = col.file_map[KEY_CSTLM_TEXT] + "." + KEY_SA;
     if (utils::file_exists(sa_path)) {
-	return;
-    } 
+        return;
+    }
     lm_construct_timer timer(KEY_SA);
     if (col.alphabet == alphabet_type::byte_alphabet) {
         sdsl::int_vector<8> text;
@@ -198,9 +198,20 @@ void construct_SA(collection& col)
         sdsl::store_to_file(sa, sa_path);
         col.file_map[KEY_SA] = sa_path;
     } else {
-        sdsl::int_vector<> sa;
-        sdsl::qsufsort::construct_sa(sa, col.file_map[KEY_CSTLM_TEXT].c_str(), 0);
-        sdsl::store_to_file(sa, sa_path);
+        sdsl::int_vector<64> text;
+        {
+            sdsl::int_vector<> org_text;
+            sdsl::load_from_file(org_text, col.file_map[KEY_CSTLM_TEXT].c_str());
+            text.resize(org_text.size());
+            for (size_t i = 0; i < text.size(); i++)
+                text[i]   = org_text[i];
+        }
+        sdsl::int_vector<> sSA(text.size());
+        uint64_t*          SA = sSA.data();
+        uint64_t*          T  = text.data();
+        parallelrangelite(T, SA, text.size());
+        sdsl::util::bit_compress(sSA);
+        sdsl::store_to_file(sSA, sa_path);
         col.file_map[KEY_SA] = sa_path;
     }
 }
