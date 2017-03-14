@@ -207,6 +207,7 @@ void construct_SA(collection& col)
                 text[i]   = org_text[i];
         }
         sdsl::int_vector<> sSA(text.size());
+	for(size_t i=0;i<sSA.size();i++) sSA[i] = i;
         uint64_t*          SA = sSA.data();
         uint64_t*          T  = text.data();
         parallelrangelite(T, SA, text.size());

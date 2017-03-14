@@ -17,6 +17,11 @@ else()
     set(BACKEND "eigen")
 endif()
 
+macro(remove_cxx_flag flag)
+  string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "${flag}" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+endmacro()
+
 # C++11 compiler Check
 if(NOT CMAKE_CXX_COMPILER_VERSION) # work around for cmake versions smaller than 2.8.10
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
@@ -33,7 +38,8 @@ endif()
 if( CMAKE_COMPILER_IS_GNUCXX )
     append_cxx_compiler_flags("-g -std=c++11 -Wall -Wextra " "GCC" CMAKE_CXX_FLAGS)
     append_cxx_compiler_flags("-ffast-math -funroll-loops" "GCC" CMAKE_CXX_FLAGS)
-    append_cxx_compiler_flags("-fcilkplus -fopenmp" "GCC" CMAKE_CXX_FLAGS)
+    append_cxx_compiler_flags("-fcilkplus -fopenmp -O2" "GCC" CMAKE_CXX_FLAGS)
+    remove_cxx_flag("-O3")
 else()
     append_cxx_compiler_flags("-g -std=c++11 -Wall" "CLANG" CMAKE_CXX_FLAGS)
     append_cxx_compiler_flags("-stdlib=libc++" "CLANG" CMAKE_CXX_FLAGS)
@@ -52,6 +58,7 @@ else()
 	message(STATUS "CPU does NOT support fast popcnt")
 endif()
 
+remove_cxx_flag("-O3")
 if( TIMINGS )
     if( CMAKE_COMPILER_IS_GNUCXX )
         append_cxx_compiler_flags("-DENABLE_CSTLM_TIMINGS" "GCC" CMAKE_CXX_FLAGS)
@@ -89,7 +96,7 @@ add_executable(build-index.x src/build-index.cpp)
 target_link_libraries(build-index.x sdsl pthread divsufsort divsufsort64 cilkrts)
 
 add_executable(create-collection.x src/create-collection.cpp)
-target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64 cilkrts)
+target_link_libraries(create-collection.x sdsl pthread divsufsort divsufsort64 cilkrts prange)
 
 add_executable(query-index-knm.x src/query-index-knm.cpp)
 target_link_libraries(query-index-knm.x sdsl pthread divsufsort divsufsort64 cilkrts)
@@ -104,6 +111,7 @@ add_test(TestsPass unit-test.x)
 #add_executable(train-hyblm.x src/train-hyblm.cpp)
 #target_link_libraries(train-hyblm.x sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 
+remove_cxx_flag("-O3")
 add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
 
 add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
