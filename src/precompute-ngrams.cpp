@@ -101,6 +101,7 @@ create_sorted_ngrams(std::vector<std::vector<word_token>>& sentences, size_t ngr
             while (itr != end) {
                 cur_gram.push_back(itr->big_id);
                 ++itr;
+                ++end;
             }
             ngram_set.insert(cur_gram);
             ++itr;
