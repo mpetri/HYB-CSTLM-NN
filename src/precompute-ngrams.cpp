@@ -283,7 +283,7 @@ int main(int argc, char** argv)
 
     /* (1) parse collection directory and create CSTLM index */
     collection col(args.collection_dir);
-
+    col.file_map[KEY_CSTLM_TEXT] = col.file_map[KEY_BIG_TEXT];
 
     /* (2) create the cstlm model */
     auto           cstlm           = load_or_create_cstlm<wordlm>(col);
