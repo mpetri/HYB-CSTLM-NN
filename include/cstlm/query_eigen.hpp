@@ -61,12 +61,13 @@ public:
         }
 
         /* compute if we can't find it */
-        vector_type log_prob_vec(m_dest_vocab->size(), -99);
+        static vector_type log_prob_vec(m_dest_vocab->size(), -99);
         //auto wordsfollowing = m_local_state.words_following();
         for (const auto& word_itr : *m_dest_vocab) {
             auto word           = word_itr.second;
             auto mapped_word_id = m_dest_vocab->small2big(word);
             if (word != UNKNOWN_SYM && mapped_word_id == UNKNOWN_SYM) {
+                log_prob_vec[mapped_word_id] = -99;
                 std::cerr << "TODO UNK IN BIG BUT NOT IN SMALL???? " << word << " - "
                           << mapped_word_id << std::endl;
                 continue;
