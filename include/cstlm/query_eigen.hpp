@@ -49,12 +49,9 @@ public:
     {
         m_local_state.append_symbol(symbol);
 
-        /* cache first */
-        static std::mutex m;
-        auto              cur_hash = m_local_state.hash();
+        auto cur_hash = m_local_state.hash();
         {
-            std::lock_guard<std::mutex> lock(m);
-            auto                        itr = local_cache.find(cur_hash);
+            auto itr = local_cache.find(cur_hash);
             if (itr != local_cache.end()) {
                 return itr->second;
             }
@@ -78,7 +75,6 @@ public:
 
         // add to cache if it is a bit more complex to compute
         {
-            std::lock_guard<std::mutex> lock(m);
             local_cache[cur_hash] = log_prob_vec;
         }
         return log_prob_vec;
