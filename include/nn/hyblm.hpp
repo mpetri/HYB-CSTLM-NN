@@ -434,6 +434,22 @@ public:
 
         int    finish_training = 0;
         double best_dev_pplx   = 99999;
+        if (m_dev_file != "") {
+            cstlm::LOG(cstlm::INFO) << "HYBLM evaluate start dev pplx.";
+            double log_probs = 0;
+            size_t tokens    = 0;
+            for (const auto& sentence : dev_sents) {
+                auto eval_res = hyblm.evaluate_sentence_logprob(sentence, use_cstlm);
+                log_probs += eval_res.logprob;
+                tokens += eval_res.tokens;
+            }
+            double dev_pplx = exp(log_probs / tokens);
+            cstlm::LOG(cstlm::INFO) << "HYBLM dev pplx= " << dev_pplx
+                                    << " current best = " << best_dev_pplx;
+            if (dev_pplx < best_dev_pplx) {
+                best_dev_pplx = dev_pplx;
+            }
+        }
         for (size_t i = 1; i <= m_num_iterations; i++) {
             cstlm::LOG(cstlm::INFO) << "HYBLM shuffle sentences";
             std::shuffle(sentences.begin(), sentences.end(), gen);
