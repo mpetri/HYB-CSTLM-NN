@@ -416,156 +416,6 @@ public:
         return fn.str();
     }
 
-    struct trie_node {
-	trie_node() {};
-        std::unordered_map<uint64_t, trie_node*> children;
-	size_t total_ngrams = 0;
-        template <class t_itr>
-        trie_node(t_itr itr, t_itr end)
-        {
-            if (itr != end) {
-                auto sym  = itr->big_id;
-                auto mitr = children.find(sym);
-                if (mitr != children.end()) {
-                    total_ngrams += mitr->second->insert(itr + 1, end);
-                } else {
-                    children[sym] = new trie_node(itr + 1, end);
-		    total_ngrams += children[sym]->total_ngrams;
-                }
-            } else {
-		total_ngrams = 1;
-	    }
-        }
-        template <class t_itr>
-        size_t insert(t_itr itr, t_itr end)
-        {
-	    size_t before = total_ngrams;
-            if (itr != end) {
-                auto sym  = itr->big_id;
-                auto mitr = children.find(sym);
-                if (mitr != children.end()) {
-                    total_ngrams += mitr->second->insert(itr + 1, end);
-                } else {
-                    children[sym] = new trie_node(itr + 1, end);
-		    total_ngrams += children[sym]->total_ngrams;
-                }
-            } else {
-		return 1;
-	    }
-	    return total_ngrams - before;
-        }
-	~trie_node() {
-		auto itr = children.begin();
-		auto end = children.end();
-	        while(itr != end) {
-			delete itr->second;
-			itr->second = nullptr;
-			++itr;
-		} 	
-	}
-    };
-
-	template<class t_cstlm>
-        void fill_cache(cstlm::LMQueryMKNE<t_cstlm> s, uint64_t cur_sym, const trie_node& cur_trie_node)
-        {
-            s.append_symbol(cur_sym);
-            auto itr = cur_trie_node.children.begin();
-            auto end = cur_trie_node.children.end();
-            while (itr != end) {
-                fill_cache(s, itr->first, *itr->second);
-                ++itr;
-            }
-        }
-
-
-    template <class t_cstlm>
-    void prefill_cstlm_cache(const std::vector<std::vector<word_token>>& sentences,
-                             const std::vector<std::vector<word_token>>& dev_sentences,
-                             size_t                                      num_threads,
-                             LM<t_cstlm>&                                hyblm)
-    {
-        cstlm::LOG(cstlm::INFO) << "HYBLM determine all ngrams";
-        std::unordered_map<uint64_t, trie_node> ngrams;
-        for (const auto& s : sentences) {
-            auto itr = s.begin();
-	    auto end = s.begin() + m_cstlm_ngramsize;
-            while (end <= s.end()) {
-                auto sym  = itr->big_id;
-                auto mitr = ngrams.find(sym);
-                if (mitr != ngrams.end()) {
-                    mitr->second.insert(itr + 1, end);
-                } else {
-                    ngrams[sym] = trie_node(itr + 1, end);
-                }
-                ++itr;
-                ++end;
-            }
-        }
-        cstlm::LOG(cstlm::INFO) << "HYBLM AAAA";
-        for (const auto& s : dev_sentences) {
-            auto itr = s.begin();
-	    auto end = s.begin() + m_cstlm_ngramsize;
-            while (end != s.end()) {
-                auto sym  = itr->big_id;
-                auto mitr = ngrams.find(sym);
-                if (mitr != ngrams.end()) {
-                    mitr->second.insert(itr + 1, end);
-                } else {
-                    ngrams[sym] = trie_node(itr + 1, end);
-                }
-                ++itr;
-                ++end;
-            }
-        }
-	std::vector<std::pair<uint64_t,trie_node>> ngram_subtrees;
-	size_t total_ngrams = 0;
-	for(const auto& st : ngrams) {
-		ngram_subtrees.emplace_back(st.first,st.second);
-		size_t cur_num_grams = ngram_subtrees.back().second.total_ngrams;
-		cstlm::LOG(cstlm::INFO) << "found " << cur_num_grams;
-		total_ngrams += cur_num_grams;
-	}
-        cstlm::LOG(cstlm::INFO) << "HYBLM prefill cstlm cache for " << total_ngrams;
-        size_t                        sents_per_thread = ngrams.size() / num_threads;
-        std::vector<std::future<int>> partial_caches;
-        std::mutex                    m;
-        for (size_t i = 0; i < num_threads; i++) {
-            auto start = ngram_subtrees.begin() + (i * sents_per_thread);
-            auto end   = start + sents_per_thread;
-            if ((i + 1) * sents_per_thread > ngram_subtrees.size()) {
-                end = ngram_subtrees.end();
-            }
-            partial_caches.push_back(std::async(std::launch::async, [=,&hyblm, start, end, i, &m]() {
-                auto itr       = start;
-                auto num_sents = std::distance(start, end);
-                int  total     = 0;
-                while (itr != end) {
-                    auto                        cur_sym       = itr->first;
-                    const auto&                 cur_trie_node = itr->second;
-                    cstlm::LMQueryMKNE<t_cstlm> s(hyblm.cstlm,
-                                                  hyblm.filtered_vocab,
-                                                  hyblm.cstlm_ngramsize,
-                                                  false,
-                                                  hyblm.cstlm_cache);
-
-                    fill_cache(s, cur_sym, cur_trie_node);
-                    ++itr;
-                    total++;
-		    {
-                    	std::lock_guard<std::mutex> lock(m);
-                    	cstlm::LOG(cstlm::INFO) << "[" << i << "] " << total << "/" << num_sents
-                                            << " cache size = " << hyblm.cstlm_cache.size();
-		    }
-                }
-                return total;
-            }));
-        }
-        for (size_t i = 0; i < partial_caches.size(); i++) {
-            auto total = partial_caches[i].get();
-            cstlm::LOG(cstlm::INFO) << "[" << i << "] done processing " << total << " sentences";
-        }
-    }
-
     template <class t_cstlm>
     void learn_model(LM<t_cstlm>                          hyblm,
                      std::vector<std::vector<word_token>> sentences,
@@ -652,10 +502,8 @@ public:
 
 
     template <class t_cstlm>
-    void train_lm(cstlm::collection&    col,
-                  const t_cstlm&        cstlm,
-                  LM<t_cstlm>           hyblm,
-                  std::string           out_file)
+    void
+    train_lm(cstlm::collection& col, const t_cstlm& cstlm, LM<t_cstlm> hyblm, std::string out_file)
     {
         auto input_file = col.file_map[cstlm::KEY_SMALL_TEXT];
         cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in training set";
@@ -663,24 +511,18 @@ public:
         cstlm::LOG(cstlm::INFO) << "HYBLM sentences to process: " << sentences.size();
 
         cstlm::LOG(cstlm::INFO) << "HYBLM parse sentences in dev set";
-        auto dev_sents = sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, hyblm.filtered_vocab);
+        auto dev_sents =
+        sentence_parser::parse_from_raw(m_dev_file, cstlm.vocab, hyblm.filtered_vocab);
         cstlm::LOG(cstlm::INFO) << "HYBLM dev sentences to process: " << dev_sents.size();
 
         // data will be stored here
         cstlm::LOG(cstlm::INFO) << "HYBLM init LM structure";
 
-/*
-        std::thread cache_thread(
-        [&] { prefill_cstlm_cache(sentences, dev_sents, m_num_threads - 1, hyblm); });
-*/
         bool use_cstlm = false;
         learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);
-/*
-        cache_thread.join();
 
         use_cstlm = true;
         learn_model(hyblm, sentences, dev_sents, out_file, use_cstlm);
-*/
     }
 
     template <class t_cstlm>
@@ -702,19 +544,20 @@ public:
 
         // (1) if exists. just load otherwise train and store
         auto hyblm_file = file_name(col);
-        if  (!cstlm::utils::file_exists(hyblm_file)) {
-            cstlm::LOG(cstlm::INFO) << "HYBLM file " << hyblm_file << " does not exist. create new model";
+        if (!cstlm::utils::file_exists(hyblm_file)) {
+            cstlm::LOG(cstlm::INFO) << "HYBLM file " << hyblm_file
+                                    << " does not exist. create new model";
             dynet::initialize(argc, argv);
             LM<t_cstlm> hyb_lm(
             cstlm, m_cstlm_ngramsize, m_num_layers, m_hidden_dim, filtered_w2vemb, filtered_vocab);
             train_lm(col, cstlm, hyb_lm, hyblm_file);
-	    return hyb_lm;
+            return hyb_lm;
         } else {
             dynet::initialize(argc, argv);
             cstlm::LOG(cstlm::INFO) << "HYBLM load LM from file";
             LM<t_cstlm> hyb_lm(cstlm, hyblm_file);
             train_lm(col, cstlm, hyb_lm, hyblm_file);
-	    return hyb_lm;
+            return hyb_lm;
         }
     }
 

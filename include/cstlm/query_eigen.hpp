@@ -45,14 +45,17 @@ public:
     {
     }
 
-    vector_type append_symbol(const uint32_t& symbol)
+    const vector_type& append_symbol(const uint32_t& symbol)
     {
         m_local_state.append_symbol(symbol);
 
-        auto cur_hash = m_local_state.hash();
+        auto           cur_hash        = m_local_state.hash();
+        const uint64_t max_cache_elems = 500000;
+        static std::map<uint64_t, uint64_t> cache_stats;
         {
             auto itr = local_cache.find(cur_hash);
             if (itr != local_cache.end()) {
+                cache_stats[cur_hash]++;
                 return itr->second;
             }
         }
@@ -74,8 +77,18 @@ public:
         }
 
         // add to cache if it is a bit more complex to compute
-        {
+        if (local_cache.size() < max_cache_elems) {
+            cache_stats[cur_hash] = 1;
             local_cache[cur_hash] = log_prob_vec;
+            return local_cache[cur_hash];
+        } else {
+            auto smallest         = cache_stats.begin();
+            auto smallest_id      = smallest->first;
+            local_cache[cur_hash] = log_prob_vec;
+            cache_stats[cur_hash] = 1;
+            local_cache.erase(smallest_id);
+            cache_stats.erase(smallest);
+            return local_cache[cur_hash];
         }
         return log_prob_vec;
     }
