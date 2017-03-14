@@ -211,7 +211,7 @@ collection& col, t_cstlm& cstlm, size_t ngram_size, size_t vocab_size, int threa
     cstlm::LOG(cstlm::INFO) << "parse sentences in test set";
     auto test_sents = sentence_parser::parse_from_raw(test_file, cstlm.vocab, filtered_vocab);
     sentences.insert(sentences.end(), test_sents.begin(), test_sents.end());
-    cstlm::LOG(cstlm::INFO) << "test sentences to process: " << dev_sents.size();
+    cstlm::LOG(cstlm::INFO) << "test sentences to process: " << test_file.size();
 
     auto ngrams = create_sorted_ngrams(sentences, ngram_size);
     cstlm::LOG(cstlm::INFO) << "ngrams to process: " << ngrams.size();
@@ -220,6 +220,7 @@ collection& col, t_cstlm& cstlm, size_t ngram_size, size_t vocab_size, int threa
     float  size_mb    = float(size_bytes) / float(1024 * 1024);
     cstlm::LOG(cstlm::INFO) << "estimated size in mb: " << size_mb;
 
+    cstlm::LOG(cstlm::INFO) << "splitting ngrams into " << threads << " chunks";
     auto split_ngrams = split_ngrams_chunks(ngrams, threads);
     cstlm::LOG(cstlm::INFO) << "generated chunks: " << split_ngrams.size();
 
