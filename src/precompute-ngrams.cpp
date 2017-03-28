@@ -124,11 +124,12 @@ size_t compute_prefix_match(const std::vector<uint32_t>& a, const std::vector<ui
 
 
 template <class t_cstlm>
-std::unordered_map<uint64_t, std::vector<float>>
-compute_ngrams(const std::vector<std::vector<uint32_t>>& ngrams,
-               t_cstlm&                                  cstlm,
-               cstlm::vocab_uncompressed<false>          f_vocab,
-               size_t                                    id)
+void compute_ngrams(const std::vector<std::vector<uint32_t>>& ngrams,
+                    t_cstlm&                                  cstlm,
+                    cstlm::vocab_uncompressed<false>          f_vocab,
+                    size_t                                    id,
+                    std::ofstream&                            hash_out,
+                    std::ofstream&                            data_out)
 {
     std::unordered_map<uint64_t, std::vector<float>> cache;
     size_t            ngram_size = ngrams[0].size();
@@ -153,15 +154,36 @@ compute_ngrams(const std::vector<std::vector<uint32_t>>& ngrams,
             cmp_stack.push(copy);
         }
         prev_ngram = cur_ngram;
-        if (processed == 100) {
+        if (processed == 10000) {
             std::lock_guard<std::mutex> lock(m);
             cstlm::LOG(cstlm::INFO) << "[" << id << "] processed " << i + 1 << "/" << ngrams.size();
-            cstlm::LOG(cstlm::INFO) << "[" << id << "] current cache size " << cache.size();
+            cstlm::LOG(cstlm::INFO) << "[" << id << "] writing cache size to disk " << cache.size();
+            for (const auto& celem : cache) {
+                uint64_t                  hash  = celem.first;
+                const std::vector<float>& fdata = celem.second;
+                hash_out.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
+                data_out.write(reinterpret_cast<const char*>(fdata.data()),
+                               fdata.size() * sizeof(float));
+            }
+            cache.clear();
+            processed = 0;
         }
         processed++;
     }
-
-    return cache;
+    // final flush
+    {
+        std::lock_guard<std::mutex> lock(m);
+        cstlm::LOG(cstlm::INFO) << "[" << id << "] ALL processed: " << ngrams.size();
+        cstlm::LOG(cstlm::INFO) << "[" << id << "] writing cache rest to disk: " << cache.size();
+        for (const auto& celem : cache) {
+            uint64_t                  hash  = celem.first;
+            const std::vector<float>& fdata = celem.second;
+            hash_out.write(reinterpret_cast<const char*>(&hash), sizeof(hash));
+            data_out.write(reinterpret_cast<const char*>(fdata.data()),
+                           fdata.size() * sizeof(float));
+        }
+        cache.clear();
+    }
 }
 
 std::vector<std::vector<std::vector<uint32_t>>>
@@ -225,20 +247,22 @@ collection& col, t_cstlm& cstlm, size_t ngram_size, size_t vocab_size, int threa
     auto split_ngrams = split_ngrams_chunks(ngrams, threads);
     cstlm::LOG(cstlm::INFO) << "generated chunks: " << split_ngrams.size();
 
-    std::vector<std::future<std::unordered_map<uint64_t, std::vector<float>>>> future_results;
+    cstlm::LOG(cstlm::INFO) << "opening output files";
+    std::ofstream hash_file(col.path + "/" + col.prefix + KEY_NGRAM_CACHE_HASH);
+    std::ofstream data_file(col.path + "/" + col.prefix + KEY_NGRAM_CACHE_DATA);
+
+    std::vector<std::future<void>> future_results;
     for (size_t i = 0; i < split_ngrams.size(); i++) {
         const auto& chunk = split_ngrams[i];
-        future_results.push_back(
-        std::async(std::launch::async, [chunk, &cstlm, &filtered_vocab, i]() {
-            return compute_ngrams(chunk, cstlm, filtered_vocab, i);
+        future_results.push_back(std::async(
+        std::launch::async, [chunk, &cstlm, &filtered_vocab, i, &hash_file, &data_file]() {
+            compute_ngrams(chunk, cstlm, filtered_vocab, i, hash_file, data_file);
         }));
     }
 
     std::unordered_map<uint64_t, std::vector<float>> ngram_cache;
     for (auto& r : future_results) {
-        const auto& cache = r.get();
-        ngram_cache.insert(cache.begin(), cache.end());
-        cstlm::LOG(cstlm::INFO) << "ngram_cache size: " << ngram_cache.size();
+        r.wait();
     }
 }
 

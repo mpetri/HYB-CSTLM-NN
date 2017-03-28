@@ -119,6 +119,8 @@ add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
 add_executable(build-hyblm.x src/build-hyblm.cpp)
 add_executable(bench-hyblm.x src/bench-hyblm.cpp)
 
+add_executable(precompute-ngrams.x src/precompute-ngrams.cpp)
+target_link_libraries(precompute-ngrams.x prange sdsl pthread divsufsort divsufsort64 cilkrts)
 
 if(CUDA_DYNET)
 target_link_libraries(build-and-bench-rnnlm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
