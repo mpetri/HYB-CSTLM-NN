@@ -188,14 +188,21 @@ void evaluate_sentences(std::vector<std::vector<word_token>>& sentences,
             if (word.big_id != UNKNOWN_SYM) {
                 if (rare_syms.count(word.big_id) != 0) { // rare word
                     // 1. sum over all rare words and add that
-                    double rare_prob = 0.0;
+                    
+                    std::vector<double> rare_probs;
                     for (const auto& rw : rare_syms) {
                         // we make a copy of the query object to iterate over all rare words
                         // and determine the probabilities they have in the given context
                         auto copy_obj = query;
-                        auto score    = copy_obj.append_symbol(rw);
-                        rare_prob += exp(score);
+                        rare_probs.emplace_back(copy_obj.append_symbol(rw));
                     }
+                    auto max_prob = *std::max_element(rare_probs.begin(),rare_probs.end());
+                    double z = 0;
+                    for(auto& i : rare_probs) {
+                        z += exp(i-max_prob);
+                    }
+                    double rare_prob = m + log(z);
+
                     // 2. BUT we add the REAL word for conditioning
                     query.append_symbol(word.big_id);
 
