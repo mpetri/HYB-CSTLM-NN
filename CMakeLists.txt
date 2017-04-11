@@ -114,6 +114,8 @@ add_test(TestsPass unit-test.x)
 remove_cxx_flag("-O3") # fix for parallel integer SA construction
 add_executable(build-and-bench-cstlm.x src/build-and-bench-cstlm.cpp)
 
+add_executable(cstlm-eval-ppl-tau.x src/cstlm-eval-ppl-tau.cpp)
+
 add_executable(build-and-bench-rnnlm.x src/build-and-bench-rnnlm.cpp)
 
 add_executable(build-hyblm.x src/build-hyblm.cpp)
@@ -125,10 +127,12 @@ target_link_libraries(precompute-ngrams.x prange sdsl pthread divsufsort divsufs
 if(CUDA_DYNET)
 target_link_libraries(build-and-bench-rnnlm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(build-and-bench-cstlm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
+target_link_libraries(cstlm-eval-ppl-tau.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(build-hyblm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 target_link_libraries(bench-hyblm.x sdsl prange pthread divsufsort divsufsort64 cilkrts gdynet dynetcuda cublas)
 else()
 target_link_libraries(build-and-bench-cstlm.x prange sdsl pthread divsufsort divsufsort64 cilkrts dynet)
+target_link_libraries(cstlm-eval-ppl-tau.x prange sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 target_link_libraries(build-and-bench-rnnlm.x prange sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 target_link_libraries(build-hyblm.x prange sdsl pthread divsufsort divsufsort64 cilkrts dynet)
 target_link_libraries(bench-hyblm.x prange sdsl pthread divsufsort divsufsort64 cilkrts dynet)
